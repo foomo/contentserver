@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	server.Run()
+	server.Run(":8080", "http://test.bestbytes/foomo/modules/Foomo.Page.Content/services/content.php")
 }

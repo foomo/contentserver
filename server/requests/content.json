@@ -1,0 +1,26 @@
+{
+	"env" : {
+		"region" : "de",
+		"language" : "de",
+		"groups" : ["admin", "www"],
+		"data" : {
+			"crazy": "stuff",
+			"data" : {
+				"crazy": "stuff"
+			}
+		}
+	},
+	"URI" : "/home",
+	"nodes" : {
+		"main" : {
+			"id" : "id-xxx",
+			"mimeTypes" : ["text/html"],
+			"expand" : false
+		},
+		"meta" : {
+			"id" : "id-yyy",
+			"mimeTypes" : ["application/x-radactFolder"],
+			"expand" : true
+		}
+	}
+}
