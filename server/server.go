@@ -18,6 +18,17 @@ func contentHandler(w http.ResponseWriter, r *http.Request) {
 	utils.JsonResponse(w, contentRepo.GetContent(request))
 }
 
+func uriHandler(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.RequestURI, "/")
+	//fmt.Println(parts, len(parts))
+	if len(parts) == 5 {
+		utils.JsonResponse(w, contentRepo.GetURI(parts[2], parts[3], parts[4]))
+	} else {
+		wtfHandler(w, r)
+	}
+
+}
+
 func wtfHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "thank you for your request, but i am totally lost with it\n", r.RequestURI, "\n")
 }
@@ -53,6 +64,7 @@ func Run(addr string, serverUrl string) {
 	contentRepo.Update()
 	fmt.Printf("    loaded %d items\n", len(contentRepo.Directory))
 	http.HandleFunc("/content", contentHandler)
+	http.HandleFunc("/uri/", uriHandler)
 	http.HandleFunc("/cmd/", commandHandler)
 	http.HandleFunc("/", wtfHandler)
 	fmt.Printf("  starting service on %s\n", addr)

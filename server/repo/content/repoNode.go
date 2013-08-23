@@ -6,20 +6,34 @@ import (
 )
 
 type RepoNode struct {
-	Id       string `json:"id"`
-	MimeType string `json:"mimeType"`
-	Handler  string `json:"handler"`
-	//Path     string                       `json:"path"`
-	Regions map[string]string            `json:"regions"`
-	URIs    map[string]map[string]string `json:"uris"`
-	Names   map[string]string            `json:"names"`
-	Hidden  bool                         `json:"hidden"` // hidden in tree
-	Groups  []string                     `json:"groups"`
-	Data    map[string]interface{}       `json:"data"`
-	Index   []string                     `json:"index"`
-	Nodes   map[string]*RepoNode         `json:"nodes"`
-	LinkIds []string                     `json:"linkIds"` // ids to link to
+	Id       string                       `json:"id"`
+	MimeType string                       `json:"mimeType"`
+	Handler  string                       `json:"handler"`
+	Regions  []string                     `json:"regions"`
+	URIs     map[string]map[string]string `json:"URIs"`
+	Names    map[string]string            `json:"names"`
+	Hidden   bool                         `json:"hidden"` // hidden in tree
+	Groups   []string                     `json:"groups"`
+	Data     map[string]interface{}       `json:"data"`
+	Content  map[string]interface{}       `json:"content"`
+	Nodes    map[string]*RepoNode         `json:"nodes"`
+	LinkIds  map[string]map[string]string `json:"linkIds"` // ids to link to
 	// published from - to
+}
+
+func (node *RepoNode) GetLanguageAndRegionForURI(URI string) (resolved bool, region string, language string) {
+	for possibleRegion, URIs := range node.URIs {
+		for possibleLanguage, regionLangURI := range URIs {
+			if regionLangURI == URI {
+				resolved = true
+				region = possibleRegion
+				language = possibleLanguage
+				return
+			}
+		}
+	}
+	resolved = false
+	return
 }
 
 func (node *RepoNode) AddNode(name string, childNode *RepoNode) *RepoNode {
@@ -29,6 +43,15 @@ func (node *RepoNode) AddNode(name string, childNode *RepoNode) *RepoNode {
 
 func (node *RepoNode) GetName(language string) string {
 	return node.Names[language]
+}
+
+func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
+	for _, mimeType := range mimeTypes {
+		if mimeType == node.MimeType {
+			return true
+		}
+	}
+	return false
 }
 
 func (node *RepoNode) PrintNode(id string, level int) {
@@ -44,5 +67,6 @@ func (node *RepoNode) PrintNode(id string, level int) {
 
 func NewRepoNode() *RepoNode {
 	node := new(RepoNode)
+
 	return node
 }

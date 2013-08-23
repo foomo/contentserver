@@ -7,18 +7,20 @@ const (
 )
 
 type SiteContent struct {
-	Status          int              `json:"status"`
-	NavigationTrees map[string]*Node `json:"navigationTrees"`
-	Content         struct {
+	Status   int    `json:"status"`
+	Region   string `json:"region"`
+	Language string `json:"language"`
+	Content  struct {
 		Item *Item       `json:"item"`
 		Data interface{} `json:"data"`
 	} `json:"content"`
-	URIs map[string]string `json:"URIs"`
+	URIs  map[string]string `json:"URIs"`
+	Nodes map[string]*Node  `json:"nodes"`
 }
 
 func NewSiteContent() *SiteContent {
 	c := new(SiteContent)
-	c.NavigationTrees = make(map[string]*Node)
+	c.Nodes = make(map[string]*Node)
 	c.URIs = make(map[string]string)
 	return c
 }

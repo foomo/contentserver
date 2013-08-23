@@ -9,5 +9,7 @@ type Node struct {
 
 func NewNode() *Node {
 	node := new(Node)
+	node.Item = NewItem()
+	node.Nodes = make(map[string]*Node)
 	return node
 }

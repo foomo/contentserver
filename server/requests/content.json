@@ -1,7 +1,5 @@
 {
 	"env" : {
-		"region" : "de",
-		"language" : "de",
 		"groups" : ["admin", "www"],
 		"data" : {
 			"crazy": "stuff",
@@ -10,16 +8,16 @@
 			}
 		}
 	},
-	"URI" : "/home",
+	"URI" : "/de/home",
 	"nodes" : {
 		"main" : {
-			"id" : "id-xxx",
+			"id" : "6666cd76f96956469e7be39d750cc7d9",
 			"mimeTypes" : ["text/html"],
 			"expand" : false
 		},
-		"meta" : {
-			"id" : "id-yyy",
-			"mimeTypes" : ["application/x-radactFolder"],
+		"mainExpanded" : {
+			"id" : "6666cd76f96956469e7be39d750cc7d9",
+			"mimeTypes" : ["text/html"],
 			"expand" : true
 		}
 	}

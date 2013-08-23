@@ -2,10 +2,8 @@ package requests
 
 type Content struct {
 	Env struct {
-		Region   string      `json:"region"`
-		Language string      `json:"language"`
-		Groups   []string    `json:"groups"`
-		Data     interface{} `json:"data"`
+		Groups []string    `json:"groups"`
+		Data   interface{} `json:"data"`
 	} `json:"env"`
 	URI   string
 	Nodes map[string]struct {

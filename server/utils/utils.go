@@ -23,7 +23,7 @@ func toJson(obj interface{}) string {
 func extractJsonFromRequest(r *http.Request) []byte {
 	file, _, err := r.FormFile("request")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err, r)
 	}
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
