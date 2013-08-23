@@ -20,13 +20,11 @@ func contentHandler(w http.ResponseWriter, r *http.Request) {
 
 func uriHandler(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.RequestURI, "/")
-	//fmt.Println(parts, len(parts))
 	if len(parts) == 5 {
 		utils.JsonResponse(w, contentRepo.GetURI(parts[2], parts[3], parts[4]))
 	} else {
 		wtfHandler(w, r)
 	}
-
 }
 
 func wtfHandler(w http.ResponseWriter, r *http.Request) {

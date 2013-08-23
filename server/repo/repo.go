@@ -23,14 +23,10 @@ func NewRepo(server string) *Repo {
 }
 
 func (repo *Repo) ResolveContent(URI string) (resolved bool, region string, language string, repoNode *content.RepoNode) {
-	if node, ok := repo.URIDirectory[URI]; ok {
+	if repoNode, ok := repo.URIDirectory[URI]; ok {
 		resolved = true
-		resolvedURI, region, language := node.GetLanguageAndRegionForURI(URI)
-		if resolvedURI {
-			return true, region, language, node
-		} else {
-			resolved = false
-		}
+		_, region, language := repoNode.GetLanguageAndRegionForURI(URI)
+		return true, region, language, repoNode
 	} else {
 		resolved = false
 	}
@@ -53,9 +49,7 @@ func (repo *Repo) GetURI(region string, language string, id string) string {
 
 func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []string, region string, language string) *content.Node {
 	node := content.NewNode()
-	node.Item.Name = repoNode.GetName(language)
-	node.Item.URI = repoNode.URIs[region][language]
-	//fmt.Println(region, language, repoNode.URIs[region][language], repoNode.URIs)
+	node.Item = repoNode.ToItem(region, language)
 	for id, childNode := range repoNode.Nodes {
 		if expanded && !childNode.Hidden && childNode.IsOneOfTheseMimeTypes(mimeTypes) {
 			// || in path and in region mimes
@@ -73,9 +67,8 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 		c.Region = region
 		c.Language = language
 		c.Status = content.STATUS_OK
-		c.Content.Item = content.NewItem()
-		c.Content.Item.Id = node.Id
-		c.Content.Item.Name = node.GetName(language)
+		c.Item = node.ToItem(region, language)
+		c.Path = node.GetPath(region, language)
 		for treeName, treeRequest := range r.Nodes {
 			// fmt.Println("getting tree", treeName, treeRequest)
 			c.Nodes[treeName] = repo.GetNode(repo.Directory[treeRequest.Id], treeRequest.Expand, treeRequest.MimeTypes, []string{}, region, language)
@@ -102,6 +95,7 @@ func (repo *Repo) builDirectory(dirNode *content.RepoNode) {
 func (repo *Repo) Update() {
 	repo.Node = content.NewRepoNode()
 	utils.Get(repo.server, repo.Node)
+	repo.Node.WireParents()
 	repo.Directory = make(map[string]*content.RepoNode)
 	repo.URIDirectory = make(map[string]*content.RepoNode)
 	repo.builDirectory(repo.Node)

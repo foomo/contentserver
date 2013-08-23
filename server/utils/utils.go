@@ -20,7 +20,7 @@ func toJson(obj interface{}) string {
 	}
 }
 
-func extractJsonFromRequest(r *http.Request) []byte {
+func extractJsonFromRequestFileUpload(r *http.Request) []byte {
 	file, _, err := r.FormFile("request")
 	if err != nil {
 		fmt.Println(err, r)
@@ -30,6 +30,11 @@ func extractJsonFromRequest(r *http.Request) []byte {
 		fmt.Println(err)
 	}
 	return data
+}
+func extractJsonFromRequest(r *http.Request) []byte {
+
+	bytes := []byte(r.PostFormValue("request"))
+	return bytes
 }
 
 func PopulateRequest(r *http.Request, obj interface{}) {

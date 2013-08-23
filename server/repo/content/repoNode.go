@@ -18,6 +18,7 @@ type RepoNode struct {
 	Content  map[string]interface{}       `json:"content"`
 	Nodes    map[string]*RepoNode         `json:"nodes"`
 	LinkIds  map[string]map[string]string `json:"linkIds"` // ids to link to
+	parent   *RepoNode
 	// published from - to
 }
 
@@ -34,6 +35,35 @@ func (node *RepoNode) GetLanguageAndRegionForURI(URI string) (resolved bool, reg
 	}
 	resolved = false
 	return
+}
+
+func (node *RepoNode) WireParents() {
+	for _, childNode := range node.Nodes {
+		childNode.parent = node
+		childNode.WireParents()
+	}
+}
+
+func (node *RepoNode) GetPath(region string, language string) map[string]*Item {
+	path := make(map[string]*Item)
+	parentNode := node.parent
+	for parentNode != nil {
+		path[parentNode.Id] = parentNode.ToItem(region, language)
+		parentNode = parentNode.parent
+	}
+	return path
+}
+
+func (node *RepoNode) ToItem(region string, language string) *Item {
+	item := NewItem()
+	item.Id = node.Id
+	item.Name = node.GetName(language)
+	item.URI = node.URIs[region][language]
+	return item
+}
+
+func (node *RepoNode) GetParent() *RepoNode {
+	return node.parent
 }
 
 func (node *RepoNode) AddNode(name string, childNode *RepoNode) *RepoNode {
