@@ -1,5 +1,6 @@
 package content
 
 const (
-	INDENT string = "\t"
+	INDENT         string = "\t"
+	PATH_SEPARATOR        = "/"
 )

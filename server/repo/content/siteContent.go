@@ -8,6 +8,7 @@ const (
 
 type SiteContent struct {
 	Status   int               `json:"status"`
+	URI      string            `json:"URI"`
 	Region   string            `json:"region"`
 	Language string            `json:"language"`
 	Item     *Item             `json:"item"`

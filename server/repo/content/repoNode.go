@@ -16,6 +16,7 @@ type RepoNode struct {
 	Groups   []string                     `json:"groups"`
 	Data     map[string]interface{}       `json:"data"`
 	Content  map[string]interface{}       `json:"content"`
+	Index    []string                     `json:"index"`
 	Nodes    map[string]*RepoNode         `json:"nodes"`
 	LinkIds  map[string]map[string]string `json:"linkIds"` // ids to link to
 	parent   *RepoNode
