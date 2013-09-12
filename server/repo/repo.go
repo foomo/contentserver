@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"fmt"
 	"github.com/foomo/ContentServer/server/log"
 	"github.com/foomo/ContentServer/server/repo/content"
 	"github.com/foomo/ContentServer/server/requests"
@@ -31,9 +32,18 @@ func (repo *Repo) ResolveContent(URI string) (resolved bool, resolvedURI string,
 		testURI := strings.Join(parts[0:i], content.PATH_SEPARATOR)
 		log.Debug("  testing" + testURI)
 		if repoNode, ok := repo.URIDirectory[testURI]; ok {
-			log.Debug("    => " + testURI)
 			resolved = true
 			_, region, language := repoNode.GetLanguageAndRegionForURI(testURI)
+			log.Debug("    => " + testURI)
+			log.Debug("      destionations " + fmt.Sprint(repoNode.DestinationIds))
+			log.Debug("        .region " + region + "  " + fmt.Sprint(repoNode.DestinationIds[region]))
+			if languageDestinations, regionOk := repoNode.DestinationIds[region]; regionOk {
+				log.Debug("    there is a destionation map for this one " + fmt.Sprint(languageDestinations))
+				if languageDestination, destinationOk := languageDestinations[language]; destinationOk {
+					// what if it is not there ....
+					repoNode = repo.Directory[languageDestination]
+				}
+			}
 			return true, testURI, region, language, repoNode
 		} else {
 			log.Debug("    => !" + testURI)
@@ -41,6 +51,14 @@ func (repo *Repo) ResolveContent(URI string) (resolved bool, resolvedURI string,
 		}
 	}
 	return
+}
+
+func (repo *Repo) GetURIs(region string, language string, ids []string) map[string]string {
+	uris := make(map[string]string)
+	for _, id := range ids {
+		uris[id] = repo.GetURI(region, language, id)
+	}
+	return uris
 }
 
 func (repo *Repo) GetURI(region string, language string, id string) string {
@@ -57,16 +75,19 @@ func (repo *Repo) GetURI(region string, language string, id string) string {
 	return ""
 }
 
-func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []string, region string, language string) *content.Node {
+func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, region string, language string) *content.Node {
 	node := content.NewNode()
 	node.Item = repoNode.ToItem(region, language)
 	log.Debug("repo.GetNode: " + repoNode.Id)
 	for _, childId := range repoNode.Index {
 		childNode := repoNode.Nodes[childId]
-		if expanded && !childNode.Hidden && childNode.IsOneOfTheseMimeTypes(mimeTypes) {
-			// || in path and in region mimes
+		if (expanded || !expanded && childNode.InPath(path)) && !childNode.Hidden && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
 			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, region, language)
+			node.Index = append(node.Index, childId)
+		} else {
+			fmt.Println("no see for", childNode.GetName(language), childNode.Hidden)
 		}
+
 	}
 	return node
 }
@@ -81,13 +102,14 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 		c.Region = region
 		c.Language = language
 		c.Status = content.STATUS_OK
+		c.Handler = node.Handler
 		c.URI = resolvedURI
 		c.Item = node.ToItem(region, language)
 		c.Path = node.GetPath(region, language)
 		c.Data = node.Data
 		for treeName, treeRequest := range r.Nodes {
 			log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
-			c.Nodes[treeName] = repo.GetNode(repo.Directory[treeRequest.Id], treeRequest.Expand, treeRequest.MimeTypes, []string{}, region, language)
+			c.Nodes[treeName] = repo.GetNode(repo.Directory[treeRequest.Id], treeRequest.Expand, treeRequest.MimeTypes, c.Path, region, language)
 		}
 	} else {
 		log.Notice("404 for " + r.URI)
@@ -99,6 +121,7 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 func (repo *Repo) builDirectory(dirNode *content.RepoNode) {
 	log.Debug("repo.buildDirectory: " + dirNode.Id)
 	repo.Directory[dirNode.Id] = dirNode
+	//todo handle duplicate uris
 	for _, languageURIs := range dirNode.URIs {
 		for _, URI := range languageURIs {
 			log.Debug("  URI: " + URI + " => Id: " + dirNode.Id)

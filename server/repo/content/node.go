@@ -5,6 +5,7 @@ import ()
 type Node struct {
 	Item  *Item            `json:"item"`
 	Nodes map[string]*Node `json:"nodes"`
+	Index []string         `json:"index"`
 }
 
 func NewNode() *Node {

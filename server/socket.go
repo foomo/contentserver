@@ -27,13 +27,13 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 	var jsonErr error
 	log.Record(fmt.Sprintf("socket.handleSocketRequest(%d): %s %s", numRequests(), handler, string(jsonBuffer)))
 	switch handler {
-	case "getURI":
-		getURIRequest := requests.NewURI()
+	case "getURIs":
+		getURIRequest := requests.NewURIs()
 		jsonErr = json.Unmarshal(jsonBuffer, &getURIRequest)
 		log.Debug("  getURIRequest: " + fmt.Sprint(getURIRequest))
-		uri := contentRepo.GetURI(getURIRequest.Region, getURIRequest.Language, getURIRequest.Id)
-		log.Debug("    resolved: " + uri)
-		reply = uri
+		uris := contentRepo.GetURIs(getURIRequest.Region, getURIRequest.Language, getURIRequest.Ids)
+		log.Debug("    resolved: " + fmt.Sprint(uris))
+		reply = uris
 		break
 	case "content":
 		contentRequest := requests.NewContent()
@@ -104,8 +104,8 @@ func handleConnection(conn net.Conn) {
 						log.Error("socket.handleConnection: could not write my reply: " + fmt.Sprint(writeError))
 						return
 					} else {
-						log.Debug("  replied.")
-						return
+						log.Debug("  replied. waiting for next request on open connection")
+						//return
 					}
 				}
 			} else {

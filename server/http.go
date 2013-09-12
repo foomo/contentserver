@@ -57,7 +57,7 @@ func commandHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func Run(addr string, serverUrl string) {
-	log.Notice("staring content server")
+	log.Notice("starting content server")
 	log.Notice("  loading content from " + serverUrl)
 	contentRepo = repo.NewRepo(serverUrl)
 	contentRepo.Update()

@@ -6,20 +6,21 @@ import (
 )
 
 type RepoNode struct {
-	Id       string                       `json:"id"`
-	MimeType string                       `json:"mimeType"`
-	Handler  string                       `json:"handler"`
-	Regions  []string                     `json:"regions"`
-	URIs     map[string]map[string]string `json:"URIs"`
-	Names    map[string]string            `json:"names"`
-	Hidden   bool                         `json:"hidden"` // hidden in tree
-	Groups   []string                     `json:"groups"`
-	Data     map[string]interface{}       `json:"data"`
-	Content  map[string]interface{}       `json:"content"`
-	Index    []string                     `json:"index"`
-	Nodes    map[string]*RepoNode         `json:"nodes"`
-	LinkIds  map[string]map[string]string `json:"linkIds"` // ids to link to
-	parent   *RepoNode
+	Id             string                       `json:"id"`
+	MimeType       string                       `json:"mimeType"`
+	Handler        string                       `json:"handler"`
+	Regions        []string                     `json:"regions"`
+	URIs           map[string]map[string]string `json:"URIs"`
+	DestinationIds map[string]map[string]string `json:"destinationIds"`
+	Names          map[string]string            `json:"names"`
+	Hidden         bool                         `json:"hidden"` // hidden in tree
+	Groups         []string                     `json:"groups"`
+	Data           map[string]interface{}       `json:"data"`
+	Content        map[string]interface{}       `json:"content"`
+	Nodes          map[string]*RepoNode         `json:"nodes"`
+	Index          []string                     `json:"index"`
+	LinkIds        map[string]map[string]string `json:"linkIds"` // ids to link to
+	parent         *RepoNode
 	// published from - to
 }
 
@@ -45,12 +46,39 @@ func (node *RepoNode) WireParents() {
 	}
 }
 
-func (node *RepoNode) GetPath(region string, language string) map[string]*Item {
-	path := make(map[string]*Item)
+func (node *RepoNode) InPath(path []*Item) bool {
+	myParentId := node.parent.Id
+	for _, pathItem := range path {
+		if pathItem.Id == myParentId {
+			return true
+		}
+	}
+	return false
+}
+
+func (node *RepoNode) InRegion(region string) bool {
+	for _, nodeRegion := range node.Regions {
+		if nodeRegion == region {
+			return true
+		}
+	}
+	return false
+}
+
+func (node *RepoNode) GetPath(region string, language string) []*Item {
 	parentNode := node.parent
+	pathLength := 0
 	for parentNode != nil {
-		path[parentNode.Id] = parentNode.ToItem(region, language)
 		parentNode = parentNode.parent
+		pathLength++
+	}
+	parentNode = node.parent
+	i := 0
+	path := make([]*Item, pathLength)
+	for parentNode != nil {
+		path[i] = parentNode.ToItem(region, language)
+		parentNode = parentNode.parent
+		i++
 	}
 	return path
 }
@@ -59,6 +87,7 @@ func (node *RepoNode) ToItem(region string, language string) *Item {
 	item := NewItem()
 	item.Id = node.Id
 	item.Name = node.GetName(language)
+	//todo handle destinationIds ....
 	item.URI = node.URIs[region][language]
 	return item
 }
@@ -77,12 +106,16 @@ func (node *RepoNode) GetName(language string) string {
 }
 
 func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
-	for _, mimeType := range mimeTypes {
-		if mimeType == node.MimeType {
-			return true
+	if len(mimeTypes) == 0 {
+		return true
+	} else {
+		for _, mimeType := range mimeTypes {
+			if mimeType == node.MimeType {
+				return true
+			}
 		}
+		return false
 	}
-	return false
 }
 
 func (node *RepoNode) PrintNode(id string, level int) {
@@ -98,6 +131,5 @@ func (node *RepoNode) PrintNode(id string, level int) {
 
 func NewRepoNode() *RepoNode {
 	node := new(RepoNode)
-
 	return node
 }

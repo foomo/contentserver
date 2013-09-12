@@ -11,9 +11,10 @@ type SiteContent struct {
 	URI      string            `json:"URI"`
 	Region   string            `json:"region"`
 	Language string            `json:"language"`
+	Handler  string            `json:"handler"`
 	Item     *Item             `json:"item"`
 	Data     interface{}       `json:"data"`
-	Path     map[string]*Item  `json:"path"`
+	Path     []*Item           `json:"path"`
 	URIs     map[string]string `json:"URIs"`
 	Nodes    map[string]*Node  `json:"nodes"`
 }

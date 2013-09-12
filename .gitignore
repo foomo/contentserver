@@ -1,5 +1,6 @@
 .*
 !.git*
+/buildOnLinux.sh
 /main
 /ContentServer.sublime-project
 /ContentServer.sublime-workspace
