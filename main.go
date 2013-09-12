@@ -6,6 +6,7 @@ import (
 	"github.com/foomo/ContentServer/server"
 	"github.com/foomo/ContentServer/server/log"
 	"os"
+	"strings"
 )
 
 const (
@@ -24,6 +25,19 @@ var contentServer string
 
 var protocol = flag.String("protocol", PROTOCOL_TCP, "what protocol to server for")
 var address = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
+var logLevelOptions = []string{
+	log.LOG_LEVEL_NAME_ERROR,
+	log.LOG_LEVEL_NAME_RECORD,
+	log.LOG_LEVEL_NAME_WARNING,
+	log.LOG_LEVEL_NAME_NOTICE,
+	log.LOG_LEVEL_NAME_DEBUG}
+
+var logLevel = flag.String(
+	"logLevel",
+	log.LOG_LEVEL_NAME_RECORD,
+	fmt.Sprintf(
+		"one of %s",
+		strings.Join(logLevelOptions, ", ")))
 
 func exitUsage(code int) {
 	fmt.Printf("Usage: %s http(s)://your-content-server/path/to/content.json\n", os.Args[0])
@@ -33,15 +47,15 @@ func exitUsage(code int) {
 
 func main() {
 	flag.Parse()
-	log.SetLogLevel(log.LOG_LEVEL_DEBUG)
 	if len(flag.Args()) == 1 {
 		fmt.Println(*protocol, *address, flag.Arg(0))
-		//server.Run(":8080", "http://test.bestbytes/foomo/modules/Foomo.Page.Content/services/content.php")
+		log.SetLogLevel(log.GetLogLevelByName(*logLevel))
 		switch *protocol {
 		case PROTOCOL_TCP:
 			server.RunSocketServer(flag.Arg(0), *address)
 			break
 		case PROTOCOL_HTTP:
+			//server.Run(":8080", "http://test.bestbytes/foomo/modules/Foomo.Page.Content/services/content.php")
 			fmt.Println("http server does not work yet - use tcp instead")
 			break
 		default:

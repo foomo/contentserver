@@ -10,11 +10,16 @@ var logLevel int = LOG_LEVEL_DEBUG
 var numErrors int64 = 0
 
 const (
-	LOG_LEVEL_ERROR   = 0
-	LOG_LEVEL_RECORD  = 1
-	LOG_LEVEL_WARNING = 2
-	LOG_LEVEL_NOTICE  = 3
-	LOG_LEVEL_DEBUG   = 4
+	LOG_LEVEL_ERROR        = 0
+	LOG_LEVEL_NAME_ERROR   = "error"
+	LOG_LEVEL_RECORD       = 1
+	LOG_LEVEL_NAME_RECORD  = "record"
+	LOG_LEVEL_WARNING      = 2
+	LOG_LEVEL_NAME_WARNING = "warning"
+	LOG_LEVEL_NOTICE       = 3
+	LOG_LEVEL_NAME_NOTICE  = "notice"
+	LOG_LEVEL_DEBUG        = 4
+	LOG_LEVEL_NAME_DEBUG   = "debug"
 )
 
 var prefices = map[int]string{
@@ -23,6 +28,23 @@ var prefices = map[int]string{
 	LOG_LEVEL_WARNING: "warning : ",
 	LOG_LEVEL_NOTICE:  "notice  : ",
 	LOG_LEVEL_DEBUG:   "debug   : ",
+}
+
+var logLevelMap = map[string]int{
+	LOG_LEVEL_NAME_ERROR:   LOG_LEVEL_ERROR,
+	LOG_LEVEL_NAME_RECORD:  LOG_LEVEL_RECORD,
+	LOG_LEVEL_NAME_WARNING: LOG_LEVEL_WARNING,
+	LOG_LEVEL_NAME_NOTICE:  LOG_LEVEL_NOTICE,
+	LOG_LEVEL_NAME_DEBUG:   LOG_LEVEL_DEBUG,
+}
+
+func GetLogLevelByName(name string) int {
+	if level, ok := logLevelMap[name]; ok {
+		return level
+	} else {
+		return LOG_LEVEL_RECORD
+	}
+
 }
 
 func log(msg string, level int) string {
