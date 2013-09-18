@@ -53,6 +53,22 @@ func (repo *Repo) ResolveContent(URI string) (resolved bool, resolvedURI string,
 	return
 }
 
+func (repo *Repo) GetItemMap(id string) map[string]map[string]*content.Item {
+	itemMap := make(map[string]map[string]*content.Item)
+	if repoNode, ok := repo.Directory[id]; ok {
+		for region, languageURIs := range repoNode.URIs {
+			itemMap[region] = make(map[string]*content.Item)
+			for language, URI := range languageURIs {
+				log.Debug(fmt.Sprintf("region :%s language :%s URI: %s", region, language, URI))
+				itemMap[region][language] = repoNode.ToItem(region, language)
+			}
+		}
+	} else {
+		log.Warning("GetItemMapForAllRegionsAndLanguages invalid id " + id)
+	}
+	return itemMap
+}
+
 func (repo *Repo) GetURIs(region string, language string, ids []string) map[string]string {
 	uris := make(map[string]string)
 	for _, id := range ids {
@@ -109,7 +125,12 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 		c.Data = node.Data
 		for treeName, treeRequest := range r.Nodes {
 			log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
-			c.Nodes[treeName] = repo.GetNode(repo.Directory[treeRequest.Id], treeRequest.Expand, treeRequest.MimeTypes, c.Path, region, language)
+			if treeNode, ok := repo.Directory[treeRequest.Id]; ok {
+				c.Nodes[treeName] = repo.GetNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, region, language)
+			} else {
+				log.Warning("you are requesting an invalid tree node for " + treeName + " : " + treeRequest.Id)
+			}
+
 		}
 	} else {
 		log.Notice("404 for " + r.URI)

@@ -42,6 +42,13 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		content := contentRepo.GetContent(contentRequest)
 		reply = content
 		break
+	case "getItemMap":
+		itemMapRequest := requests.NewItemMap()
+		jsonErr = json.Unmarshal(jsonBuffer, &itemMapRequest)
+		log.Debug("  itemMapRequest: " + fmt.Sprint(itemMapRequest))
+		itemMap := contentRepo.GetItemMap(itemMapRequest.Id)
+		reply = itemMap
+		break
 	default:
 		err = errors.New(log.Error("  can not handle this one " + handler))
 	}
