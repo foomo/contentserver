@@ -91,14 +91,14 @@ func (repo *Repo) GetURI(region string, language string, id string) string {
 	return ""
 }
 
-func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, region string, language string) *content.Node {
+func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, level int, region string, language string) *content.Node {
 	node := content.NewNode()
 	node.Item = repoNode.ToItem(region, language)
 	log.Debug("repo.GetNode: " + repoNode.Id)
 	for _, childId := range repoNode.Index {
 		childNode := repoNode.Nodes[childId]
-		if (expanded || !expanded && childNode.InPath(path)) && !childNode.Hidden && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
-			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, region, language)
+		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && !childNode.Hidden && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
+			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, level+1, region, language)
 			node.Index = append(node.Index, childId)
 		} else {
 			fmt.Println("no see for", childNode.GetName(language), childNode.Hidden)
@@ -106,6 +106,20 @@ func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes [
 
 	}
 	return node
+}
+
+func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
+	nodes := make(map[string]*content.Node)
+	path := make([]*content.Item, 0)
+	for nodeName, nodeRequest := range r.Nodes {
+		log.Debug("  adding node " + nodeName + " " + nodeRequest.Id)
+		if treeNode, ok := repo.Directory[nodeRequest.Id]; ok {
+			nodes[nodeName] = repo.GetNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, r.Env.Defaults.Region, r.Env.Defaults.Language)
+		} else {
+			log.Warning("you are requesting an invalid tree node for " + nodeName + " : " + nodeRequest.Id)
+		}
+	}
+	return nodes
 }
 
 func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
@@ -123,18 +137,19 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 		c.Item = node.ToItem(region, language)
 		c.Path = node.GetPath(region, language)
 		c.Data = node.Data
-		for treeName, treeRequest := range r.Nodes {
-			log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
-			if treeNode, ok := repo.Directory[treeRequest.Id]; ok {
-				c.Nodes[treeName] = repo.GetNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, region, language)
-			} else {
-				log.Warning("you are requesting an invalid tree node for " + treeName + " : " + treeRequest.Id)
-			}
-
-		}
 	} else {
 		log.Notice("404 for " + r.URI)
 		c.Status = content.STATUS_NOT_FOUND
+		region = r.Env.Defaults.Region
+		language = r.Env.Defaults.Language
+	}
+	for treeName, treeRequest := range r.Nodes {
+		log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
+		if treeNode, ok := repo.Directory[treeRequest.Id]; ok {
+			c.Nodes[treeName] = repo.GetNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, 0, region, language)
+		} else {
+			log.Warning("you are requesting an invalid tree node for " + treeName + " : " + treeRequest.Id)
+		}
 	}
 	return c
 }

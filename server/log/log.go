@@ -49,7 +49,7 @@ func GetLogLevelByName(name string) int {
 
 func log(msg string, level int) string {
 	if level <= logLevel {
-		prefix := time.Now().Format(time.RFC3339) + " " + prefices[level]
+		prefix := time.Now().Format(time.RFC3339Nano) + " " + prefices[level]
 		lines := strings.Split(msg, "\n")
 		for i := 0; i < len(lines); i++ {
 			fmt.Println(prefix + lines[i])

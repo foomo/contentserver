@@ -1,16 +1,9 @@
 package requests
 
 type Content struct {
-	Env struct {
-		Groups []string    `json:"groups"`
-		Data   interface{} `json:"data"`
-	} `json:"env"`
+	Env   *Env `json:"env"`
 	URI   string
-	Nodes map[string]struct {
-		Id        string   `json:"id"`
-		MimeTypes []string `json:"mimeTypes"`
-		Expand    bool     `json:"expand"`
-	} `json:"nodes"`
+	Nodes map[string]*Node `json:"nodes"`
 }
 
 func NewContent() *Content {
