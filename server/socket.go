@@ -7,6 +7,7 @@ import (
 	"github.com/foomo/ContentServer/server/log"
 	"github.com/foomo/ContentServer/server/repo"
 	"github.com/foomo/ContentServer/server/requests"
+	"github.com/foomo/ContentServer/server/responses"
 	"net"
 	"strconv"
 	"strings"
@@ -56,22 +57,28 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		nodesMap := contentRepo.GetNodes(nodesRequest)
 		reply = nodesMap
 		break
-
+	case "update":
+		updateRequest := requests.NewUpdate()
+		jsonErr = json.Unmarshal(jsonBuffer, &updateRequest)
+		log.Debug("  updateRequest: " + fmt.Sprint(updateRequest))
+		updateResponse := contentRepo.Update()
+		reply = updateResponse
+		break
 	default:
 		err = errors.New(log.Error("  can not handle this one " + handler))
+		errorResponse := responses.NewError(1, "unkown handler")
+		reply = errorResponse
 	}
-	if err == nil {
+	if jsonErr != nil {
+		log.Error("  could not read incoming json: " + fmt.Sprint(jsonErr))
+		err = jsonErr
+	} else {
+		encodedBytes, jsonErr := json.MarshalIndent(map[string]interface{}{"reply": reply}, "", " ")
 		if jsonErr != nil {
-			log.Error("  could not read incoming json: " + fmt.Sprint(jsonErr))
 			err = jsonErr
+			log.Error("  could not encode reply " + fmt.Sprint(jsonErr))
 		} else {
-			encodedBytes, jsonErr := json.MarshalIndent(map[string]interface{}{"reply": reply}, "", " ")
-			if jsonErr != nil {
-				err = jsonErr
-				log.Error("  could not encode reply " + fmt.Sprint(jsonErr))
-			} else {
-				replyBytes = encodedBytes
-			}
+			replyBytes = encodedBytes
 		}
 	}
 	return replyBytes, err
@@ -109,22 +116,26 @@ func handleConnection(conn net.Conn) {
 				reply, handlingError := handleSocketRequest(requestHandler, jsonBuffer)
 				if handlingError != nil {
 					log.Error("socket.handleConnection: handlingError " + fmt.Sprint(handlingError))
+					if reply == nil {
+						log.Error("giving up with nil reply")
+						conn.Close()
+						return
+					}
+				}
+				headerBytes := []byte(strconv.Itoa(len(reply)))
+				reply = concat(headerBytes, reply)
+				log.Debug("  replying: " + string(reply))
+				_, writeError := conn.Write(reply)
+				if writeError != nil {
+					log.Error("socket.handleConnection: could not write my reply: " + fmt.Sprint(writeError))
 					return
 				} else {
-					headerBytes := []byte(strconv.Itoa(len(reply)))
-					reply = concat(headerBytes, reply)
-					log.Debug("  replying: " + string(reply))
-					_, writeError := conn.Write(reply)
-					if writeError != nil {
-						log.Error("socket.handleConnection: could not write my reply: " + fmt.Sprint(writeError))
-						return
-					} else {
-						log.Debug("  replied. waiting for next request on open connection")
-						//return
-					}
+					log.Debug("  replied. waiting for next request on open connection")
+					//return
 				}
 			} else {
 				log.Error("can not read empty json")
+				conn.Close()
 				return
 			}
 		} else {

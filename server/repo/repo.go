@@ -5,8 +5,10 @@ import (
 	"github.com/foomo/ContentServer/server/log"
 	"github.com/foomo/ContentServer/server/repo/content"
 	"github.com/foomo/ContentServer/server/requests"
+	"github.com/foomo/ContentServer/server/responses"
 	"github.com/foomo/ContentServer/server/utils"
 	"strings"
+	"time"
 )
 
 type Repo struct {
@@ -103,7 +105,6 @@ func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes [
 		} else {
 			fmt.Println("no see for", childNode.GetName(language), childNode.Hidden)
 		}
-
 	}
 	return node
 }
@@ -154,26 +155,46 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 	return c
 }
 
-func (repo *Repo) builDirectory(dirNode *content.RepoNode) {
+func builDirectory(dirNode *content.RepoNode, directory map[string]*content.RepoNode, uRIDirectory map[string]*content.RepoNode) {
 	log.Debug("repo.buildDirectory: " + dirNode.Id)
-	repo.Directory[dirNode.Id] = dirNode
+	directory[dirNode.Id] = dirNode
 	//todo handle duplicate uris
 	for _, languageURIs := range dirNode.URIs {
 		for _, URI := range languageURIs {
 			log.Debug("  URI: " + URI + " => Id: " + dirNode.Id)
-			repo.URIDirectory[URI] = dirNode
+			uRIDirectory[URI] = dirNode
 		}
 	}
 	for _, childNode := range dirNode.Nodes {
-		repo.builDirectory(childNode)
+		builDirectory(childNode, directory, uRIDirectory)
 	}
 }
 
-func (repo *Repo) Update() {
-	repo.Node = content.NewRepoNode()
-	utils.Get(repo.server, repo.Node)
-	repo.Node.WireParents()
-	repo.Directory = make(map[string]*content.RepoNode)
-	repo.URIDirectory = make(map[string]*content.RepoNode)
-	repo.builDirectory(repo.Node)
+func (repo *Repo) Update() *responses.Update {
+	updateResponse := responses.NewUpdate()
+
+	newNode := content.NewRepoNode()
+
+	startTimeRepo := time.Now()
+	utils.Get(repo.server, newNode)
+	updateResponse.Stats.RepoRuntime = time.Now().Sub(startTimeRepo).Seconds()
+
+	startTimeOwn := time.Now()
+	newNode.WireParents()
+
+	newDirectory := make(map[string]*content.RepoNode)
+	newURIDirectory := make(map[string]*content.RepoNode)
+
+	builDirectory(newNode, newDirectory, newURIDirectory)
+
+	repo.Node = newNode
+	repo.Directory = newDirectory
+	repo.URIDirectory = newURIDirectory
+
+	updateResponse.Stats.OwnRuntime = time.Now().Sub(startTimeOwn).Seconds()
+
+	updateResponse.Stats.NumberOfNodes = len(repo.Directory)
+	updateResponse.Stats.NumberOfURIs = len(repo.URIDirectory)
+
+	return updateResponse
 }
