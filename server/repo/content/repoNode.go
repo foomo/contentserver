@@ -12,7 +12,7 @@ type RepoNode struct {
 	Regions        []string                     `json:"regions"`
 	URIs           map[string]map[string]string `json:"URIs"`
 	DestinationIds map[string]map[string]string `json:"destinationIds"`
-	Names          map[string]string            `json:"names"`
+	Names          map[string]map[string]string `json:"names"`
 	Hidden         bool                         `json:"hidden"` // hidden in tree
 	Groups         []string                     `json:"groups"`
 	Data           map[string]interface{}       `json:"data"`
@@ -86,7 +86,7 @@ func (node *RepoNode) GetPath(region string, language string) []*Item {
 func (node *RepoNode) ToItem(region string, language string) *Item {
 	item := NewItem()
 	item.Id = node.Id
-	item.Name = node.GetName(language)
+	item.Name = node.GetName(region, language)
 	//todo handle destinationIds ....
 	item.URI = node.URIs[region][language]
 	return item
@@ -101,8 +101,8 @@ func (node *RepoNode) AddNode(name string, childNode *RepoNode) *RepoNode {
 	return node
 }
 
-func (node *RepoNode) GetName(language string) string {
-	return node.Names[language]
+func (node *RepoNode) GetName(region string, language string) string {
+	return node.Names[region][language]
 }
 
 func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
@@ -112,6 +112,22 @@ func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 		for _, mimeType := range mimeTypes {
 			if mimeType == node.MimeType {
 				return true
+			}
+		}
+		return false
+	}
+}
+
+func (node *RepoNode) CanBeAccessedByGroups(groups []string) bool {
+	if len(groups) == 0 {
+		return true
+	} else {
+		// @todo is there sth like in_array ... or some array intersection
+		for _, group := range groups {
+			for _, myGroup := range node.Groups {
+				if group == myGroup {
+					return true
+				}
 			}
 		}
 		return false
