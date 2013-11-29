@@ -49,6 +49,9 @@ func Get(URL string, obj interface{}) {
 		fmt.Printf("%s", err)
 	} else {
 		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			fmt.Errorf("Bad HTTP Response: %v", response.Status)
+		}
 		contents, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			fmt.Printf("%s", err)
