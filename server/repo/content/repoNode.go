@@ -7,6 +7,7 @@ import (
 
 type RepoNode struct {
 	Id             string                       `json:"id"`
+	Updated        int    	                    `json:"updated"`	// last modification timestamp
 	MimeType       string                       `json:"mimeType"`
 	Handler        string                       `json:"handler"`
 	Regions        []string                     `json:"regions"`
