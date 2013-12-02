@@ -1,7 +1,9 @@
 package responses
 
 type Update struct {
-	Stats struct {
+	Success      bool   `json:"success"`
+	ErrorMessage string `json:"errorMessage"`
+	Stats        struct {
 		NumberOfNodes int     `json:"numberOfNodes"`
 		NumberOfURIs  int     `json:"numberOfURIs"`
 		RepoRuntime   float64 `json:"repoRuntime"`

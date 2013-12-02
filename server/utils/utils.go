@@ -2,6 +2,7 @@ package utils
 
 import (
 	//"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/foomo/ContentServer/server/jjson"
 	"io/ioutil"
@@ -42,25 +43,28 @@ func PopulateRequest(r *http.Request, obj interface{}) {
 	jjson.Unmarshal(extractJsonFromRequest(r), obj)
 }
 
-func Get(URL string, obj interface{}) {
+func Get(URL string, obj interface{}) (ok bool, err error) {
 	// add proper error handling
 	response, err := http.Get(URL)
+	defer response.Body.Close()
 	if err != nil {
-		fmt.Printf("%s", err)
+		return false, err
 	} else {
-		defer response.Body.Close()
 		if response.StatusCode != http.StatusOK {
-			fmt.Errorf("Bad HTTP Response: %v", response.Status)
-		}
-		contents, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			fmt.Printf("%s", err)
-		}
-		// fmt.Printf("json string %s", string(contents))
-		jsonErr := jjson.Unmarshal(contents, &obj)
-		if jsonErr != nil {
-			fmt.Println("wtf", jsonErr)
+			return false, errors.New(fmt.Sprintf("Bad HTTP Response: %v", response.Status))
+		} else {
+			contents, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				return false, err
+			} else {
+				// fmt.Printf("json string %s", string(contents))
+				jsonErr := jjson.Unmarshal(contents, &obj)
+				if jsonErr != nil {
+					return false, jsonErr
+				} else {
+					return true, nil
+				}
+			}
 		}
 	}
-
 }

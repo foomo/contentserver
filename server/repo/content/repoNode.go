@@ -3,24 +3,26 @@ package content
 import (
 	"fmt"
 	"strings"
+
+//	"github.com/foomo/ContentServer/server/repo"
 )
 
 type RepoNode struct {
-	Id             string                       `json:"id"`
-	MimeType       string                       `json:"mimeType"`
-	Handler        string                       `json:"handler"`
-	Regions        []string                     `json:"regions"`
-	URIs           map[string]map[string]string `json:"URIs"`
-	DestinationIds map[string]map[string]string `json:"destinationIds"`
-	Names          map[string]map[string]string `json:"names"`
-	Hidden         bool                         `json:"hidden"` // hidden in tree
-	Groups         []string                     `json:"groups"`
-	Data           map[string]interface{}       `json:"data"`
-	Content        map[string]interface{}       `json:"content"`
-	Nodes          map[string]*RepoNode         `json:"nodes"`
-	Index          []string                     `json:"index"`
-	LinkIds        map[string]map[string]string `json:"linkIds"` // ids to link to
-	parent         *RepoNode
+	Id            string                       `json:"id"`
+	MimeType      string                       `json:"mimeType"`
+	Handler       string                       `json:"handler"`
+	Regions       []string                     `json:"regions"`
+	URIs          map[string]map[string]string `json:"URIs"`
+	DestinationId string                       `json:"destinationId"`
+	Names         map[string]map[string]string `json:"names"`
+	Hidden        map[string]map[string]bool   `json:"hidden"` // hidden in tree
+	Groups        []string                     `json:"groups"`
+	Data          map[string]interface{}       `json:"data"`
+	Content       map[string]interface{}       `json:"content"`
+	Nodes         map[string]*RepoNode         `json:"nodes"`
+	Index         []string                     `json:"index"`
+	LinkId        map[string]map[string]string `json:"linkIds"` // ids to link to
+	parent        *RepoNode
 	// published from - to
 }
 
@@ -87,8 +89,7 @@ func (node *RepoNode) ToItem(region string, language string) *Item {
 	item := NewItem()
 	item.Id = node.Id
 	item.Name = node.GetName(region, language)
-	//todo handle destinationIds ....
-	item.URI = node.URIs[region][language]
+	item.URI = node.URIs[region][language] //uri //repo.GetURI(region, language, node.Id)
 	return item
 }
 
@@ -99,6 +100,17 @@ func (node *RepoNode) GetParent() *RepoNode {
 func (node *RepoNode) AddNode(name string, childNode *RepoNode) *RepoNode {
 	node.Nodes[name] = childNode
 	return node
+}
+
+func (node *RepoNode) IsHidden(region string, language string) bool {
+	if regionMap, ok := node.Hidden[region]; ok {
+		if languageHidden, ok := regionMap[language]; ok {
+			return languageHidden
+		} else {
+			return false
+		}
+	}
+	return false
 }
 
 func (node *RepoNode) GetName(region string, language string) string {

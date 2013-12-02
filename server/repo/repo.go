@@ -37,15 +37,9 @@ func (repo *Repo) ResolveContent(URI string) (resolved bool, resolvedURI string,
 			resolved = true
 			_, region, language := repoNode.GetLanguageAndRegionForURI(testURI)
 			log.Debug("    => " + testURI)
-			log.Debug("      destionations " + fmt.Sprint(repoNode.DestinationIds))
-			log.Debug("        .region " + region + "  " + fmt.Sprint(repoNode.DestinationIds[region]))
-			if languageDestinations, regionOk := repoNode.DestinationIds[region]; regionOk {
-				log.Debug("    there is a destionation map for this one " + fmt.Sprint(languageDestinations))
-				if languageDestination, destinationOk := languageDestinations[language]; destinationOk {
-					// what if it is not there ....
-					repoNode = repo.Directory[languageDestination]
-				}
-			}
+			log.Debug("      destination " + fmt.Sprint(repoNode.DestinationId))
+			// check this one
+			// repoNode = repo.Directory[repoNode.DestinationId]
 			return true, testURI, region, language, repoNode
 		} else {
 			log.Debug("    => !" + testURI)
@@ -79,9 +73,8 @@ func (repo *Repo) GetURIs(region string, language string, ids []string) map[stri
 	return uris
 }
 
-func (repo *Repo) GetURI(region string, language string, id string) string {
-	repoNode, ok := repo.Directory[id]
-	if ok {
+func (repo *Repo) GetURIForNode(region string, language string, repoNode *content.RepoNode) string {
+	if repoNode.DestinationId == "" {
 		languageURIs, regionExists := repoNode.URIs[region]
 		if regionExists {
 			languageURI, languageURIExists := languageURIs[language]
@@ -89,6 +82,16 @@ func (repo *Repo) GetURI(region string, language string, id string) string {
 				return languageURI
 			}
 		}
+		return ""
+	} else {
+		return repo.GetURI(region, language, repoNode.DestinationId)
+	}
+}
+
+func (repo *Repo) GetURI(region string, language string, id string) string {
+	repoNode, ok := repo.Directory[id]
+	if ok {
+		return repo.GetURIForNode(region, language, repoNode)
 	}
 	return ""
 }
@@ -99,11 +102,11 @@ func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes [
 	log.Debug("repo.GetNode: " + repoNode.Id)
 	for _, childId := range repoNode.Index {
 		childNode := repoNode.Nodes[childId]
-		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && !childNode.Hidden && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
+		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && !childNode.IsHidden(region, language) && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
 			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, level+1, groups, region, language)
 			node.Index = append(node.Index, childId)
 		}
-		// fmt.Println("no see for", childNode.GetName(region, language), childNode.Hidden)
+		// fmt.Println("no see for", childNode.GetName(region, language), childNode.IsHidden(region, language))
 
 	}
 	return node
@@ -170,31 +173,48 @@ func builDirectory(dirNode *content.RepoNode, directory map[string]*content.Repo
 	}
 }
 
+func wireAliases(directory map[string]*content.RepoNode) {
+	for _, repoNode := range directory {
+		if repoNode.DestinationId != "" {
+			if destinationNode, ok := directory[repoNode.DestinationId]; ok {
+				repoNode.URIs = destinationNode.URIs
+			}
+		}
+	}
+}
+
 func (repo *Repo) Update() *responses.Update {
 	updateResponse := responses.NewUpdate()
 
 	newNode := content.NewRepoNode()
 
 	startTimeRepo := time.Now()
-	utils.Get(repo.server, newNode)
+	ok, err := utils.Get(repo.server, newNode)
 	updateResponse.Stats.RepoRuntime = time.Now().Sub(startTimeRepo).Seconds()
-
 	startTimeOwn := time.Now()
-	newNode.WireParents()
+	updateResponse.Success = ok
+	if ok {
 
-	newDirectory := make(map[string]*content.RepoNode)
-	newURIDirectory := make(map[string]*content.RepoNode)
+		newNode.WireParents()
 
-	builDirectory(newNode, newDirectory, newURIDirectory)
+		newDirectory := make(map[string]*content.RepoNode)
+		newURIDirectory := make(map[string]*content.RepoNode)
 
-	repo.Node = newNode
-	repo.Directory = newDirectory
-	repo.URIDirectory = newURIDirectory
+		builDirectory(newNode, newDirectory, newURIDirectory)
+		wireAliases(newDirectory)
 
+		repo.Node = newNode
+		repo.Directory = newDirectory
+		repo.URIDirectory = newURIDirectory
+
+		updateResponse.Stats.NumberOfNodes = len(repo.Directory)
+		updateResponse.Stats.NumberOfURIs = len(repo.URIDirectory)
+	} else {
+		log.Error(fmt.Sprintf("update error: %", err))
+		updateResponse.ErrorMessage = fmt.Sprintf("%", err)
+		updateResponse.Stats.NumberOfNodes = -1
+		updateResponse.Stats.NumberOfURIs = -1
+	}
 	updateResponse.Stats.OwnRuntime = time.Now().Sub(startTimeOwn).Seconds()
-
-	updateResponse.Stats.NumberOfNodes = len(repo.Directory)
-	updateResponse.Stats.NumberOfURIs = len(repo.URIDirectory)
-
 	return updateResponse
 }
