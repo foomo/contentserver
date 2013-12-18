@@ -1,10 +1,9 @@
 package utils
 
 import (
-	//"encoding/json"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/foomo/ContentServer/server/jjson"
 	"io/ioutil"
 	"net/http"
 )
@@ -15,7 +14,7 @@ func JsonResponse(w http.ResponseWriter, obj interface{}) {
 
 func toJson(obj interface{}) string {
 	//b, err := json.MarshalIndent(obj, "", "\t")
-	b, err := jjson.Marshal(obj)
+	b, err := json.Marshal(obj)
 	if err != nil {
 		return ""
 	} else {
@@ -40,7 +39,7 @@ func extractJsonFromRequest(r *http.Request) []byte {
 }
 
 func PopulateRequest(r *http.Request, obj interface{}) {
-	jjson.Unmarshal(extractJsonFromRequest(r), obj)
+	json.Unmarshal(extractJsonFromRequest(r), obj)
 }
 
 func Get(URL string, obj interface{}) (ok bool, err error) {
@@ -58,7 +57,7 @@ func Get(URL string, obj interface{}) (ok bool, err error) {
 				return false, err
 			} else {
 				// fmt.Printf("json string %s", string(contents))
-				jsonErr := jjson.Unmarshal(contents, &obj)
+				jsonErr := json.Unmarshal(contents, &obj)
 				if jsonErr != nil {
 					return false, jsonErr
 				} else {

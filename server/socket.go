@@ -1,9 +1,9 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	json "github.com/foomo/ContentServer/server/jjson"
 	"github.com/foomo/ContentServer/server/log"
 	"github.com/foomo/ContentServer/server/repo"
 	"github.com/foomo/ContentServer/server/requests"
@@ -47,7 +47,7 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		itemMapRequest := requests.NewItemMap()
 		jsonErr = json.Unmarshal(jsonBuffer, &itemMapRequest)
 		log.Debug("  itemMapRequest: " + fmt.Sprint(itemMapRequest))
-		itemMap := contentRepo.GetItemMap(itemMapRequest.Id)
+		itemMap := contentRepo.GetItemMap(itemMapRequest.Id, itemMapRequest.DataFields)
 		reply = itemMap
 		break
 	case "getNodes":
@@ -64,6 +64,13 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		updateResponse := contentRepo.Update()
 		reply = updateResponse
 		break
+	case "getRepo":
+		repoRequest := requests.NewRepo()
+		jsonErr = json.Unmarshal(jsonBuffer, &repoRequest)
+		log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
+		repoResponse := contentRepo.GetRepo()
+		reply = repoResponse
+		break
 	default:
 		err = errors.New(log.Error("  can not handle this one " + handler))
 		errorResponse := responses.NewError(1, "unkown handler")
@@ -71,15 +78,15 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 	}
 	if jsonErr != nil {
 		log.Error("  could not read incoming json: " + fmt.Sprint(jsonErr))
+		errorResponse := responses.NewError(2, "could not read incoming json "+jsonErr.Error())
+		reply = errorResponse
+	}
+	encodedBytes, jsonErr := json.MarshalIndent(map[string]interface{}{"reply": reply}, "", " ")
+	if jsonErr != nil {
 		err = jsonErr
+		log.Error("  could not encode reply " + fmt.Sprint(jsonErr))
 	} else {
-		encodedBytes, jsonErr := json.MarshalIndent(map[string]interface{}{"reply": reply}, "", " ")
-		if jsonErr != nil {
-			err = jsonErr
-			log.Error("  could not encode reply " + fmt.Sprint(jsonErr))
-		} else {
-			replyBytes = encodedBytes
-		}
+		replyBytes = encodedBytes
 	}
 	return replyBytes, err
 }

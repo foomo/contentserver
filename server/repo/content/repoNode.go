@@ -3,27 +3,24 @@ package content
 import (
 	"fmt"
 	"strings"
-
-//	"github.com/foomo/ContentServer/server/repo"
 )
 
 type RepoNode struct {
-	Id            string                       `json:"id"`
-	MimeType      string                       `json:"mimeType"`
-	Handler       string                       `json:"handler"`
-	Regions       []string                     `json:"regions"`
-	URIs          map[string]map[string]string `json:"URIs"`
-	DestinationId string                       `json:"destinationId"`
-	Names         map[string]map[string]string `json:"names"`
-	Hidden        map[string]map[string]bool   `json:"hidden"` // hidden in tree
-	Groups        []string                     `json:"groups"`
-	Data          map[string]interface{}       `json:"data"`
-	Content       map[string]interface{}       `json:"content"`
-	Nodes         map[string]*RepoNode         `json:"nodes"`
-	Index         []string                     `json:"index"`
-	LinkId        map[string]map[string]string `json:"linkIds"` // ids to link to
-	parent        *RepoNode
-	// published from - to
+	Id             string                       `json:"id"`       // unique identifier - it is your responsibility, that they are unique
+	MimeType       string                       `json:"mimeType"` // well a mime type http://www.ietf.org/rfc/rfc2046.txt
+	LinkId         string                       `json:"linkId"`   //(symbolic) link/alias to another node
+	Handler        string                       `json:"handler"`  // that information is for you
+	Regions        []string                     `json:"regions"`  // in what regions is this node available, if empty it will be accessible everywhere
+	Groups         []string                     `json:"groups"`   // which groups have access to the node, if empty everybody has access to it
+	URIs           map[string]map[string]string `json:"URIs"`
+	Names          map[string]map[string]string `json:"names"`
+	Hidden         map[string]map[string]bool   `json:"hidden"`         // hidden in content.nodes, but can still be resolved when being directly addressed
+	DestinationIds map[string]map[string]string `json:"destinationIds"` // if a node does not have any content like a folder the destinationIds can point to nodes that do aka. the first displayable child node
+	Data           map[string]interface{}       `json:"data"`           // what ever you want to stuff into it - the payload you want to attach to a node
+	Nodes          map[string]*RepoNode         `json:"nodes"`          // child nodes
+	Index          []string                     `json:"index"`          // defines the order of the child nodes
+	parent         *RepoNode                    // parent node - helps to resolve a path / bread crumb
+	// published from - to is going to be an array of fromTos
 }
 
 func (node *RepoNode) GetLanguageAndRegionForURI(URI string) (resolved bool, region string, language string) {
@@ -78,18 +75,23 @@ func (node *RepoNode) GetPath(region string, language string) []*Item {
 	i := 0
 	path := make([]*Item, pathLength)
 	for parentNode != nil {
-		path[i] = parentNode.ToItem(region, language)
+		path[i] = parentNode.ToItem(region, language, []string{})
 		parentNode = parentNode.parent
 		i++
 	}
 	return path
 }
 
-func (node *RepoNode) ToItem(region string, language string) *Item {
+func (node *RepoNode) ToItem(region string, language string, dataFields []string) *Item {
 	item := NewItem()
 	item.Id = node.Id
 	item.Name = node.GetName(region, language)
 	item.URI = node.URIs[region][language] //uri //repo.GetURI(region, language, node.Id)
+	for _, dataField := range dataFields {
+		if data, ok := node.Data[dataField]; ok {
+			item.Data[dataField] = data
+		}
+	}
 	return item
 }
 

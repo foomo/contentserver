@@ -10,7 +10,8 @@ type Env struct {
 }
 
 type Node struct {
-	Id        string   `json:"id"`
-	MimeTypes []string `json:"mimeTypes"`
-	Expand    bool     `json:"expand"`
+	Id         string   `json:"id"`
+	MimeTypes  []string `json:"mimeTypes"`
+	Expand     bool     `json:"expand"`
+	DataFields []string `json:"dataFields"`
 }

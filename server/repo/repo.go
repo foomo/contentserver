@@ -37,9 +37,21 @@ func (repo *Repo) ResolveContent(URI string) (resolved bool, resolvedURI string,
 			resolved = true
 			_, region, language := repoNode.GetLanguageAndRegionForURI(testURI)
 			log.Debug("    => " + testURI)
-			log.Debug("      destination " + fmt.Sprint(repoNode.DestinationId))
+			log.Debug("      destination " + fmt.Sprint(repoNode.DestinationIds))
 			// check this one
-			// repoNode = repo.Directory[repoNode.DestinationId]
+			// repoNode = repo.Directory[repoNode.DestinationIds]
+
+			if languageDestinations, regionOk := repoNode.DestinationIds[region]; regionOk {
+				// this check should happen, when updating the repo
+				log.Debug("    there is a destionation map for this one " + fmt.Sprint(languageDestinations))
+				if languageDestination, destinationOk := languageDestinations[language]; destinationOk {
+					if destinationNode, destinationNodeOk := repo.Directory[languageDestination]; destinationNodeOk {
+						repoNode = destinationNode
+					} else {
+						log.Debug("    could not resolve this destinationId : " + languageDestination)
+					}
+				}
+			}
 			return true, testURI, region, language, repoNode
 		} else {
 			log.Debug("    => !" + testURI)
@@ -49,14 +61,14 @@ func (repo *Repo) ResolveContent(URI string) (resolved bool, resolvedURI string,
 	return
 }
 
-func (repo *Repo) GetItemMap(id string) map[string]map[string]*content.Item {
+func (repo *Repo) GetItemMap(id string, dataFields []string) map[string]map[string]*content.Item {
 	itemMap := make(map[string]map[string]*content.Item)
 	if repoNode, ok := repo.Directory[id]; ok {
 		for region, languageURIs := range repoNode.URIs {
 			itemMap[region] = make(map[string]*content.Item)
 			for language, URI := range languageURIs {
 				log.Debug(fmt.Sprintf("region :%s language :%s URI: %s", region, language, URI))
-				itemMap[region][language] = repoNode.ToItem(region, language)
+				itemMap[region][language] = repoNode.ToItem(region, language, dataFields)
 			}
 		}
 	} else {
@@ -74,7 +86,8 @@ func (repo *Repo) GetURIs(region string, language string, ids []string) map[stri
 }
 
 func (repo *Repo) GetURIForNode(region string, language string, repoNode *content.RepoNode) string {
-	if repoNode.DestinationId == "" {
+
+	if repoNode.LinkId == "" {
 		languageURIs, regionExists := repoNode.URIs[region]
 		if regionExists {
 			languageURI, languageURIExists := languageURIs[language]
@@ -84,7 +97,7 @@ func (repo *Repo) GetURIForNode(region string, language string, repoNode *conten
 		}
 		return ""
 	} else {
-		return repo.GetURI(region, language, repoNode.DestinationId)
+		return repo.GetURI(region, language, repoNode.LinkId)
 	}
 }
 
@@ -96,18 +109,16 @@ func (repo *Repo) GetURI(region string, language string, id string) string {
 	return ""
 }
 
-func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, level int, groups []string, region string, language string) *content.Node {
+func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, level int, groups []string, region string, language string, dataFields []string) *content.Node {
 	node := content.NewNode()
-	node.Item = repoNode.ToItem(region, language)
+	node.Item = repoNode.ToItem(region, language, dataFields)
 	log.Debug("repo.GetNode: " + repoNode.Id)
 	for _, childId := range repoNode.Index {
 		childNode := repoNode.Nodes[childId]
 		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && !childNode.IsHidden(region, language) && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
-			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, level+1, groups, region, language)
+			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, level+1, groups, region, language, dataFields)
 			node.Index = append(node.Index, childId)
 		}
-		// fmt.Println("no see for", childNode.GetName(region, language), childNode.IsHidden(region, language))
-
 	}
 	return node
 }
@@ -118,7 +129,7 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 	for nodeName, nodeRequest := range r.Nodes {
 		log.Debug("  adding node " + nodeName + " " + nodeRequest.Id)
 		if treeNode, ok := repo.Directory[nodeRequest.Id]; ok {
-			nodes[nodeName] = repo.GetNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, r.Env.Groups, r.Env.Defaults.Region, r.Env.Defaults.Language)
+			nodes[nodeName] = repo.GetNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, r.Env.Groups, r.Env.Defaults.Region, r.Env.Defaults.Language, nodeRequest.DataFields)
 		} else {
 			log.Warning("you are requesting an invalid tree node for " + nodeName + " : " + nodeRequest.Id)
 		}
@@ -138,7 +149,7 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 		c.Status = content.STATUS_OK
 		c.Handler = node.Handler
 		c.URI = resolvedURI
-		c.Item = node.ToItem(region, language)
+		c.Item = node.ToItem(region, language, []string{})
 		c.Path = node.GetPath(region, language)
 		c.Data = node.Data
 	} else {
@@ -150,12 +161,16 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 	for treeName, treeRequest := range r.Nodes {
 		log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
 		if treeNode, ok := repo.Directory[treeRequest.Id]; ok {
-			c.Nodes[treeName] = repo.GetNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, 0, r.Env.Groups, region, language)
+			c.Nodes[treeName] = repo.GetNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, 0, r.Env.Groups, region, language, treeRequest.DataFields)
 		} else {
 			log.Warning("you are requesting an invalid tree node for " + treeName + " : " + treeRequest.Id)
 		}
 	}
 	return c
+}
+
+func (repo *Repo) GetRepo() *content.RepoNode {
+	return repo.Node
 }
 
 func builDirectory(dirNode *content.RepoNode, directory map[string]*content.RepoNode, uRIDirectory map[string]*content.RepoNode) {
@@ -175,8 +190,8 @@ func builDirectory(dirNode *content.RepoNode, directory map[string]*content.Repo
 
 func wireAliases(directory map[string]*content.RepoNode) {
 	for _, repoNode := range directory {
-		if repoNode.DestinationId != "" {
-			if destinationNode, ok := directory[repoNode.DestinationId]; ok {
+		if repoNode.LinkId != "" {
+			if destinationNode, ok := directory[repoNode.LinkId]; ok {
 				repoNode.URIs = destinationNode.URIs
 			}
 		}
@@ -202,6 +217,9 @@ func (repo *Repo) Update() *responses.Update {
 
 		builDirectory(newNode, newDirectory, newURIDirectory)
 		wireAliases(newDirectory)
+
+		// some more validation anyone?
+		//  invalid destination ids
 
 		repo.Node = newNode
 		repo.Directory = newDirectory
