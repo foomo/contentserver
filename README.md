@@ -1,6 +1,8 @@
 Content2Go Server
 ===========
 
+Serves content tree structures very quickly through a json socket api
+
 ## Concept
 
 A Server written in GoLang to mix and resolve content from different content sources, e.g. CMS, Blog, Shop and many other more. The server provides a simple to use API for non blocking content repository updates, to resolve site content by an URI or to get deep-linking multilingual URIs for a given contentID.
@@ -40,3 +42,5 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 ## Request Data
 
 There is a PHP Proxy for our awesome open-source PHP Web-Framework called Foomo. Feel free to use it or to implement your own proxy in the language you love. The API should be easily to implement in every other framework and language, too.
+=======
+
