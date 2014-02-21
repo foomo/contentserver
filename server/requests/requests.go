@@ -6,6 +6,7 @@ type Env struct {
 		Language string `json:"language"`
 	} `json:"defaults"`
 	Groups []string    `json:"groups"`
+	State string
 	Data   interface{} `json:"data"`
 }
 

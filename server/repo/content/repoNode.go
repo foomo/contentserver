@@ -8,10 +8,11 @@ import (
 type RepoNode struct {
 	Id             string                       `json:"id"`       // unique identifier - it is your responsibility, that they are unique
 	MimeType       string                       `json:"mimeType"` // well a mime type http://www.ietf.org/rfc/rfc2046.txt
-	LinkId         string                       `json:"linkId"`   //(symbolic) link/alias to another node
+	LinkId         string                       `json:"linkId"`   // (symbolic) link/alias to another node
 	Handler        string                       `json:"handler"`  // that information is for you
 	Regions        []string                     `json:"regions"`  // in what regions is this node available, if empty it will be accessible everywhere
 	Groups         []string                     `json:"groups"`   // which groups have access to the node, if empty everybody has access to it
+	States         []string                     `json:"states"`   // in which states is this node valid, if empty => in all of them
 	URIs           map[string]map[string]string `json:"URIs"`
 	Names          map[string]map[string]string `json:"names"`
 	Hidden         map[string]map[string]bool   `json:"hidden"`         // hidden in content.nodes, but can still be resolved when being directly addressed
@@ -54,6 +55,20 @@ func (node *RepoNode) InPath(path []*Item) bool {
 	}
 	return false
 }
+
+func (node *RepoNode) InState(state string) bool {
+	if(len(node.States) == 0) {
+		return true
+	} else {
+		for _, nodeState := range node.States {
+			if(state == nodeState) {
+				return true
+			}
+		}
+		return false;
+	}
+}
+
 
 func (node *RepoNode) InRegion(region string) bool {
 	for _, nodeRegion := range node.Regions {

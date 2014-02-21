@@ -27,16 +27,17 @@ func NewRepo(server string) *Repo {
 	return repo
 }
 
-func (repo *Repo) ResolveContent(URI string) (resolved bool, resolvedURI string, region string, language string, repoNode *content.RepoNode) {
+func (repo *Repo) ResolveContent(state string, URI string) (resolved bool, resolvedURI string, region string, language string, repoNode *content.RepoNode) {
 	parts := strings.Split(URI, content.PATH_SEPARATOR)
 	log.Debug("repo.ResolveContent: " + URI)
 	for i := len(parts); i > -1; i-- {
-		testURI := strings.Join(parts[0:i], content.PATH_SEPARATOR)
-		log.Debug("  testing" + testURI)
-		if repoNode, ok := repo.URIDirectory[testURI]; ok {
+		testURI := strings.Join(parts[0:i], content.PATH_SEPARATOR)		
+		testURIKey := uriKeyForState(state, testURI)
+		log.Debug("  testing" + testURIKey)
+		if repoNode, ok := repo.URIDirectory[testURIKey]; ok {
 			resolved = true
 			_, region, language := repoNode.GetLanguageAndRegionForURI(testURI)
-			log.Debug("    => " + testURI)
+			log.Debug("    => " + testURIKey)
 			log.Debug("      destination " + fmt.Sprint(repoNode.DestinationIds))
 			// check this one
 			// repoNode = repo.Directory[repoNode.DestinationIds]
@@ -109,14 +110,14 @@ func (repo *Repo) GetURI(region string, language string, id string) string {
 	return ""
 }
 
-func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, level int, groups []string, region string, language string, dataFields []string) *content.Node {
+func (repo *Repo) GetNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, level int, state string, groups []string, region string, language string, dataFields []string) *content.Node {
 	node := content.NewNode()
 	node.Item = repoNode.ToItem(region, language, dataFields)
 	log.Debug("repo.GetNode: " + repoNode.Id)
 	for _, childId := range repoNode.Index {
 		childNode := repoNode.Nodes[childId]
-		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && !childNode.IsHidden(region, language) && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
-			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, level+1, groups, region, language, dataFields)
+		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && childNode.InState(state) && !childNode.IsHidden(region, language) && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) && childNode.InRegion(region) {
+			node.Nodes[childId] = repo.GetNode(childNode, expanded, mimeTypes, path, level+1, state, groups, region, language, dataFields)
 			node.Index = append(node.Index, childId)
 		}
 	}
@@ -129,7 +130,7 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 	for nodeName, nodeRequest := range r.Nodes {
 		log.Debug("  adding node " + nodeName + " " + nodeRequest.Id)
 		if treeNode, ok := repo.Directory[nodeRequest.Id]; ok {
-			nodes[nodeName] = repo.GetNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, r.Env.Groups, r.Env.Defaults.Region, r.Env.Defaults.Language, nodeRequest.DataFields)
+			nodes[nodeName] = repo.GetNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, r.Env.State, r.Env.Groups, r.Env.Defaults.Region, r.Env.Defaults.Language, nodeRequest.DataFields)
 		} else {
 			log.Warning("you are requesting an invalid tree node for " + nodeName + " : " + nodeRequest.Id)
 		}
@@ -140,7 +141,7 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 	log.Debug("repo.GetContent: " + r.URI)
 	c := content.NewSiteContent()
-	resolved, resolvedURI, region, language, node := repo.ResolveContent(r.URI)
+	resolved, resolvedURI, region, language, node := repo.ResolveContent(r.Env.State, r.URI)
 	if resolved {
 		log.Notice("200 for " + r.URI)
 		// forbidden ?!
@@ -161,7 +162,7 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 	for treeName, treeRequest := range r.Nodes {
 		log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
 		if treeNode, ok := repo.Directory[treeRequest.Id]; ok {
-			c.Nodes[treeName] = repo.GetNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, 0, r.Env.Groups, region, language, treeRequest.DataFields)
+			c.Nodes[treeName] = repo.GetNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, 0, r.Env.State, r.Env.Groups, region, language, treeRequest.DataFields)
 		} else {
 			log.Warning("you are requesting an invalid tree node for " + treeName + " : " + treeRequest.Id)
 		}
@@ -173,14 +174,25 @@ func (repo *Repo) GetRepo() *content.RepoNode {
 	return repo.Node
 }
 
+func uriKeyForState(state string, uri string) string {
+	return state + "-" + uri;
+}
+
 func builDirectory(dirNode *content.RepoNode, directory map[string]*content.RepoNode, uRIDirectory map[string]*content.RepoNode) {
 	log.Debug("repo.buildDirectory: " + dirNode.Id)
 	directory[dirNode.Id] = dirNode
 	//todo handle duplicate uris
 	for _, languageURIs := range dirNode.URIs {
-		for _, URI := range languageURIs {
-			log.Debug("  URI: " + URI + " => Id: " + dirNode.Id)
-			uRIDirectory[URI] = dirNode
+		for _, uri := range languageURIs {
+			log.Debug("  uri: " + uri + " => Id: " + dirNode.Id)
+			if len(dirNode.States) == 0 {
+				uRIDirectory[uriKeyForState("", uri)] = dirNode
+			} else {
+				for _, state := range dirNode.States {
+					uRIDirectory[uriKeyForState(state, uri)] = dirNode
+				}
+			}
+
 		}
 	}
 	for _, childNode := range dirNode.Nodes {

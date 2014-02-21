@@ -24,6 +24,7 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 | DestinationId | string | alias or symlink handling |
 | Names | map[string]map[string]string | a name for this node in every region and language |
 | Hidden | map[string]map[string]bool | hide in menu specific for region and language |
+| States | []string | server states |
 | Groups | []string | access control |
 | Data | map[string]interface{} | payload data |
 | Content | map[string]interface{} | ??? |
