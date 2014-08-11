@@ -45,10 +45,10 @@ func PopulateRequest(r *http.Request, obj interface{}) {
 func Get(URL string, obj interface{}) (ok bool, err error) {
 	// add proper error handling
 	response, err := http.Get(URL)
-	defer response.Body.Close()
 	if err != nil {
 		return false, err
 	} else {
+		defer response.Body.Close()
 		if response.StatusCode != http.StatusOK {
 			return false, errors.New(fmt.Sprintf("Bad HTTP Response: %v", response.Status))
 		} else {
