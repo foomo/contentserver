@@ -1,13 +1,15 @@
 package requests
 
+type Defaults struct {
+	Region   string `json:"region"`
+	Language string `json:"language"`
+}
+
 type Env struct {
-	Defaults struct {
-		Region   string `json:"region"`
-		Language string `json:"language"`
-	} `json:"defaults"`
-	Groups []string    `json:"groups"`
-	State string
-	Data   interface{} `json:"data"`
+	Defaults *Defaults `json:"defaults"`
+	Groups   []string  `json:"groups"`
+	State    string
+	Data     interface{} `json:"data"`
 }
 
 type Node struct {
