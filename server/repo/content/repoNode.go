@@ -57,18 +57,17 @@ func (node *RepoNode) InPath(path []*Item) bool {
 }
 
 func (node *RepoNode) InState(state string) bool {
-	if(len(node.States) == 0) {
+	if len(node.States) == 0 {
 		return true
 	} else {
 		for _, nodeState := range node.States {
-			if(state == nodeState) {
+			if state == nodeState {
 				return true
 			}
 		}
-		return false;
+		return false
 	}
 }
-
 
 func (node *RepoNode) InRegion(region string) bool {
 	for _, nodeRegion := range node.Regions {
@@ -148,7 +147,7 @@ func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 }
 
 func (node *RepoNode) CanBeAccessedByGroups(groups []string) bool {
-	if len(groups) == 0 {
+	if len(groups) == 0 || len(node.Groups) == 0 {
 		return true
 	} else {
 		// @todo is there sth like in_array ... or some array intersection
