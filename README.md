@@ -1,4 +1,4 @@
-Content2Go Server
+Content Server
 ===========
 
 Serves content tree structures very quickly through a json socket api
@@ -42,5 +42,5 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 
 ## Request Data
 
-There is a PHP Proxy implementation for foomo in Foomo.ContentServer. Feel free to use it or to implement your own proxy in the language you love. The API should be easily to implement in every other framework and language, too.
+There is a PHP Proxy implementation for foomo in [Foomo.ContentServer](https://github.com/foomo/Foomo.ContentServer). Feel free to use it or to implement your own proxy in the language you love. The API should be easily to implement in every other framework and language, too.
 
