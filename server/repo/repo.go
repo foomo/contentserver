@@ -88,7 +88,7 @@ func (repo *Repo) GetURIs(region string, language string, ids []string) map[stri
 
 func (repo *Repo) GetURIForNode(region string, language string, repoNode *content.RepoNode) string {
 
-	if repoNode.LinkId == "" {
+	if len(repoNode.LinkIds) == 0 {
 		languageURIs, regionExists := repoNode.URIs[region]
 		if regionExists {
 			languageURI, languageURIExists := languageURIs[language]
@@ -98,7 +98,7 @@ func (repo *Repo) GetURIForNode(region string, language string, repoNode *conten
 		}
 		return ""
 	} else {
-		return repo.GetURI(region, language, repoNode.LinkId)
+		return repo.GetURI(region, language, repoNode.LinkIds[region][language])
 	}
 }
 
@@ -202,9 +202,13 @@ func builDirectory(dirNode *content.RepoNode, directory map[string]*content.Repo
 
 func wireAliases(directory map[string]*content.RepoNode) {
 	for _, repoNode := range directory {
-		if repoNode.LinkId != "" {
-			if destinationNode, ok := directory[repoNode.LinkId]; ok {
-				repoNode.URIs = destinationNode.URIs
+		if len(repoNode.LinkIds) > 0 {
+			for region, languages := range repoNode.LinkIds {
+				for language, linkId := range languages {
+					if destinationNode, ok := directory[linkId]; ok {
+						repoNode.URIs[region][language] = destinationNode.URIs[region][language]
+					}
+				}
 			}
 		}
 	}
