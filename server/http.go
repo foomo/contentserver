@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/foomo/ContentServer/server/log"
-	"github.com/foomo/ContentServer/server/repo"
-	"github.com/foomo/ContentServer/server/requests"
-	"github.com/foomo/ContentServer/server/utils"
+	"github.com/foomo/contentserver/server/log"
+	"github.com/foomo/contentserver/server/repo"
+	"github.com/foomo/contentserver/server/requests"
+	"github.com/foomo/contentserver/server/utils"
 	"net/http"
 	"strconv"
 	"strings"

@@ -2,11 +2,11 @@ package repo
 
 import (
 	"fmt"
-	"github.com/foomo/ContentServer/server/log"
-	"github.com/foomo/ContentServer/server/repo/content"
-	"github.com/foomo/ContentServer/server/requests"
-	"github.com/foomo/ContentServer/server/responses"
-	"github.com/foomo/ContentServer/server/utils"
+	"github.com/foomo/contentserver/server/log"
+	"github.com/foomo/contentserver/server/repo/content"
+	"github.com/foomo/contentserver/server/requests"
+	"github.com/foomo/contentserver/server/responses"
+	"github.com/foomo/contentserver/server/utils"
 	"strings"
 	"time"
 )

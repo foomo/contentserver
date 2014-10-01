@@ -1,6 +1,6 @@
-// ContentServer project doc.go
+// contentserver project doc.go
 
 /*
-ContentServer document
+contentserver document
 */
 package main
