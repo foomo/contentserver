@@ -214,6 +214,23 @@ func wireAliases(directory map[string]*content.RepoNode) {
 	}
 }
 
+func (repo *Repo) Load(newNode *content.RepoNode) {
+	newNode.WireParents()
+
+	newDirectory := make(map[string]*content.RepoNode)
+	newURIDirectory := make(map[string]*content.RepoNode)
+
+	builDirectory(newNode, newDirectory, newURIDirectory)
+	wireAliases(newDirectory)
+
+	// some more validation anyone?
+	//  invalid destination ids
+
+	repo.Node = newNode
+	repo.Directory = newDirectory
+	repo.URIDirectory = newURIDirectory
+}
+
 func (repo *Repo) Update() *responses.Update {
 	updateResponse := responses.NewUpdate()
 
@@ -225,22 +242,7 @@ func (repo *Repo) Update() *responses.Update {
 	startTimeOwn := time.Now()
 	updateResponse.Success = ok
 	if ok {
-
-		newNode.WireParents()
-
-		newDirectory := make(map[string]*content.RepoNode)
-		newURIDirectory := make(map[string]*content.RepoNode)
-
-		builDirectory(newNode, newDirectory, newURIDirectory)
-		wireAliases(newDirectory)
-
-		// some more validation anyone?
-		//  invalid destination ids
-
-		repo.Node = newNode
-		repo.Directory = newDirectory
-		repo.URIDirectory = newURIDirectory
-
+		repo.Load(newNode)
 		updateResponse.Stats.NumberOfNodes = len(repo.Directory)
 		updateResponse.Stats.NumberOfURIs = len(repo.URIDirectory)
 	} else {

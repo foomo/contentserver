@@ -147,7 +147,7 @@ func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 }
 
 func (node *RepoNode) CanBeAccessedByGroups(groups []string) bool {
-	if len(groups) == 0 {
+	if len(groups) == 0 || len(node.Groups) == 0 {
 		return true
 	} else {
 		// @todo is there sth like in_array ... or some array intersection
