@@ -59,7 +59,7 @@ func log(msg string, level int) string {
 }
 
 func SetLogLevel(level int) bool {
-	if level > LOG_LEVEL_ERROR && level <= LOG_LEVEL_DEBUG {
+	if level >= LOG_LEVEL_ERROR && level <= LOG_LEVEL_DEBUG {
 		logLevel = level
 		return true
 	} else {
