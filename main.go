@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/foomo/ContentServer/server"
-	"github.com/foomo/ContentServer/server/log"
+	"github.com/foomo/contentserver/server"
+	"github.com/foomo/contentserver/server/log"
 	"os"
 	"strings"
 )

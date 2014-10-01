@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/foomo/ContentServer/server/repo"
+	"github.com/foomo/contentserver/server/repo"
 )
 
 // our data
