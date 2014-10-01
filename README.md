@@ -18,7 +18,7 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 | ------------- |:-------------:| -----:|
 | Id | string | unique id to identify the node |
 | MimeType | string | mime-type of the node, e.g. text/html, image/png, ... |
-| LinkId | map[string]map[string]string | (symbolic) link/alias to another node |
+| LinkIds | map[string]map[string]string | (symbolic) link/alias to another node |
 | Handler | string | define a handler to easily control the output rendering |
 | Regions | []string | define regions for multi-market websites |
 | Groups | []string | access control |
@@ -26,7 +26,7 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 | URIs | map[string]map[string]string | a map of unique URIs for each region and language to resolve and link to the node |
 | Names | map[string]map[string]string | a name for this node in every region and language |
 | Hidden | map[string]map[string]bool | hide in menu specific for region and language |
-| DestinationId | string | alias or symlink handling |
+| DestinationIds | map[string]map[string]string | alias or symlink handling |
 | Data | map[string]interface{} | payload data |
 | Nodes | map[string]*RepoNode | child nodes |
 | Index | []string | ??? |
