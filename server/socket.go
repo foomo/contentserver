@@ -32,7 +32,7 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		getURIRequest := requests.NewURIs()
 		jsonErr = json.Unmarshal(jsonBuffer, &getURIRequest)
 		log.Debug("  getURIRequest: " + fmt.Sprint(getURIRequest))
-		uris := contentRepo.GetURIs(getURIRequest.Region, getURIRequest.Language, getURIRequest.Ids)
+		uris := contentRepo.GetURIs(getURIRequest.Dimension, getURIRequest.Ids)
 		log.Debug("    resolved: " + fmt.Sprint(uris))
 		reply = uris
 		break
@@ -43,13 +43,15 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		content := contentRepo.GetContent(contentRequest)
 		reply = content
 		break
-	case "getItemMap":
-		itemMapRequest := requests.NewItemMap()
-		jsonErr = json.Unmarshal(jsonBuffer, &itemMapRequest)
-		log.Debug("  itemMapRequest: " + fmt.Sprint(itemMapRequest))
-		itemMap := contentRepo.GetItemMap(itemMapRequest.Id, itemMapRequest.DataFields)
-		reply = itemMap
-		break
+		/*
+			case "getItemMap":
+				itemMapRequest := requests.NewItemMap()
+				jsonErr = json.Unmarshal(jsonBuffer, &itemMapRequest)
+				log.Debug("  itemMapRequest: " + fmt.Sprint(itemMapRequest))
+				itemMap := contentRepo.GetItemMap(itemMapRequest.Id, itemMapRequest.DataFields)
+				reply = itemMap
+				break
+		*/
 	case "getNodes":
 		nodesRequest := requests.NewNodes()
 		jsonErr = json.Unmarshal(jsonBuffer, &nodesRequest)
@@ -64,13 +66,15 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		updateResponse := contentRepo.Update()
 		reply = updateResponse
 		break
-	case "getRepo":
-		repoRequest := requests.NewRepo()
-		jsonErr = json.Unmarshal(jsonBuffer, &repoRequest)
-		log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
-		repoResponse := contentRepo.GetRepo()
-		reply = repoResponse
-		break
+		/*
+			case "getRepo":
+				repoRequest := requests.NewRepo()
+				jsonErr = json.Unmarshal(jsonBuffer, &repoRequest)
+				log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
+				repoResponse := contentRepo.GetRepo()
+				reply = repoResponse
+				break
+		*/
 	default:
 		err = errors.New(log.Error("  can not handle this one " + handler))
 		errorResponse := responses.NewError(1, "unkown handler")

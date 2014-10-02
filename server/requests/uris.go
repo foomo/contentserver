@@ -1,9 +1,8 @@
 package requests
 
 type URIs struct {
-	Ids      []string `json:"ids"`
-	Region   string   `json:"region"`
-	Language string   `json:"language"`
+	Ids       []string `json:"ids"`
+	Dimension string   `json:"dimension"`
 }
 
 func NewURIs() *URIs {

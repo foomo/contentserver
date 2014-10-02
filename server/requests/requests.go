@@ -1,19 +1,14 @@
 package requests
 
-type Defaults struct {
-	Region   string `json:"region"`
-	Language string `json:"language"`
-}
-
 type Env struct {
-	Defaults *Defaults `json:"defaults"`
-	Groups   []string  `json:"groups"`
-	State    string
-	Data     interface{} `json:"data"`
+	Dimensions []string    `json:"dimensions"`
+	Groups     []string    `json:"groups"`
+	Data       interface{} `json:"data"`
 }
 
 type Node struct {
 	Id         string   `json:"id"`
+	Dimension  string   `json:"id"`
 	MimeTypes  []string `json:"mimeTypes"`
 	Expand     bool     `json:"expand"`
 	DataFields []string `json:"dataFields"`
