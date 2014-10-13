@@ -11,7 +11,7 @@ type RepoNode struct {
 	LinkId        string                 `json:"linkIds"`  // (symbolic) link/alias to another node
 	Groups        []string               `json:"groups"`   // which groups have access to the node, if empty everybody has access to it
 	URI           string                 `json:"URI"`
-	Name          string                 `json:"names"`
+	Name          string                 `json:"name"`
 	Hidden        bool                   `json:"hidden"`        // hidden in content.nodes, but can still be resolved when being directly addressed
 	DestinationId string                 `json:"destinationId"` // if a node does not have any content like a folder the destinationIds can point to nodes that do aka. the first displayable child node
 	Data          map[string]interface{} `json:"data"`          // what ever you want to stuff into it - the payload you want to attach to a node

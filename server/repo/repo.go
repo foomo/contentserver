@@ -38,9 +38,11 @@ func NewRepo(server string) *Repo {
 	repo.updateChannel = make(chan *RepoDimension)
 	repo.updateDoneChannel = make(chan error)
 	go func() {
-		select {
-		case newDimension := <-repo.updateChannel:
-			repo.updateDoneChannel <- repo.load(newDimension.Dimension, newDimension.Node)
+		for {
+			select {
+			case newDimension := <-repo.updateChannel:
+				repo.updateDoneChannel <- repo.load(newDimension.Dimension, newDimension.Node)
+			}
 		}
 	}()
 	return repo
@@ -77,29 +79,32 @@ func (repo *Repo) load(dimension string, newNode *content.RepoNode) error {
 
 func (repo *Repo) ResolveContent(dimensions []string, URI string) (resolved bool, resolvedURI string, resolvedDimension string, repoNode *content.RepoNode) {
 	parts := strings.Split(URI, content.PATH_SEPARATOR)
+	resolved = false
+	resolvedURI = ""
+	resolvedDimension = ""
+	repoNode = nil
 	log.Debug("repo.ResolveContent: " + URI)
 	for _, dimension := range dimensions {
 		if d, ok := repo.Directory[dimension]; ok {
-			for i := len(parts); i > -1; i-- {
+			for i := len(parts); i > 0; i-- {
 				testURI := strings.Join(parts[0:i], content.PATH_SEPARATOR)
-				log.Debug("  testing" + testURI)
+				if testURI == "" {
+					testURI = content.PATH_SEPARATOR
+				}
+				log.Debug("  testing[" + dimension + "]: " + testURI)
 				if repoNode, ok := d.URIDirectory[testURI]; ok {
 					resolved = true
-					log.Debug("    => " + testURI)
-					log.Debug("      destination " + fmt.Sprint(repoNode.DestinationId))
+					log.Debug("  found  => " + testURI)
+					log.Debug("    destination " + fmt.Sprint(repoNode.DestinationId))
 					if len(repoNode.DestinationId) > 0 {
 						if destionationNode, destinationNodeOk := d.Directory[repoNode.DestinationId]; destinationNodeOk {
 							repoNode = destionationNode
 						}
 					}
 					return true, testURI, dimension, repoNode
-				} else {
-					log.Debug("    => !" + testURI)
-					resolved = false
 				}
 			}
 		}
-
 	}
 	return
 }
@@ -163,6 +168,7 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 }
 
 func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
+	// add more input validation
 	log.Debug("repo.GetContent: " + r.URI)
 	c := content.NewSiteContent()
 	resolved, resolvedURI, resolvedDimension, node := repo.ResolveContent(r.Env.Dimensions, r.URI)
@@ -181,6 +187,10 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 		c.Status = content.STATUS_NOT_FOUND
 		c.Dimension = r.Env.Dimensions[0]
 	}
+	log.Debug(fmt.Sprintf("resolved: %v, uri: %v, dim: %v, n: %v", resolved, resolvedURI, resolvedDimension, node))
+	if resolved == false {
+		resolvedDimension = r.Env.Dimensions[0]
+	}
 	for treeName, treeRequest := range r.Nodes {
 		log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
 		if treeNode, ok := repo.Directory[resolvedDimension].Directory[treeRequest.Id]; ok {
@@ -192,11 +202,14 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 	return c
 }
 
-/*
-func (repo *Repo) GetRepo() *content.RepoNode {
-	return repo.Node
+func (repo *Repo) GetRepo() map[string]*content.RepoNode {
+	response := make(map[string]*content.RepoNode)
+	for dimensionName, dimension := range repo.Directory {
+		response[dimensionName] = dimension.Node
+	}
+	return response
 }
-*/
+
 func uriKeyForState(state string, uri string) string {
 	return state + "-" + uri
 }
@@ -239,15 +252,17 @@ func (repo *Repo) Update() *responses.Update {
 	updateResponse := responses.NewUpdate()
 	newNodes := make(map[string]*content.RepoNode) //content.NewRepoNode()
 	startTimeRepo := time.Now()
-	ok, err := utils.Get(repo.server, newNodes)
+	ok, err := utils.GetRepo(repo.server, newNodes)
 	updateResponse.Stats.RepoRuntime = time.Now().Sub(startTimeRepo).Seconds()
 	startTimeOwn := time.Now()
 	updateResponse.Success = ok
 	if ok {
+		log.Debug("going to load dimensions from" + utils.ToJSON(newNodes))
 		for dimension, newNode := range newNodes {
+			log.Debug("loading nodes for dimension " + dimension)
 			repo.Load(dimension, newNode)
-			updateResponse.Stats.NumberOfNodes = len(repo.Directory[dimension].Directory)
-			updateResponse.Stats.NumberOfURIs = len(repo.Directory[dimension].URIDirectory)
+			updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
+			updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
 		}
 	} else {
 		log.Error(fmt.Sprintf("update error: %", err))
