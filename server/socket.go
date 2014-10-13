@@ -66,18 +66,16 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		updateResponse := contentRepo.Update()
 		reply = updateResponse
 		break
-		/*
-			case "getRepo":
-				repoRequest := requests.NewRepo()
-				jsonErr = json.Unmarshal(jsonBuffer, &repoRequest)
-				log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
-				repoResponse := contentRepo.GetRepo()
-				reply = repoResponse
-				break
-		*/
+	case "getRepo":
+		repoRequest := requests.NewRepo()
+		jsonErr = json.Unmarshal(jsonBuffer, &repoRequest)
+		log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
+		repoResponse := contentRepo.GetRepo()
+		reply = repoResponse
+		break
 	default:
 		err = errors.New(log.Error("  can not handle this one " + handler))
-		errorResponse := responses.NewError(1, "unkown handler")
+		errorResponse := responses.NewError(1, "unknown handler")
 		reply = errorResponse
 	}
 	if jsonErr != nil {

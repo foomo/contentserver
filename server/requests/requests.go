@@ -8,7 +8,7 @@ type Env struct {
 
 type Node struct {
 	Id         string   `json:"id"`
-	Dimension  string   `json:"id"`
+	Dimension  string   `json:"dimension"`
 	MimeTypes  []string `json:"mimeTypes"`
 	Expand     bool     `json:"expand"`
 	DataFields []string `json:"dataFields"`
