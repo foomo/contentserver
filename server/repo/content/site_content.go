@@ -7,16 +7,15 @@ const (
 )
 
 type SiteContent struct {
-	Status   int               `json:"status"`
-	URI      string            `json:"URI"`
-	Region   string            `json:"region"`
-	Language string            `json:"language"`
-	Handler  string            `json:"handler"`
-	Item     *Item             `json:"item"`
-	Data     interface{}       `json:"data"`
-	Path     []*Item           `json:"path"`
-	URIs     map[string]string `json:"URIs"`
-	Nodes    map[string]*Node  `json:"nodes"`
+	Status    int               `json:"status"`
+	URI       string            `json:"URI"`
+	Dimension string            `json:"dimension"`
+	MimeType  string            `json:"mimeType"`
+	Item      *Item             `json:"item"`
+	Data      interface{}       `json:"data"`
+	Path      []*Item           `json:"path"`
+	URIs      map[string]string `json:"URIs"`
+	Nodes     map[string]*Node  `json:"nodes"`
 }
 
 func NewSiteContent() *SiteContent {
