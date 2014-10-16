@@ -242,7 +242,7 @@ func wireAliases(directory map[string]*content.RepoNode) error {
 			if destinationNode, ok := directory[repoNode.LinkId]; ok {
 				repoNode.URI = destinationNode.URI
 			} else {
-				return errors.New("that link id point nowhere " + repoNode.LinkId + " from " + repoNode.Id)
+				return errors.New("that link id points nowhere " + repoNode.LinkId + " from " + repoNode.Id)
 			}
 		}
 	}
