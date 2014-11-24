@@ -60,6 +60,7 @@ func (node *RepoNode) ToItem(dataFields []string) *Item {
 	item := NewItem()
 	item.Id = node.Id
 	item.Name = node.Name
+	item.MimeType = node.MimeType
 	item.URI = node.URI
 	for _, dataField := range dataFields {
 		if data, ok := node.Data[dataField]; ok {

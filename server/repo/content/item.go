@@ -3,10 +3,11 @@ package content
 import ()
 
 type Item struct {
-	Id   string                 `json:"id"`
-	Name string                 `json:"name"`
-	URI  string                 `json:"URI"`
-	Data map[string]interface{} `json:"data"`
+	Id       string                 `json:"id"`
+	Name     string                 `json:"name"`
+	URI      string                 `json:"URI"`
+	MimeType string                 `json:"mimeType"`
+	Data     map[string]interface{} `json:"data"`
 }
 
 func NewItem() *Item {
