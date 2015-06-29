@@ -8,6 +8,7 @@ import (
 	"github.com/foomo/contentserver/server/requests"
 	"github.com/foomo/contentserver/server/responses"
 	"github.com/foomo/contentserver/server/utils"
+	golog "log"
 	"strings"
 	"time"
 )
@@ -241,7 +242,7 @@ func wireAliases(directory map[string]*content.RepoNode) error {
 			if destinationNode, ok := directory[repoNode.LinkId]; ok {
 				repoNode.URI = destinationNode.URI
 			} else {
-				return errors.New("that link id point nowhere " + repoNode.LinkId + " from " + repoNode.Id)
+				return errors.New("that link id points nowhere " + repoNode.LinkId + " from " + repoNode.Id)
 			}
 		}
 	}
@@ -260,9 +261,20 @@ func (repo *Repo) Update() *responses.Update {
 		log.Debug("going to load dimensions from" + utils.ToJSON(newNodes))
 		for dimension, newNode := range newNodes {
 			log.Debug("loading nodes for dimension " + dimension)
-			repo.Load(dimension, newNode)
-			updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
-			updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
+			loadErr := repo.Load(dimension, newNode)
+			if loadErr != nil {
+				golog.Println(loadErr)
+				panic(loadErr)
+			}
+			log.Debug("loaded nodes for dimension " + dimension)
+			_, dimensionOk := repo.Directory[dimension]
+			if dimensionOk {
+				updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
+				updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
+			} else {
+				log.Debug("where is dimension " + dimension)
+				golog.Println(repo.Directory)
+			}
 		}
 	} else {
 		log.Error(fmt.Sprintf("update error: %", err))

@@ -8,7 +8,7 @@ import (
 type RepoNode struct {
 	Id            string                 `json:"id"`       // unique identifier - it is your responsibility, that they are unique
 	MimeType      string                 `json:"mimeType"` // well a mime type http://www.ietf.org/rfc/rfc2046.txt
-	LinkId        string                 `json:"linkIds"`  // (symbolic) link/alias to another node
+	LinkId        string                 `json:"linkId"`   // (symbolic) link/alias to another node
 	Groups        []string               `json:"groups"`   // which groups have access to the node, if empty everybody has access to it
 	URI           string                 `json:"URI"`
 	Name          string                 `json:"name"`
@@ -60,6 +60,7 @@ func (node *RepoNode) ToItem(dataFields []string) *Item {
 	item := NewItem()
 	item.Id = node.Id
 	item.Name = node.Name
+	item.MimeType = node.MimeType
 	item.URI = node.URI
 	for _, dataField := range dataFields {
 		if data, ok := node.Data[dataField]; ok {
