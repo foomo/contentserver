@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/foomo/contentserver/server/repo/content"
 	"io/ioutil"
 	"net/http"
 )
@@ -47,56 +46,16 @@ func PopulateRequest(r *http.Request, obj interface{}) {
 	json.Unmarshal(extractJsonFromRequest(r), obj)
 }
 
-func GetRepo(URL string, obj map[string]*content.RepoNode) (ok bool, err error) {
-	// add proper error handling
+func Get(URL string) (data []byte, err error) {
 	response, err := http.Get(URL)
 	if err != nil {
-		return false, err
+		return data, err
 	} else {
 		defer response.Body.Close()
 		if response.StatusCode != http.StatusOK {
-			return false, errors.New(fmt.Sprintf("Bad HTTP Response: %v", response.Status))
+			return data, errors.New(fmt.Sprintf("Bad HTTP Response: %v", response.Status))
 		} else {
-			contents, err := ioutil.ReadAll(response.Body)
-			if err != nil {
-				return false, err
-			} else {
-				fmt.Printf("json string %s", string(contents))
-				jsonErr := json.Unmarshal(contents, &obj)
-				if jsonErr != nil {
-					panic(jsonErr)
-					return false, jsonErr
-				} else {
-					return true, nil
-				}
-			}
-		}
-	}
-}
-
-func Get(URL string, obj interface{}) (ok bool, err error) {
-	// add proper error handling
-	response, err := http.Get(URL)
-	if err != nil {
-		return false, err
-	} else {
-		defer response.Body.Close()
-		if response.StatusCode != http.StatusOK {
-			return false, errors.New(fmt.Sprintf("Bad HTTP Response: %v", response.Status))
-		} else {
-			contents, err := ioutil.ReadAll(response.Body)
-			if err != nil {
-				return false, err
-			} else {
-				fmt.Printf("json string %s", string(contents))
-				jsonErr := json.Unmarshal(contents, &obj)
-				if jsonErr != nil {
-					panic(jsonErr)
-					return false, jsonErr
-				} else {
-					return true, nil
-				}
-			}
+			return ioutil.ReadAll(response.Body)
 		}
 	}
 }

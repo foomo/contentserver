@@ -1,6 +1,6 @@
 .*
 *~
+/bin/*
 /main
 /*.sublime-*
-/buildOnLinux.sh
 !.git*

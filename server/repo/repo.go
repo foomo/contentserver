@@ -1,16 +1,15 @@
 package repo
 
 import (
-	"errors"
+	//	"errors"
 	"fmt"
 	"github.com/foomo/contentserver/server/log"
 	"github.com/foomo/contentserver/server/repo/content"
 	"github.com/foomo/contentserver/server/requests"
-	"github.com/foomo/contentserver/server/responses"
-	"github.com/foomo/contentserver/server/utils"
-	golog "log"
+	//"github.com/foomo/contentserver/server/responses"
+	//"github.com/foomo/contentserver/server/utils"
 	"strings"
-	"time"
+	//"time"
 )
 
 type Dimension struct {
@@ -29,53 +28,23 @@ type Repo struct {
 	Directory         map[string]*Dimension
 	updateChannel     chan *RepoDimension
 	updateDoneChannel chan error
+	history           *history
 }
 
-func NewRepo(server string) *Repo {
+func NewRepo(server string, varDir string) *Repo {
 	log.Notice("creating new repo for " + server)
 	repo := new(Repo)
 	repo.Directory = make(map[string]*Dimension)
 	repo.server = server
-	repo.updateChannel = make(chan *RepoDimension)
-	repo.updateDoneChannel = make(chan error)
-	go func() {
-		for {
-			select {
-			case newDimension := <-repo.updateChannel:
-				repo.updateDoneChannel <- repo.load(newDimension.Dimension, newDimension.Node)
-			}
-		}
-	}()
+	repo.history = newHistory(varDir)
+	go repo.updateRoutine()
+	restoreErr := repo.tryToRestoreCurrent()
+	if restoreErr == nil {
+		log.Record("could not restore previous repo content:" + restoreErr.Error())
+	} else {
+		log.Record("restored previous repo content")
+	}
 	return repo
-}
-
-func (repo *Repo) Load(dimension string, node *content.RepoNode) error {
-	repo.updateChannel <- &RepoDimension{
-		Dimension: dimension,
-		Node:      node,
-	}
-	return <-repo.updateDoneChannel
-}
-
-func (repo *Repo) load(dimension string, newNode *content.RepoNode) error {
-	newNode.WireParents()
-	newDirectory := make(map[string]*content.RepoNode)
-	newURIDirectory := make(map[string]*content.RepoNode)
-
-	err := builDirectory(newNode, newDirectory, newURIDirectory)
-	if err != nil {
-		return err
-	}
-	err = wireAliases(newDirectory)
-	if err != nil {
-		return err
-	}
-	repo.Directory[dimension] = &Dimension{
-		Node:         newNode,
-		Directory:    newDirectory,
-		URIDirectory: newURIDirectory,
-	}
-	return nil
 }
 
 func (repo *Repo) ResolveContent(dimensions []string, URI string) (resolved bool, resolvedURI string, resolvedDimension string, repoNode *content.RepoNode) {
@@ -213,75 +182,4 @@ func (repo *Repo) GetRepo() map[string]*content.RepoNode {
 
 func uriKeyForState(state string, uri string) string {
 	return state + "-" + uri
-}
-
-func builDirectory(dirNode *content.RepoNode, directory map[string]*content.RepoNode, uRIDirectory map[string]*content.RepoNode) error {
-	log.Debug("repo.buildDirectory: " + dirNode.Id)
-	existingNode, ok := directory[dirNode.Id]
-	if ok {
-		return errors.New("duplicate node with id:" + existingNode.Id)
-	}
-	directory[dirNode.Id] = dirNode
-	//todo handle duplicate uris
-	if _, thereIsAnExistingUriNode := uRIDirectory[dirNode.URI]; thereIsAnExistingUriNode {
-		return errors.New("duplicate node with uri: " + dirNode.URI)
-	}
-	uRIDirectory[dirNode.URI] = dirNode
-	for _, childNode := range dirNode.Nodes {
-		err := builDirectory(childNode, directory, uRIDirectory)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func wireAliases(directory map[string]*content.RepoNode) error {
-	for _, repoNode := range directory {
-		if len(repoNode.LinkId) > 0 {
-			if destinationNode, ok := directory[repoNode.LinkId]; ok {
-				repoNode.URI = destinationNode.URI
-			} else {
-				return errors.New("that link id points nowhere " + repoNode.LinkId + " from " + repoNode.Id)
-			}
-		}
-	}
-	return nil
-}
-
-func (repo *Repo) Update() *responses.Update {
-	updateResponse := responses.NewUpdate()
-	newNodes := make(map[string]*content.RepoNode) //content.NewRepoNode()
-	startTimeRepo := time.Now()
-	ok, err := utils.GetRepo(repo.server, newNodes)
-	updateResponse.Stats.RepoRuntime = time.Now().Sub(startTimeRepo).Seconds()
-	startTimeOwn := time.Now()
-	updateResponse.Success = ok
-	if ok {
-		log.Debug("going to load dimensions from" + utils.ToJSON(newNodes))
-		for dimension, newNode := range newNodes {
-			log.Debug("loading nodes for dimension " + dimension)
-			loadErr := repo.Load(dimension, newNode)
-			if loadErr != nil {
-				golog.Println(loadErr)
-				panic(loadErr)
-			}
-			log.Debug("loaded nodes for dimension " + dimension)
-			_, dimensionOk := repo.Directory[dimension]
-			if dimensionOk {
-				updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
-				updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
-			} else {
-				log.Debug("where is dimension " + dimension)
-				golog.Println(repo.Directory)
-			}
-		}
-	} else {
-		log.Error(fmt.Sprintf("update error: %", err))
-		updateResponse.ErrorMessage = fmt.Sprintf("%", err)
-		updateResponse.Stats.NumberOfNodes = -1
-		updateResponse.Stats.NumberOfURIs = -1
-	}
-	updateResponse.Stats.OwnRuntime = time.Now().Sub(startTimeOwn).Seconds()
-	return updateResponse
 }

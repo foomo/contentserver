@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	PROTOCOL_TCP  = "tcp"
-	PROTOCOL_HTTP = "http"
+	PROTOCOL_TCP = "tcp"
 )
 
 type ExitCode int
@@ -25,6 +24,7 @@ var contentServer string
 
 var protocol = flag.String("protocol", PROTOCOL_TCP, "what protocol to server for")
 var address = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
+var varDir = flag.String("vardir", "127.0.0.1:8081", "where to put my data")
 var logLevelOptions = []string{
 	log.LOG_LEVEL_NAME_ERROR,
 	log.LOG_LEVEL_NAME_RECORD,
@@ -52,11 +52,7 @@ func main() {
 		log.SetLogLevel(log.GetLogLevelByName(*logLevel))
 		switch *protocol {
 		case PROTOCOL_TCP:
-			server.RunSocketServer(flag.Arg(0), *address)
-			break
-		case PROTOCOL_HTTP:
-			//server.Run(":8080", "http://test.bestbytes/foomo/modules/Foomo.Page.Content/services/content.php")
-			fmt.Println("http server does not work yet - use tcp instead")
+			server.RunSocketServer(flag.Arg(0), *address, *varDir)
 			break
 		default:
 			exitUsage(EXIT_CODE_INSUFFICIENT_ARGS)

@@ -154,9 +154,9 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-func RunSocketServer(server string, address string) {
+func RunSocketServer(server string, address string, varDir string) {
 	log.Record("building repo with content from " + server)
-	contentRepo = repo.NewRepo(server)
+	contentRepo = repo.NewRepo(server, varDir)
 	contentRepo.Update()
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
