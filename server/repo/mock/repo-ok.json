@@ -1,0 +1,53 @@
+{
+    "dimension_foo": {
+        "id": "id-root",
+        "name": "root node",
+        "mimeType": "application\/x-node",
+        "groups": null,
+        "URI": "\/",
+        "hidden": false,
+        "linkId": null,
+        "destinationId": null,
+        "data": {
+            "foo": "bar"
+        },
+        "index": [
+            "id-a",
+            "id-b"
+        ],
+        "nodes": {
+            "id-a": {
+                "id": "id-a",
+                "name": "node a",
+                "mimeType": "application\/x-node",
+                "groups": null,
+                "URI": "\/a",
+                "hidden": false,
+                "linkId": null,
+                "destinationId": null,
+                "data": {
+                    "baz": 1
+                },
+                "index": [
+                ],
+                "nodes": {}
+            },
+            "id-b": {
+                "id": "id-b",
+                "name": "node b",
+                "mimeType": "application\/x-node",
+                "groups": null,
+                "URI": "\/a",
+                "hidden": false,
+                "linkId": null,
+                "destinationId": null,
+                "data": {
+                    "b": "b"
+                },
+                "index": [
+                ],
+                "nodes": {}
+            }
+        }
+    }
+}
