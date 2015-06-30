@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/foomo/contentserver/server/requests"
 )
 
 func getMockData(t *testing.T) (server *httptest.Server, varDir string) {
@@ -91,5 +93,36 @@ func TestDimensionHygiene(t *testing.T) {
 	}
 	if len(r.Directory) != 1 {
 		t.Fatal("directory hygiene failed")
+	}
+}
+
+func TestResolveContent(t *testing.T) {
+	mockServer, varDir := getMockData(t)
+	server := mockServer.URL + "/repo-two-dimensions.json"
+	r := NewRepo(server, varDir)
+	response := r.Update()
+	if !response.Success {
+		t.Fatal("well those two dimension should be fine")
+	}
+	dimensions := []string{"dimension_foo"}
+	contentRequest := &requests.Content{
+		URI: "/a",
+		Env: &requests.Env{
+			Dimensions: dimensions,
+			Groups:     []string{},
+		},
+		Nodes: map[string]*requests.Node{
+			"id-root": &requests.Node{
+				Id:         "id-root",
+				Dimension:  dimensions[0],
+				MimeTypes:  []string{"application/x-node"},
+				Expand:     true,
+				DataFields: []string{},
+			},
+		},
+	}
+	siteContent := r.GetContent(contentRequest)
+	if siteContent.URI != contentRequest.URI {
+		t.Fatal("failed to resolve uri")
 	}
 }

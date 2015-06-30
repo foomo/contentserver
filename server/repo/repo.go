@@ -1,15 +1,11 @@
 package repo
 
 import (
-	//	"errors"
 	"fmt"
 	"github.com/foomo/contentserver/server/log"
 	"github.com/foomo/contentserver/server/repo/content"
 	"github.com/foomo/contentserver/server/requests"
-	//"github.com/foomo/contentserver/server/responses"
-	//"github.com/foomo/contentserver/server/utils"
 	"strings"
-	//"time"
 )
 
 type Dimension struct {

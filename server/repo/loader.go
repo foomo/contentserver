@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/foomo/contentserver/server/log"
 	"github.com/foomo/contentserver/server/repo/content"
 	"github.com/foomo/contentserver/server/responses"
 	"github.com/foomo/contentserver/server/utils"
-	"time"
 	//golog "log"
 )
 
@@ -19,7 +20,7 @@ func (repo *Repo) updateRoutine() {
 			select {
 			case newDimension := <-repo.updateChannel:
 				log.Debug("update routine received a new dimension: " + newDimension.Dimension)
-				err := repo.updateDimension(newDimension.Dimension, newDimension.Node)
+				err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
 				log.Debug("update routine received result")
 				if err != nil {
 					log.Debug("	update routine error: " + err.Error())
@@ -30,7 +31,7 @@ func (repo *Repo) updateRoutine() {
 	}()
 }
 
-func (repo *Repo) UpdateDimension(dimension string, node *content.RepoNode) error {
+func (repo *Repo) updateDimension(dimension string, node *content.RepoNode) error {
 	repo.updateChannel <- &RepoDimension{
 		Dimension: dimension,
 		Node:      node,
@@ -39,7 +40,7 @@ func (repo *Repo) UpdateDimension(dimension string, node *content.RepoNode) erro
 }
 
 // do not call directly, but only through channel
-func (repo *Repo) updateDimension(dimension string, newNode *content.RepoNode) error {
+func (repo *Repo) _updateDimension(dimension string, newNode *content.RepoNode) error {
 	newNode.WireParents()
 	newDirectory := make(map[string]*content.RepoNode)
 	newURIDirectory := make(map[string]*content.RepoNode)
@@ -68,7 +69,7 @@ func builDirectory(dirNode *content.RepoNode, directory map[string]*content.Repo
 	}
 	directory[dirNode.Id] = dirNode
 	//todo handle duplicate uris
-	if _, thereIsAnExistingUriNode := uRIDirectory[dirNode.URI]; thereIsAnExistingUriNode {
+	if _, thereIsAnExistingURINode := uRIDirectory[dirNode.URI]; thereIsAnExistingURINode {
 		return errors.New("duplicate uri: " + dirNode.URI + " (bad node id: " + dirNode.Id + ")")
 	}
 	uRIDirectory[dirNode.URI] = dirNode
@@ -100,13 +101,14 @@ func loadNodesFromJSON(jsonBytes []byte) (nodes map[string]*content.RepoNode, er
 	return nodes, err
 }
 
+// Update - reload contents of repository with json from repo.server
 func (repo *Repo) Update() (updateResponse *responses.Update) {
 	floatSeconds := func(nanoSeconds int64) float64 {
 		return float64(float64(nanoSeconds) / float64(1000000000.0))
 	}
 	startTime := time.Now().UnixNano()
 	updateRepotime, jsonBytes, updateErr := repo.update()
-	updateResponse = responses.NewUpdate()
+	updateResponse = &responses.Update{}
 	updateResponse.Stats.RepoRuntime = floatSeconds(updateRepotime)
 
 	if updateErr != nil {
@@ -128,7 +130,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 			log.Warning("could not persist current repo in history: " + historyErr.Error())
 		}
 		// add some stats
-		for dimension, _ := range repo.Directory {
+		for dimension := range repo.Directory {
 			updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
 			updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
 		}
@@ -139,11 +141,11 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 }
 
 func (repo *Repo) tryToRestoreCurrent() error {
-	currentJsonBytes, err := repo.history.getCurrent()
+	currentJSONBytes, err := repo.history.getCurrent()
 	if err != nil {
 		return err
 	}
-	return repo.loadJSONBytes(currentJsonBytes)
+	return repo.loadJSONBytes(currentJSONBytes)
 }
 
 func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
@@ -153,28 +155,27 @@ func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 	if err != nil {
 		// we have no json to load - the repo server did not reply
 		return repoRuntime, jsonBytes, err
-	} else {
-		nodes, err := loadNodesFromJSON(jsonBytes)
-		if err != nil {
-			// could not load nodes from json
-			return repoRuntime, jsonBytes, err
-		}
-		err = repo.loadNodes(nodes)
-		if err != nil {
-			// repo failed to load nodes
-			return repoRuntime, jsonBytes, err
-		}
+	}
+	nodes, err := loadNodesFromJSON(jsonBytes)
+	if err != nil {
+		// could not load nodes from json
+		return repoRuntime, jsonBytes, err
+	}
+	err = repo.loadNodes(nodes)
+	if err != nil {
+		// repo failed to load nodes
+		return repoRuntime, jsonBytes, err
 	}
 	return repoRuntime, jsonBytes, nil
 }
 
 func updateErrorHandler(err error, updateResponse *responses.Update) *responses.Update {
-	log.Error(fmt.Sprintf("update error: %", err))
+	log.Error(fmt.Sprintf("update error: %v", err))
 	if updateResponse == nil {
-		updateResponse = responses.NewUpdate()
+		updateResponse = &responses.Update{}
 	}
 	updateResponse.Success = false
-	updateResponse.ErrorMessage = fmt.Sprintf("%", err)
+	updateResponse.ErrorMessage = fmt.Sprintf("%v", err)
 	updateResponse.Stats.NumberOfNodes = -1
 	updateResponse.Stats.NumberOfURIs = -1
 	return updateResponse
@@ -202,7 +203,7 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	for dimension, newNode := range newNodes {
 		newDimensions = append(newDimensions, dimension)
 		log.Debug("loading nodes for dimension " + dimension)
-		loadErr := repo.UpdateDimension(dimension, newNode)
+		loadErr := repo.updateDimension(dimension, newNode)
 		if loadErr != nil {
 			log.Debug("	failed to load " + dimension + ": " + loadErr.Error())
 			return loadErr
@@ -217,7 +218,7 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 		return false
 	}
 	// we need to throw away orphaned dimensions
-	for dimension, _ := range repo.Directory {
+	for dimension := range repo.Directory {
 		if !dimensionIsValid(dimension) {
 			log.Notice("removing orphaned dimension:" + dimension)
 			delete(repo.Directory, dimension)

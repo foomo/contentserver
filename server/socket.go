@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
+	"strings"
+
 	"github.com/foomo/contentserver/server/log"
 	"github.com/foomo/contentserver/server/repo"
 	"github.com/foomo/contentserver/server/requests"
 	"github.com/foomo/contentserver/server/responses"
-	"net"
-	"strconv"
-	"strings"
 )
 
 // there should be sth. built in ?!
@@ -29,7 +30,7 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 	log.Record(fmt.Sprintf("socket.handleSocketRequest(%d): %s %s", numRequests(), handler, string(jsonBuffer)))
 	switch handler {
 	case "getURIs":
-		getURIRequest := requests.NewURIs()
+		getURIRequest := &requests.URIs{}
 		jsonErr = json.Unmarshal(jsonBuffer, &getURIRequest)
 		log.Debug("  getURIRequest: " + fmt.Sprint(getURIRequest))
 		uris := contentRepo.GetURIs(getURIRequest.Dimension, getURIRequest.Ids)
@@ -37,37 +38,28 @@ func handleSocketRequest(handler string, jsonBuffer []byte) (replyBytes []byte, 
 		reply = uris
 		break
 	case "content":
-		contentRequest := requests.NewContent()
+		contentRequest := &requests.Content{}
 		jsonErr = json.Unmarshal(jsonBuffer, &contentRequest)
 		log.Debug("  contentRequest: " + fmt.Sprint(contentRequest))
 		content := contentRepo.GetContent(contentRequest)
 		reply = content
 		break
-		/*
-			case "getItemMap":
-				itemMapRequest := requests.NewItemMap()
-				jsonErr = json.Unmarshal(jsonBuffer, &itemMapRequest)
-				log.Debug("  itemMapRequest: " + fmt.Sprint(itemMapRequest))
-				itemMap := contentRepo.GetItemMap(itemMapRequest.Id, itemMapRequest.DataFields)
-				reply = itemMap
-				break
-		*/
 	case "getNodes":
-		nodesRequest := requests.NewNodes()
+		nodesRequest := &requests.Nodes{}
 		jsonErr = json.Unmarshal(jsonBuffer, &nodesRequest)
 		log.Debug("  nodesRequest: " + fmt.Sprint(nodesRequest))
 		nodesMap := contentRepo.GetNodes(nodesRequest)
 		reply = nodesMap
 		break
 	case "update":
-		updateRequest := requests.NewUpdate()
+		updateRequest := &requests.Update{}
 		jsonErr = json.Unmarshal(jsonBuffer, &updateRequest)
 		log.Debug("  updateRequest: " + fmt.Sprint(updateRequest))
 		updateResponse := contentRepo.Update()
 		reply = updateResponse
 		break
 	case "getRepo":
-		repoRequest := requests.NewRepo()
+		repoRequest := &requests.Repo{}
 		jsonErr = json.Unmarshal(jsonBuffer, &repoRequest)
 		log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
 		repoResponse := contentRepo.GetRepo()
@@ -119,9 +111,8 @@ func handleConnection(conn net.Conn) {
 				if jsonReadErr != nil {
 					log.Error("  could not read json - giving up with this client connection" + fmt.Sprint(jsonReadErr))
 					return
-				} else {
-					log.Debug("  read json: " + string(jsonBuffer))
 				}
+				log.Debug("  read json: " + string(jsonBuffer))
 				reply, handlingError := handleSocketRequest(requestHandler, jsonBuffer)
 				if handlingError != nil {
 					log.Error("socket.handleConnection: handlingError " + fmt.Sprint(handlingError))
@@ -138,10 +129,8 @@ func handleConnection(conn net.Conn) {
 				if writeError != nil {
 					log.Error("socket.handleConnection: could not write my reply: " + fmt.Sprint(writeError))
 					return
-				} else {
-					log.Debug("  replied. waiting for next request on open connection")
-					//return
 				}
+				log.Debug("  replied. waiting for next request on open connection")
 			} else {
 				log.Error("can not read empty json")
 				conn.Close()
@@ -154,6 +143,7 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
+// RunSocketServer - let it run and enjoy on a socket near you
 func RunSocketServer(server string, address string, varDir string) {
 	log.Record("building repo with content from " + server)
 	contentRepo = repo.NewRepo(server, varDir)
