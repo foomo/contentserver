@@ -3,7 +3,6 @@ package repo
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/foomo/contentserver/server/log"
@@ -113,6 +112,8 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 
 	if updateErr != nil {
 		updateResponse.Success = false
+		updateResponse.Stats.NumberOfNodes = -1
+		updateResponse.Stats.NumberOfURIs = -1
 		// let us try to restore the world from a file
 		log.Error("could not update repository:" + updateErr.Error())
 		updateResponse.ErrorMessage = updateErr.Error()
@@ -134,7 +135,6 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 			updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
 			updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
 		}
-
 	}
 	updateResponse.Stats.OwnRuntime = floatSeconds(time.Now().UnixNano()-startTime) - updateResponse.Stats.RepoRuntime
 	return updateResponse
@@ -167,18 +167,6 @@ func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 		return repoRuntime, jsonBytes, err
 	}
 	return repoRuntime, jsonBytes, nil
-}
-
-func updateErrorHandler(err error, updateResponse *responses.Update) *responses.Update {
-	log.Error(fmt.Sprintf("update error: %v", err))
-	if updateResponse == nil {
-		updateResponse = &responses.Update{}
-	}
-	updateResponse.Success = false
-	updateResponse.ErrorMessage = fmt.Sprintf("%v", err)
-	updateResponse.Stats.NumberOfNodes = -1
-	updateResponse.Stats.NumberOfURIs = -1
-	return updateResponse
 }
 
 func (repo *Repo) loadJSONBytes(jsonBytes []byte) error {

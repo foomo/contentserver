@@ -1,0 +1,18 @@
+{
+    "dimension_foo": {
+        "id": "id-root",
+        "name": "root node",
+        "mimeType": "application\/x-node",
+        "groups": null,
+        "URI": "\/",
+        "hidden": false,
+        "linkId": null,
+        "destinationId": null,
+        "data": {
+            "foo": "bar"
+        },
+        "index": [
+            "id-a",
+            "id-b"
+        ],
+        "nod

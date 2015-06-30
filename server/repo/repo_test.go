@@ -42,6 +42,26 @@ func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 	}
 }
 
+func TestLoad404(t *testing.T) {
+	mockServer, varDir := getMockData(t)
+	server := mockServer.URL + "/repo-no-have"
+	r := NewRepo(server, varDir)
+	response := r.Update()
+	if response.Success {
+		t.Fatal("can not get a repo, if the server responds with a 404")
+	}
+}
+
+func TestLoadBrokenRepo(t *testing.T) {
+	mockServer, varDir := getMockData(t)
+	server := mockServer.URL + "/repo-broken-json.json"
+	r := NewRepo(server, varDir)
+	response := r.Update()
+	if response.Success {
+		t.Fatal("how could we load a broken json")
+	}
+}
+
 func TestLoadRepo(t *testing.T) {
 
 	mockServer, varDir := getMockData(t)
@@ -125,4 +145,22 @@ func TestResolveContent(t *testing.T) {
 	if siteContent.URI != contentRequest.URI {
 		t.Fatal("failed to resolve uri")
 	}
+}
+
+func TestLinkIds(t *testing.T) {
+	mockServer, varDir := getMockData(t)
+	server := mockServer.URL + "/repo-link-ok.json"
+	r := NewRepo(server, varDir)
+	response := r.Update()
+	if !response.Success {
+		t.Fatal("those links should have been fine")
+	}
+
+	r.server = mockServer.URL + "/repo-link-broken.json"
+	response = r.Update()
+
+	if response.Success {
+		t.Fatal("I do not think so")
+	}
+
 }
