@@ -31,7 +31,7 @@ func (h *history) add(jsonBytes []byte) error {
 }
 
 func (h *history) getCurrentFilename() string {
-	return historyRepoJSONPrefix + "current" + historyRepoJSONSuffix
+	return path.Join(h.varDir, historyRepoJSONPrefix+"current"+historyRepoJSONSuffix)
 }
 
 func (h *history) getCurrent() (jsonBytes []byte, err error) {

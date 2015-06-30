@@ -33,16 +33,20 @@ type Repo struct {
 
 func NewRepo(server string, varDir string) *Repo {
 	log.Notice("creating new repo for " + server)
+	log.Notice("	using var dir:" + varDir)
 	repo := new(Repo)
 	repo.Directory = make(map[string]*Dimension)
 	repo.server = server
 	repo.history = newHistory(varDir)
+	repo.updateChannel = make(chan *RepoDimension)
+	repo.updateDoneChannel = make(chan error)
 	go repo.updateRoutine()
+	log.Record("trying to restore pervious state")
 	restoreErr := repo.tryToRestoreCurrent()
-	if restoreErr == nil {
-		log.Record("could not restore previous repo content:" + restoreErr.Error())
+	if restoreErr != nil {
+		log.Record("	could not restore previous repo content:" + restoreErr.Error())
 	} else {
-		log.Record("restored previous repo content")
+		log.Record("	restored previous repo content")
 	}
 	return repo
 }

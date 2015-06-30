@@ -13,13 +13,18 @@ import (
 )
 
 func (repo *Repo) updateRoutine() {
-	repo.updateChannel = make(chan *RepoDimension)
-	repo.updateDoneChannel = make(chan error)
 	go func() {
 		for {
+			log.Debug("update routine is about to select")
 			select {
 			case newDimension := <-repo.updateChannel:
-				repo.updateDoneChannel <- repo.updateDimension(newDimension.Dimension, newDimension.Node)
+				log.Debug("update routine received a new dimension: " + newDimension.Dimension)
+				err := repo.updateDimension(newDimension.Dimension, newDimension.Node)
+				log.Debug("update routine received result")
+				if err != nil {
+					log.Debug("	update routine error: " + err.Error())
+				}
+				repo.updateDoneChannel <- err
 			}
 		}
 	}()
@@ -33,6 +38,7 @@ func (repo *Repo) UpdateDimension(dimension string, node *content.RepoNode) erro
 	return <-repo.updateDoneChannel
 }
 
+// do not call directly, but only through channel
 func (repo *Repo) updateDimension(dimension string, newNode *content.RepoNode) error {
 	newNode.WireParents()
 	newDirectory := make(map[string]*content.RepoNode)
@@ -40,7 +46,7 @@ func (repo *Repo) updateDimension(dimension string, newNode *content.RepoNode) e
 
 	err := builDirectory(newNode, newDirectory, newURIDirectory)
 	if err != nil {
-		return err
+		return errors.New("update dimension \"" + dimension + "\" failed when building its directory:: " + err.Error())
 	}
 	err = wireAliases(newDirectory)
 	if err != nil {
@@ -63,7 +69,7 @@ func builDirectory(dirNode *content.RepoNode, directory map[string]*content.Repo
 	directory[dirNode.Id] = dirNode
 	//todo handle duplicate uris
 	if _, thereIsAnExistingUriNode := uRIDirectory[dirNode.URI]; thereIsAnExistingUriNode {
-		return errors.New("duplicate node with uri: " + dirNode.URI)
+		return errors.New("duplicate uri: " + dirNode.URI + " (bad node id: " + dirNode.Id + ")")
 	}
 	uRIDirectory[dirNode.URI] = dirNode
 	for _, childNode := range dirNode.Nodes {
@@ -96,22 +102,31 @@ func loadNodesFromJSON(jsonBytes []byte) (nodes map[string]*content.RepoNode, er
 
 func (repo *Repo) Update() (updateResponse *responses.Update) {
 	floatSeconds := func(nanoSeconds int64) float64 {
-		return float64(nanoSeconds / 1000000)
+		return float64(float64(nanoSeconds) / float64(1000000000.0))
 	}
 	startTime := time.Now().UnixNano()
-	updateRepotime, updateErr := repo.update()
+	updateRepotime, jsonBytes, updateErr := repo.update()
 	updateResponse = responses.NewUpdate()
 	updateResponse.Stats.RepoRuntime = floatSeconds(updateRepotime)
+
 	if updateErr != nil {
+		updateResponse.Success = false
 		// let us try to restore the world from a file
 		log.Error("could not update repository:" + updateErr.Error())
+		updateResponse.ErrorMessage = updateErr.Error()
 		restoreErr := repo.tryToRestoreCurrent()
-		if restoreErr == nil {
-			log.Error("failed to restore preceding repo version")
+		if restoreErr != nil {
+			log.Error("failed to restore preceding repo version: " + restoreErr.Error())
 		} else {
 			log.Record("restored current repo from local history")
 		}
 	} else {
+		updateResponse.Success = true
+		// persist the currently loaded one
+		historyErr := repo.history.add(jsonBytes)
+		if historyErr != nil {
+			log.Warning("could not persist current repo in history: " + historyErr.Error())
+		}
 		// add some stats
 		for dimension, _ := range repo.Directory {
 			updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
@@ -119,7 +134,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		}
 
 	}
-	updateResponse.Stats.OwnRuntime = floatSeconds(startTime-time.Now().UnixNano()) - updateResponse.Stats.RepoRuntime
+	updateResponse.Stats.OwnRuntime = floatSeconds(time.Now().UnixNano()-startTime) - updateResponse.Stats.RepoRuntime
 	return updateResponse
 }
 
@@ -131,56 +146,26 @@ func (repo *Repo) tryToRestoreCurrent() error {
 	return repo.loadJSONBytes(currentJsonBytes)
 }
 
-func (repo *Repo) update() (repoRuntime int64, err error) {
+func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 	startTimeRepo := time.Now().UnixNano()
-	jsonBytes, err := utils.Get(repo.server)
+	jsonBytes, err = utils.Get(repo.server)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
 	if err != nil {
 		// we have no json to load - the repo server did not reply
-		return
+		return repoRuntime, jsonBytes, err
 	} else {
 		nodes, err := loadNodesFromJSON(jsonBytes)
 		if err != nil {
 			// could not load nodes from json
-			return repoRuntime, err
+			return repoRuntime, jsonBytes, err
 		}
 		err = repo.loadNodes(nodes)
 		if err != nil {
 			// repo failed to load nodes
-			return repoRuntime, err
+			return repoRuntime, jsonBytes, err
 		}
 	}
-	return repoRuntime, nil
-
-	/*
-
-		log.Debug("loaded nodes for dimension " + dimension)
-		_, dimensionOk := repo.Directory[dimension]
-		if dimensionOk {
-			updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
-			updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
-		}
-
-
-
-		jsonBytes
-			newNodes := loadNodesFromJSON(jsonBytes)
-
-		data, err := utils.GetRepo(repo.server, newNodes)
-		updateResponse.Stats.RepoRuntime =
-		startTimeOwn := time.Now()
-		if err == nil {
-		}
-		updateResponse.Success = (err != nil)
-
-		doneHandler := func() *responses.Update {
-			updateResponse.Stats.OwnRuntime = time.Now().Sub(startTimeOwn).Seconds()
-			return updateResponse
-		}
-
-		if updateResponse.Success {
-			log.Debug("going to load dimensions from" + utils.ToJSON(newNodes))
-	*/
+	return repoRuntime, jsonBytes, nil
 }
 
 func updateErrorHandler(err error, updateResponse *responses.Update) *responses.Update {
@@ -213,7 +198,9 @@ func (repo *Repo) loadJSONBytes(jsonBytes []byte) error {
 }
 
 func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
+	newDimensions := []string{}
 	for dimension, newNode := range newNodes {
+		newDimensions = append(newDimensions, dimension)
 		log.Debug("loading nodes for dimension " + dimension)
 		loadErr := repo.UpdateDimension(dimension, newNode)
 		if loadErr != nil {
@@ -221,6 +208,20 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 			return loadErr
 		}
 	}
-	// we need to throw away orphaned nodes
+	dimensionIsValid := func(dimension string) bool {
+		for _, newDimension := range newDimensions {
+			if dimension == newDimension {
+				return true
+			}
+		}
+		return false
+	}
+	// we need to throw away orphaned dimensions
+	for dimension, _ := range repo.Directory {
+		if !dimensionIsValid(dimension) {
+			log.Notice("removing orphaned dimension:" + dimension)
+			delete(repo.Directory, dimension)
+		}
+	}
 	return nil
 }

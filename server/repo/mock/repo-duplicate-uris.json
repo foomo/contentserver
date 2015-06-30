@@ -37,7 +37,7 @@
                 "name": "node b",
                 "mimeType": "application\/x-node",
                 "groups": null,
-                "URI": "\/b",
+                "URI": "\/a",
                 "hidden": false,
                 "linkId": null,
                 "destinationId": null,
