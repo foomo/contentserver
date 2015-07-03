@@ -3,7 +3,7 @@
 USER="foomo"
 NAME="content-server"
 URL="http://www.foomo.org"
-DESCRIPTION="Serves content tree structures very quickly through a json socket api"
+DESCRIPTION="Serves content tree structures very quickly through a json socket api."
 LICENSE="LGPL-3.0"
 
 ARCH="amd64"
