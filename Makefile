@@ -7,5 +7,7 @@ clean:
 build:
 	make clean
 	go build -o bin/contentserver
+package:
+	cli/package.sh
 test:
 	go test -v  github.com/foomo/contentserver/server/repo

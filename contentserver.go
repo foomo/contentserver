@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/foomo/contentserver/server"
-	"github.com/foomo/contentserver/server/log"
 	"os"
 	"strings"
+
+	"github.com/foomo/contentserver/server"
+	"github.com/foomo/contentserver/server/log"
 )
 
 const (
