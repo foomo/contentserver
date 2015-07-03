@@ -147,7 +147,6 @@ func handleConnection(conn net.Conn) {
 func RunSocketServer(server string, address string, varDir string) {
 	log.Record("building repo with content from " + server)
 	contentRepo = repo.NewRepo(server, varDir)
-	contentRepo.Update()
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		// failed to create socket
@@ -155,6 +154,9 @@ func RunSocketServer(server string, address string, varDir string) {
 	} else {
 		// there we go
 		log.Record("RunSocketServer: started to listen on " + address)
+		if len(contentRepo.Directory) == 0 {
+			contentRepo.Update()
+		}
 		for {
 			conn, err := ln.Accept() // this blocks until connection or error
 			if err != nil {
