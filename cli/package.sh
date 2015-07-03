@@ -25,7 +25,6 @@ package()
 	cp bin/${NAME} $BUILD/usr/bin/.
 
 	# build binary
-	make clean
 	GOOS=$OS GOARCH=$ARCH go build -o $BUILD/usr/bin/${NAME} contentserver.go
 
 	# create package
