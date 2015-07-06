@@ -6,11 +6,12 @@ URL="http://www.foomo.org"
 DESCRIPTION="Serves content tree structures very quickly through a json socket api."
 LICENSE="LGPL-3.0"
 
-ARCH="amd64"
+# get version
 VERSION=`bin/content-server --version | sed 's/content-server //'`
 
-PACKAGE=`pwd`/pkg
-mkdir -p $PACKAGE
+# create temp dir
+TEMP=`pwd`/pkg/tmp
+mkdir -p $TEMP
 
 package()
 {
@@ -19,13 +20,18 @@ package()
 	TYPE=$3
 	TARGET=$4
 
+	# copy license file
+	cp LICENSE $LICENSE
+
+	# define source dir
+	SOURCE=`pwd`/pkg/${TYPE}
+
 	# create build folder
-	BUILD=`pwd`/${NAME}-${VERSION}
-	mkdir -p $BUILD/usr/bin
-	cp bin/${NAME} $BUILD/usr/bin/.
+	BUILD=${TEMP}/${NAME}-${VERSION}
+	#rsync -rv --exclude **/.git* --exclude /*.sh $SOURCE/ $BUILD/
 
 	# build binary
-	GOOS=$OS GOARCH=$ARCH go build -o $BUILD/usr/bin/${NAME} contentserver.go
+	GOOS=$OS GOARCH=$ARCH go build -o $BUILD/usr/local/bin/${NAME}
 
 	# create package
 	fpm -s dir \
@@ -36,16 +42,17 @@ package()
 		--license $LICENSE \
 		--description "${DESCRIPTION}" \
 		--architecture $ARCH \
-		--package pkg \
+		--package $TEMP \
 		--url "${URL}" \
 		-C $BUILD \
 		.
 
-	# cleanup
-	rm -rf $BUILD
-
 	# push
-	package_cloud push $TARGET $PACKAGE/${NAME}_${VERSION}_${ARCH}.${TYPE}
+	package_cloud push $TARGET $TEMP/${NAME}_${VERSION}_${ARCH}.${TYPE}
+
+	# cleanup
+	rm -rf $TEMP
+	rm $LICENSE
 }
 
 package linux amd64 deb foomo/content-server/ubuntu/trusty

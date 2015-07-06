@@ -1,7 +1,6 @@
-Content Server
-===========
+# Content Server
 
-Serves content tree structures very quickly through a json socket api
+> Serves content tree structures very quickly through a json socket api
 
 ## Concept
 
@@ -41,3 +40,34 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 
 There is a PHP Proxy implementation for foomo in [Foomo.ContentServer](https://github.com/foomo/Foomo.ContentServer). Feel free to use it or to implement your own proxy in the language you love. The API should be easily to implement in every other framework and language, too.
 
+## Usage
+
+```
+$ content-server --help
+
+Usage of bin/content-server:
+  -address="127.0.0.1:8081": address to bind host:port
+  -logLevel="record": one of error, record, warning, notice, debug
+  -protocol="tcp": what protocol to server for
+  -vardir="127.0.0.1:8081": where to put my data
+```
+
+## Testing
+
+```
+$ git clone https://github.com/foomo/contentserver.git
+$ cd content-server
+$ make test
+```
+
+## Contributing
+In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests and examples for any new or changed functionality.
+
+1. Fork it
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Add some feature'`)
+4. Push to the branch (`git push origin my-new-feature`)
+5. Create new Pull Request
+
+## License
+Copyright (c) foomo under the LGPL 3.0 license.
