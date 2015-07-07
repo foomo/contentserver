@@ -1,13 +1,12 @@
 SHELL := /bin/bash
 
 options:
-	echo "you can clean | test | build | run"
+	echo "you can clean | test | build | run | package"
 clean:
 	rm -f bin/content-server
-build:
-	make clean
+build: clean
 	go build -o bin/content-server
-package: clean build
-	cli/package.sh
+package: build
+	pkg/build.sh
 test:
-	go test -v  github.com/foomo/contentserver/server/repo
+	go test -v github.com/foomo/contentserver/server/repo

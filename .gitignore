@@ -1,6 +1,5 @@
 .*
 *~
 /bin/
-/pkg/
-/main
+/pkg/tmp/
 !.git*
