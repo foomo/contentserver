@@ -55,6 +55,7 @@ package()
 	rm $LICENSE
 }
 
+package linux amd64 deb foomo/content-server/ubuntu/precise
 package linux amd64 deb foomo/content-server/ubuntu/trusty
 
 #package linux amd64 rpm
