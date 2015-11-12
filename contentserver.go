@@ -23,7 +23,7 @@ const (
 
 var contentServer string
 
-var uniqushPushVersion = "content-server 1.1.0"
+var uniqushPushVersion = "content-server 1.2.0"
 
 var showVersionFlag = flag.Bool("version", false, "Version info")
 var protocol = flag.String("protocol", PROTOCOL_TCP, "what protocol to server for")
