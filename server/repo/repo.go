@@ -2,10 +2,11 @@ package repo
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/foomo/contentserver/server/log"
 	"github.com/foomo/contentserver/server/repo/content"
 	"github.com/foomo/contentserver/server/requests"
-	"strings"
 )
 
 type Dimension struct {
@@ -152,6 +153,12 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 		c.Item = node.ToItem([]string{})
 		c.Path = node.GetPath()
 		c.Data = node.Data
+		// fetch URIs for all dimensions
+		uris := make(map[string]string)
+		for dimensionName, _ := range repo.Directory {
+			uris[dimensionName] = repo.GetURI(dimensionName, node.Id)
+		}
+		c.URIs = uris
 	} else {
 		log.Notice("404 for " + r.URI)
 		c.Status = content.STATUS_NOT_FOUND
@@ -161,6 +168,7 @@ func (repo *Repo) GetContent(r *requests.Content) *content.SiteContent {
 	if resolved == false {
 		resolvedDimension = r.Env.Dimensions[0]
 	}
+	// add navigation trees
 	for treeName, treeRequest := range r.Nodes {
 		log.Debug("  adding tree " + treeName + " " + treeRequest.Id)
 		if treeNode, ok := repo.Directory[resolvedDimension].Directory[treeRequest.Id]; ok {
