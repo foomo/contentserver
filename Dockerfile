@@ -1,4 +1,4 @@
-FROM scratch
+FROM alpine:latest
 
 COPY bin/contentserver-linux-amd64 /usr/sbin/contentserver
 
