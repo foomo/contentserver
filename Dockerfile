@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM scratch
 
 COPY bin/contentserver /usr/sbin/contentserver
 
