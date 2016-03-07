@@ -22,7 +22,7 @@ var contentServer string
 
 var uniqushPushVersion = "content-server 1.3.0"
 
-var showVersionFlag = flag.Bool("version", false, "Version info")
+var showVersionFlag = flag.Bool("version", false, "version info")
 var address = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
 var varDir = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
 var logLevelOptions = []string{
@@ -38,7 +38,9 @@ var logLevel = flag.String(
 	logLevelRecord,
 	fmt.Sprintf(
 		"one of %s",
-		strings.Join(logLevelOptions, ", ")))
+		strings.Join(logLevelOptions, ", "),
+	),
+)
 
 func exitUsage(code int) {
 	fmt.Printf("Usage: %s http(s)://your-content-server/path/to/content.json\n", os.Args[0])
