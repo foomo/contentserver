@@ -20,7 +20,7 @@ const (
 
 var contentServer string
 
-var uniqushPushVersion = "content-server 1.2.0"
+var uniqushPushVersion = "content-server 1.3.0"
 
 var showVersionFlag = flag.Bool("version", false, "Version info")
 var address = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
@@ -69,7 +69,11 @@ func main() {
 
 		}
 		log.SelectedLevel = level
-		server.RunSocketServer(flag.Arg(0), *address, *varDir)
+		err := server.Run(flag.Arg(0), *address, *varDir)
+		if err != nil {
+			fmt.Println("exiting with error", err)
+			os.Exit(1)
+		}
 	} else {
 		exitUsage(1)
 	}
