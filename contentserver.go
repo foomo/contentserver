@@ -18,28 +18,26 @@ const (
 	logLevelError   = "error"
 )
 
-var contentServer string
-
-var uniqushPushVersion = "content-server 1.3.0"
-
-var showVersionFlag = flag.Bool("version", false, "version info")
-var address = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
-var varDir = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
-var logLevelOptions = []string{
-	logLevelError,
-	logLevelRecord,
-	logLevelWarning,
-	logLevelNotice,
-	logLevelDebug,
-}
-
-var logLevel = flag.String(
-	"log-level",
-	logLevelRecord,
-	fmt.Sprintf(
-		"one of %s",
-		strings.Join(logLevelOptions, ", "),
-	),
+var (
+	uniqushPushVersion = "content-server 1.3.0"
+	showVersionFlag    = flag.Bool("version", false, "version info")
+	address            = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
+	varDir             = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
+	logLevelOptions    = []string{
+		logLevelError,
+		logLevelRecord,
+		logLevelWarning,
+		logLevelNotice,
+		logLevelDebug,
+	}
+	logLevel = flag.String(
+		"log-level",
+		logLevelRecord,
+		fmt.Sprintf(
+			"one of %s",
+			strings.Join(logLevelOptions, ", "),
+		),
+	)
 )
 
 func exitUsage(code int) {
