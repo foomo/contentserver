@@ -1,28 +1,28 @@
 package server
 
-import (
-	"github.com/foomo/contentserver/server/repo"
-)
-
-// our data
-
-type Stats struct {
-	requests int64
+type stats struct {
+	requests  int64
+	chanCount chan int
 }
 
-func NewStats() *Stats {
-	stats := new(Stats)
-	stats.requests = 0
-	return stats
+func newStats() *stats {
+	s := &stats{
+		requests:  0,
+		chanCount: make(chan int),
+	}
+	go func() {
+		for {
+			select {
+			case <-s.chanCount:
+				s.requests++
+				s.chanCount <- 1
+			}
+		}
+	}()
+	return s
 }
 
-var stats *Stats = NewStats()
-var contentRepo *repo.Repo
-
-func countRequest() {
-	stats.requests++
-}
-
-func numRequests() int64 {
-	return stats.requests
+func (s *stats) countRequest() {
+	s.chanCount <- 1
+	<-s.chanCount
 }

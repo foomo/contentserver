@@ -6,24 +6,24 @@ import (
 	"time"
 )
 
-// LogLevel logging level enum
+// Level logging level enum
 type Level int
 
 const (
 	// LevelError an error - as bad as it gets
 	LevelError Level = 0
 	// LevelRecord put this to the logs in any case
-	LevelRecord = 1
+	LevelRecord Level = 1
 	// LevelWarning not that bad
-	LevelWarning = 2
+	LevelWarning Level = 2
 	// LevelNotice almost on debug level
-	LevelNotice = 3
+	LevelNotice Level = 3
 	// LevelDebug we are debugging
-	LevelDebug = 4
+	LevelDebug Level = 4
 )
 
 // SelectedLevel selected log level
-var SelectedLevel Level = LevelDebug
+var SelectedLevel = LevelDebug
 
 var prefices = map[Level]string{
 	LevelRecord:  "record  : ",

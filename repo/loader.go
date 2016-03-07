@@ -3,13 +3,14 @@ package repo
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
-	"github.com/foomo/contentserver/server/log"
-	"github.com/foomo/contentserver/server/repo/content"
-	"github.com/foomo/contentserver/server/responses"
-	"github.com/foomo/contentserver/server/utils"
-	//golog "log"
+	"github.com/foomo/contentserver/content"
+	"github.com/foomo/contentserver/log"
+	"github.com/foomo/contentserver/responses"
 )
 
 func (repo *Repo) updateRoutine() {
@@ -31,7 +32,7 @@ func (repo *Repo) updateRoutine() {
 }
 
 func (repo *Repo) updateDimension(dimension string, node *content.RepoNode) error {
-	repo.updateChannel <- &RepoDimension{
+	repo.updateChannel <- &repoDimension{
 		Dimension: dimension,
 		Node:      node,
 	}
@@ -61,15 +62,15 @@ func (repo *Repo) _updateDimension(dimension string, newNode *content.RepoNode) 
 }
 
 func builDirectory(dirNode *content.RepoNode, directory map[string]*content.RepoNode, uRIDirectory map[string]*content.RepoNode) error {
-	log.Debug("repo.buildDirectory: " + dirNode.Id)
-	existingNode, ok := directory[dirNode.Id]
+	log.Debug("repo.buildDirectory: " + dirNode.ID)
+	existingNode, ok := directory[dirNode.ID]
 	if ok {
-		return errors.New("duplicate node with id:" + existingNode.Id)
+		return errors.New("duplicate node with id:" + existingNode.ID)
 	}
-	directory[dirNode.Id] = dirNode
+	directory[dirNode.ID] = dirNode
 	//todo handle duplicate uris
 	if _, thereIsAnExistingURINode := uRIDirectory[dirNode.URI]; thereIsAnExistingURINode {
-		return errors.New("duplicate uri: " + dirNode.URI + " (bad node id: " + dirNode.Id + ")")
+		return errors.New("duplicate uri: " + dirNode.URI + " (bad node id: " + dirNode.ID + ")")
 	}
 	uRIDirectory[dirNode.URI] = dirNode
 	for _, childNode := range dirNode.Nodes {
@@ -83,11 +84,11 @@ func builDirectory(dirNode *content.RepoNode, directory map[string]*content.Repo
 
 func wireAliases(directory map[string]*content.RepoNode) error {
 	for _, repoNode := range directory {
-		if len(repoNode.LinkId) > 0 {
-			if destinationNode, ok := directory[repoNode.LinkId]; ok {
+		if len(repoNode.LinkID) > 0 {
+			if destinationNode, ok := directory[repoNode.LinkID]; ok {
 				repoNode.URI = destinationNode.URI
 			} else {
-				return errors.New("that link id points nowhere " + repoNode.LinkId + " from " + repoNode.Id)
+				return errors.New("that link id points nowhere " + repoNode.LinkID + " from " + repoNode.ID)
 			}
 		}
 	}
@@ -148,14 +149,28 @@ func (repo *Repo) tryToRestoreCurrent() error {
 	return repo.loadJSONBytes(currentJSONBytes)
 }
 
+func get(URL string) (data []byte, err error) {
+	response, err := http.Get(URL)
+	if err != nil {
+		return data, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return data, fmt.Errorf("Bad HTTP Response: %q", response.Status)
+	}
+	return ioutil.ReadAll(response.Body)
+}
+
 func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 	startTimeRepo := time.Now().UnixNano()
-	jsonBytes, err = utils.Get(repo.server)
+	jsonBytes, err = get(repo.server)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
 	if err != nil {
 		// we have no json to load - the repo server did not reply
+		log.Debug("we have no json to load - the repo server did not reply", err)
 		return repoRuntime, jsonBytes, err
 	}
+	log.Debug("loading json from: "+repo.server, string(jsonBytes))
 	nodes, err := loadNodesFromJSON(jsonBytes)
 	if err != nil {
 		// could not load nodes from json
@@ -172,6 +187,7 @@ func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 func (repo *Repo) loadJSONBytes(jsonBytes []byte) error {
 	nodes, err := loadNodesFromJSON(jsonBytes)
 	if err != nil {
+		log.Debug("could not parse json", string(jsonBytes))
 		return err
 	}
 	err = repo.loadNodes(nodes)

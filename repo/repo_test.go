@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/foomo/contentserver/server/requests"
+	"github.com/foomo/contentserver/requests"
 )
 
 func getMockData(t *testing.T) (server *httptest.Server, varDir string) {
@@ -116,34 +116,28 @@ func TestDimensionHygiene(t *testing.T) {
 	}
 }
 
-func TestResolveContent(t *testing.T) {
+func getTestRepo(path string, t *testing.T) *Repo {
 	mockServer, varDir := getMockData(t)
-	server := mockServer.URL + "/repo-two-dimensions.json"
+	server := mockServer.URL + path
 	r := NewRepo(server, varDir)
 	response := r.Update()
 	if !response.Success {
 		t.Fatal("well those two dimension should be fine")
 	}
-	dimensions := []string{"dimension_foo"}
-	contentRequest := &requests.Content{
-		URI: "/a",
-		Env: &requests.Env{
-			Dimensions: dimensions,
-			Groups:     []string{},
-		},
-		Nodes: map[string]*requests.Node{
-			"id-root": &requests.Node{
-				Id:         "id-root",
-				Dimension:  dimensions[0],
-				MimeTypes:  []string{"application/x-node"},
-				Expand:     true,
-				DataFields: []string{},
-			},
-		},
-	}
-	siteContent := r.GetContent(contentRequest)
+	return r
+}
+
+func TestResolveContent(t *testing.T) {
+	r := getTestRepo("/repo-two-dimensions.json", t)
+
+	contentRequest := makeValidRequest()
+
+	siteContent, err := r.GetContent(contentRequest)
 	if siteContent.URI != contentRequest.URI {
 		t.Fatal("failed to resolve uri")
+	}
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -163,4 +157,58 @@ func TestLinkIds(t *testing.T) {
 		t.Fatal("I do not think so")
 	}
 
+}
+
+func makeValidRequest() *requests.Content {
+	dimensions := []string{"dimension_foo"}
+	return &requests.Content{
+		URI: "/a",
+		Env: &requests.Env{
+			Dimensions: dimensions,
+			Groups:     []string{},
+		},
+		Nodes: map[string]*requests.Node{
+			"id-root": &requests.Node{
+				ID:         "id-root",
+				Dimension:  dimensions[0],
+				MimeTypes:  []string{"application/x-node"},
+				Expand:     true,
+				DataFields: []string{},
+			},
+		},
+	}
+
+}
+
+func TestInvalidRequest(t *testing.T) {
+
+	r := getTestRepo("/repo-two-dimensions.json", t)
+
+	if r.validateContentRequest(makeValidRequest()) != nil {
+		t.Fatal("failed validation a valid request")
+	}
+
+	tests := map[string]*requests.Content{}
+
+	rEmptyURI := makeValidRequest()
+	rEmptyURI.URI = ""
+	tests["empty uri"] = rEmptyURI
+
+	rEmptyEnv := makeValidRequest()
+	rEmptyEnv.Env = nil
+	tests["empty env"] = rEmptyEnv
+
+	rEmptyEnvDimensions := makeValidRequest()
+	rEmptyEnvDimensions.Env.Dimensions = []string{}
+	tests["empty env dimensions"] = rEmptyEnvDimensions
+
+	//rNodesValidID := makeValidRequest()
+	//rNodesValidID.Nodes["id-root"].Id = ""
+	//tests["nodes must have a valid id"] = rNodesValidID
+
+	for comment, req := range tests {
+		if r.validateContentRequest(req) == nil {
+			t.Fatal(comment, "should have failed")
+		}
+	}
 }

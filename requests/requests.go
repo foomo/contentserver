@@ -13,7 +13,7 @@ type Env struct {
 // Node - an abdtract node request, use this one to request navigations
 type Node struct {
 	// this one should be obvious
-	Id string `json:"id"`
+	ID string `json:"id"`
 	// from which dimension
 	Dimension string `json:"dimension"`
 	// what do you want to see in your navigations, folders, images or unicorns
@@ -49,7 +49,7 @@ type Repo struct {
 
 // ItemMap - map of items
 type ItemMap struct {
-	Id         string   `json:"id"`
+	ID         string   `json:"id"`
 	DataFields []string `json:"dataFields"`
 }
 
