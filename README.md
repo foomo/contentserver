@@ -1,19 +1,16 @@
 [![Travis CI](https://travis-ci.org/foomo/contentserver.svg?branch=development)](https://travis-ci.org/foomo/contentserver)
 
-Content Server
-==============
+# Content Server
 
-> Serves content tree structures very quickly through a json socket api
+Serves content tree structures very quickly through a json socket api
 
-Concept
--------
+## Concept
 
 A Server written in GoLang to mix and resolve content from different content sources, e.g. CMS, Blog, Shop and many other more. The server provides a simple to use API for non blocking content repository updates, to resolve site content by an URI or to get deep-linking multilingual URIs for a given contentID.
 
 It's up to you how you use it and which data you want to export to the server. Our intention was to write a fast and cache hazzle-free content server to mix different content sources.
 
-Export Data
------------
+## Export Data
 
 All you have to do is to provide a tree of content nodes as a JSON encoded RepoNode.
 
@@ -23,31 +20,28 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 | MimeType      |         string         |                             mime-type of the node, e.g. text/html, image/png, ... |
 | LinkId        |         string         |                                             (symbolic) link/alias to another node |
 | Groups        |        []string        |                                                                    access control |
-| URI           |         string         | a map of unique URIs for each region and language to resolve and link to the node |
-| Name          |         string         |                                 a name for this node in every region and language |
-| Hidden        |          bool          |                                     hide in menu specific for region and language |
-| DestinationId |         string         |                                                         alias or symlink handling |
+| URI           |         string         |                                                                               URI |
+| Name          |         string         |                                                                              name |
+| Hidden        |          bool          |                                                                      hide in menu |
+| DestinationId |         string         |                                                          alias / symlink handling |
 | Data          | map[string]interface{} |                                                                      payload data |
 | Nodes         |  map[string]*RepoNode  |                                                                       child nodes |
-| Index         |        []string        |                                                    contains the order of ou nodes |
+| Index         |        []string        |                                                    contains the order of of nodes |
 
 ### Tips
 
--	If you do not want to build a multi-market website define a generic market, e.g. call it *universe*.
--	Do not export content which should not be accessible at all, e.g. you are working on a super secret fancy new category of your website.
--	Hidden nodes could be resolved by uri-requests, but are not served on a navigation node request.
--	To make a node accessible only for a given region/language is totally easy, just set the region/language you want to serve. Other regions and languages will not contain this node any more.
--	To avoid duplicate content provide a DestinationId ( = ContentId of the node you want to reference) instead of URIs.
+-	If you do not want to build a multi-market website define a generic market, e.g. call it *universe*
+-	keep it lean and do not export content which should not be accessible at all, e.g. you are working on a super secret fancy new category of your website
+-	Hidden nodes can be resolved by their uri, but are hidden on nodes
+-	To avoid duplicate content provide a DestinationId ( = ContentId of the node you want to reference) instead of URIs
 
-Request Data
-------------
+## Request Data
 
 There is a PHP Proxy implementation for foomo in [Foomo.ContentServer](https://github.com/foomo/Foomo.ContentServer). Feel free to use it or to implement your own proxy in the language you love. The API should be easily to implement in every other framework and language, too.
 
-Usage
------
+### Usage
 
-```
+```bash
 $ contentserver --help
 Usage of contentserver:
   -address string
@@ -60,7 +54,6 @@ Usage of contentserver:
     	version info
 ```
 
-License
--------
+## License
 
 Copyright (c) foomo under the LGPL 3.0 license.
