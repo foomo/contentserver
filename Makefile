@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 options:
-	echo "you can clean | test | build | build-arch | run | package"
+	echo "you can clean | test | build | build-arch | package"
 clean:
 	rm -fv bin/contentserve*
 build: clean
@@ -12,4 +12,4 @@ build-arch: clean
 package: build
 	pkg/build.sh
 test:
-	go test -v github.com/foomo/contentserver/server/repo
+	go test ./...

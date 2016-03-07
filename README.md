@@ -47,12 +47,15 @@ Usage
 
 ```
 $ contentserver --help
-
-Usage of bin/contentserver:
-  -address="127.0.0.1:8081": address to bind host:port
-  -logLevel="record": one of error, record, warning, notice, debug
-  -protocol="tcp": what protocol to server for
-  -vardir="127.0.0.1:8081": where to put my data
+Usage of contentserver:
+  -address string
+    	address to bind host:port (default "127.0.0.1:8081")
+  -log-level string
+    	one of error, record, warning, notice, debug (default "record")
+  -var-dir string
+    	where to put my data (default "/var/lib/contentserver")
+  -version
+    	version info
 ```
 
 License
