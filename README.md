@@ -1,3 +1,5 @@
+[![Travis CI](https://travis-ci.org/foomo/contentserver.svg?branch=development)](https://travis-ci.org/foomo/contentserver)
+
 Content Server
 ==============
 
