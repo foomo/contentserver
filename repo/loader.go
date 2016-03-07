@@ -10,7 +10,6 @@ import (
 
 	"github.com/foomo/contentserver/content"
 	"github.com/foomo/contentserver/log"
-	"github.com/foomo/contentserver/responses"
 )
 
 func (repo *Repo) updateRoutine() {
@@ -101,46 +100,6 @@ func loadNodesFromJSON(jsonBytes []byte) (nodes map[string]*content.RepoNode, er
 	return nodes, err
 }
 
-// Update - reload contents of repository with json from repo.server
-func (repo *Repo) Update() (updateResponse *responses.Update) {
-	floatSeconds := func(nanoSeconds int64) float64 {
-		return float64(float64(nanoSeconds) / float64(1000000000.0))
-	}
-	startTime := time.Now().UnixNano()
-	updateRepotime, jsonBytes, updateErr := repo.update()
-	updateResponse = &responses.Update{}
-	updateResponse.Stats.RepoRuntime = floatSeconds(updateRepotime)
-
-	if updateErr != nil {
-		updateResponse.Success = false
-		updateResponse.Stats.NumberOfNodes = -1
-		updateResponse.Stats.NumberOfURIs = -1
-		// let us try to restore the world from a file
-		log.Error("could not update repository:" + updateErr.Error())
-		updateResponse.ErrorMessage = updateErr.Error()
-		restoreErr := repo.tryToRestoreCurrent()
-		if restoreErr != nil {
-			log.Error("failed to restore preceding repo version: " + restoreErr.Error())
-		} else {
-			log.Record("restored current repo from local history")
-		}
-	} else {
-		updateResponse.Success = true
-		// persist the currently loaded one
-		historyErr := repo.history.add(jsonBytes)
-		if historyErr != nil {
-			log.Warning("could not persist current repo in history: " + historyErr.Error())
-		}
-		// add some stats
-		for dimension := range repo.Directory {
-			updateResponse.Stats.NumberOfNodes += len(repo.Directory[dimension].Directory)
-			updateResponse.Stats.NumberOfURIs += len(repo.Directory[dimension].URIDirectory)
-		}
-	}
-	updateResponse.Stats.OwnRuntime = floatSeconds(time.Now().UnixNano()-startTime) - updateResponse.Stats.RepoRuntime
-	return updateResponse
-}
-
 func (repo *Repo) tryToRestoreCurrent() error {
 	currentJSONBytes, err := repo.history.getCurrent()
 	if err != nil {
@@ -197,6 +156,12 @@ func (repo *Repo) loadJSONBytes(jsonBytes []byte) error {
 			log.Warning("could not add valid json to history:" + historyErr.Error())
 		} else {
 			log.Record("added valid json to history")
+		}
+		cleanUpErr := repo.history.cleanup()
+		if cleanUpErr != nil {
+			log.Warning("an error occured while cleaning up my history:", cleanUpErr)
+		} else {
+			log.Record("cleaned up history")
 		}
 	}
 	return err
