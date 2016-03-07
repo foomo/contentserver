@@ -9,8 +9,8 @@ type Node struct {
 
 // NewNode constructor
 func NewNode() *Node {
-	node := new(Node)
-	node.Item = NewItem()
-	node.Nodes = make(map[string]*Node)
-	return node
+	return &Node{
+		Item:  NewItem(),
+		Nodes: map[string]*Node{},
+	}
 }

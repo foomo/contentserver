@@ -11,7 +11,7 @@ type Item struct {
 
 // NewItem item contructor
 func NewItem() *Item {
-	item := new(Item)
-	item.Data = make(map[string]interface{})
-	return item
+	return &Item{
+		Data: map[string]interface{}{},
+	}
 }
