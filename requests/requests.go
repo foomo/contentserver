@@ -40,12 +40,10 @@ type Content struct {
 }
 
 // Update - request an update
-type Update struct {
-}
+type Update struct{}
 
 // Repo - query repo
-type Repo struct {
-}
+type Repo struct{}
 
 // ItemMap - map of items
 type ItemMap struct {

@@ -8,10 +8,10 @@ type Error struct {
 
 // NewError - a brand new error
 func NewError(code int, message string) *Error {
-	error := new(Error)
-	error.Code = code
-	error.Message = message
-	return error
+	return &Error{
+		Code:    code,
+		Message: message,
+	}
 }
 
 // Update - information about an update

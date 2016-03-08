@@ -37,12 +37,13 @@ type repoDimension struct {
 func NewRepo(server string, varDir string) *Repo {
 	log.Notice("creating new repo for " + server)
 	log.Notice("	using var dir:" + varDir)
-	repo := new(Repo)
-	repo.Directory = make(map[string]*Dimension)
-	repo.server = server
-	repo.history = newHistory(varDir)
-	repo.updateChannel = make(chan *repoDimension)
-	repo.updateDoneChannel = make(chan error)
+	repo := &Repo{
+		server:            server,
+		Directory:         map[string]*Dimension{},
+		history:           newHistory(varDir),
+		updateChannel:     make(chan *repoDimension),
+		updateDoneChannel: make(chan error),
+	}
 	go repo.updateRoutine()
 	log.Record("trying to restore pervious state")
 	restoreErr := repo.tryToRestoreCurrent()
@@ -125,7 +126,9 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		c.Status = content.StatusNotFound
 		c.Dimension = r.Env.Dimensions[0]
 	}
-	log.Debug(fmt.Sprintf("resolved: %v, uri: %v, dim: %v, n: %v", resolved, resolvedURI, resolvedDimension, node))
+	if log.SelectedLevel == log.LevelDebug {
+		log.Debug(fmt.Sprintf("resolved: %v, uri: %v, dim: %v, n: %v", resolved, resolvedURI, resolvedDimension, node))
+	}
 	if resolved == false {
 		log.Debug("repo.GetContent", r.URI, "could not be resolved falling back to default dimension", r.Env.Dimensions[0])
 		// r.Env.Dimensions is validated => we can access it

@@ -14,6 +14,16 @@ import (
 	"github.com/foomo/contentserver/responses"
 )
 
+type Handler string
+
+const (
+	HandlerGetURIs  Handler = "getURIs"
+	HandlerContent          = "content"
+	HandlerGetNodes         = "getNodes"
+	HandlerUpdate           = "update"
+	HandlerGetRepo          = "getRepo"
+)
+
 // simple internal request counter
 type stats struct {
 	requests  int64
@@ -47,7 +57,7 @@ type socketServer struct {
 	repo  *repo.Repo
 }
 
-func (s *socketServer) handle(handler string, jsonBytes []byte) (replyBytes []byte, err error) {
+func (s *socketServer) handle(handler Handler, jsonBytes []byte) (replyBytes []byte, err error) {
 
 	var reply interface{}
 	var apiErr error
@@ -62,27 +72,27 @@ func (s *socketServer) handle(handler string, jsonBytes []byte) (replyBytes []by
 	}
 
 	switch handler {
-	case "getURIs":
+	case HandlerGetURIs:
 		getURIRequest := &requests.URIs{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {
 			reply = s.repo.GetURIs(getURIRequest.Dimension, getURIRequest.Ids)
 		})
-	case "content":
+	case HandlerContent:
 		contentRequest := &requests.Content{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &contentRequest), func() {
 			reply, apiErr = s.repo.GetContent(contentRequest)
 		})
-	case "getNodes":
+	case HandlerGetNodes:
 		nodesRequest := &requests.Nodes{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &nodesRequest), func() {
 			reply = s.repo.GetNodes(nodesRequest)
 		})
-	case "update":
+	case HandlerUpdate:
 		updateRequest := &requests.Update{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
 			reply = s.repo.Update()
 		})
-	case "getRepo":
+	case HandlerGetRepo:
 		repoRequest := &requests.Repo{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &repoRequest), func() {
 			reply = s.repo.GetRepo()
@@ -118,13 +128,13 @@ func (s *socketServer) reply(reply interface{}, jsonErr error, apiErr error) (re
 	return replyBytes, err
 }
 
-func extractHandlerAndJSONLentgh(header string) (handler string, jsonLength int) {
+func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int) {
 	headerParts := strings.Split(header, ":")
 	jsonLength, _ = strconv.Atoi(headerParts[1])
-	return headerParts[0], jsonLength
+	return Handler(headerParts[0]), jsonLength
 }
 
-func (s *socketServer) execute(conn net.Conn, handler string, jsonBytes []byte) {
+func (s *socketServer) execute(conn net.Conn, handler Handler, jsonBytes []byte) {
 	s.stats.countRequest()
 	log.Record("socket.handleSocketRequest(%d): %s", s.stats.requests, handler)
 	if log.SelectedLevel == log.LevelDebug {

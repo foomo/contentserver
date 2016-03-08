@@ -1,34 +1,12 @@
 package repo
 
 import (
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"path"
-	"runtime"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/foomo/contentserver/repo/mock"
 	"github.com/foomo/contentserver/requests"
 )
-
-func getMockData(t *testing.T) (server *httptest.Server, varDir string) {
-
-	_, filename, _, _ := runtime.Caller(1)
-	mockDir := path.Join(path.Dir(filename), "mock")
-
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		time.Sleep(time.Millisecond * 50)
-		mockFilename := path.Join(mockDir, req.URL.Path[1:])
-		http.ServeFile(w, req, mockFilename)
-	}))
-	varDir, err := ioutil.TempDir("", "content-server-test")
-	if err != nil {
-		panic(err)
-	}
-	return server, varDir
-}
 
 func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 	if empty {
@@ -43,7 +21,7 @@ func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 }
 
 func TestLoad404(t *testing.T) {
-	mockServer, varDir := getMockData(t)
+	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-no-have"
 	r := NewRepo(server, varDir)
 	response := r.Update()
@@ -53,7 +31,7 @@ func TestLoad404(t *testing.T) {
 }
 
 func TestLoadBrokenRepo(t *testing.T) {
-	mockServer, varDir := getMockData(t)
+	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-broken-json.json"
 	r := NewRepo(server, varDir)
 	response := r.Update()
@@ -64,7 +42,7 @@ func TestLoadBrokenRepo(t *testing.T) {
 
 func TestLoadRepo(t *testing.T) {
 
-	mockServer, varDir := getMockData(t)
+	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-ok.json"
 	r := NewRepo(server, varDir)
 	assertRepoIsEmpty(t, r, true)
@@ -86,7 +64,7 @@ func TestLoadRepo(t *testing.T) {
 }
 
 func TestLoadRepoDuplicateUris(t *testing.T) {
-	mockServer, varDir := getMockData(t)
+	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-duplicate-uris.json"
 	r := NewRepo(server, varDir)
 	response := r.Update()
@@ -99,7 +77,7 @@ func TestLoadRepoDuplicateUris(t *testing.T) {
 }
 
 func TestDimensionHygiene(t *testing.T) {
-	mockServer, varDir := getMockData(t)
+	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-two-dimensions.json"
 	r := NewRepo(server, varDir)
 	response := r.Update()
@@ -117,7 +95,7 @@ func TestDimensionHygiene(t *testing.T) {
 }
 
 func getTestRepo(path string, t *testing.T) *Repo {
-	mockServer, varDir := getMockData(t)
+	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + path
 	r := NewRepo(server, varDir)
 	response := r.Update()
@@ -142,7 +120,7 @@ func TestResolveContent(t *testing.T) {
 }
 
 func TestLinkIds(t *testing.T) {
-	mockServer, varDir := getMockData(t)
+	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-link-ok.json"
 	r := NewRepo(server, varDir)
 	response := r.Update()
