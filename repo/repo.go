@@ -56,7 +56,7 @@ func NewRepo(server string, varDir string) *Repo {
 
 // GetURIs get many uris at once
 func (repo *Repo) GetURIs(dimension string, ids []string) map[string]string {
-	uris := make(map[string]string)
+	uris := map[string]string{}
 	for _, id := range ids {
 		uris[id] = repo.getURI(dimension, id)
 	}
@@ -65,7 +65,7 @@ func (repo *Repo) GetURIs(dimension string, ids []string) map[string]string {
 
 // GetNodes get nodes
 func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
-	nodes := make(map[string]*content.Node)
+	nodes := map[string]*content.Node{}
 	path := []*content.Item{}
 	for nodeName, nodeRequest := range r.Nodes {
 		log.Debug("  adding node " + nodeName + " " + nodeRequest.ID)
@@ -75,7 +75,8 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 			log.Warning("could not get dimension root node for nodeRequest.Dimension: " + nodeRequest.Dimension)
 			continue
 		}
-		if treeNode, ok := dimensionNode.Directory[nodeRequest.ID]; ok {
+		treeNode, ok := dimensionNode.Directory[nodeRequest.ID]
+		if ok {
 			nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, r.Env.Groups, nodeRequest.DataFields)
 		} else {
 			log.Warning("you are requesting an invalid tree node for " + nodeName + " : " + nodeRequest.ID)
@@ -271,14 +272,12 @@ func (repo *Repo) validateContentRequest(req *requests.Content) (err error) {
 	if len(req.URI) == 0 {
 		return errors.New("request URI must not be empty")
 	}
-
 	if req.Env == nil {
 		return errors.New("request.Env must not be nil")
 	}
 	if len(req.Env.Dimensions) == 0 {
 		return errors.New("request.Env.Dimensions must not be empty")
 	}
-
 	for _, envDimension := range req.Env.Dimensions {
 		if !repo.hasDimension(envDimension) {
 			availableDimensions := []string{}

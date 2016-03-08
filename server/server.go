@@ -61,60 +61,72 @@ func (s *socketServer) handleSocketRequest(handler string, jsonBuffer []byte) (r
 	var apiErr error
 	var jsonErr error
 	log.Record(fmt.Sprintf("socket.handleSocketRequest(%d): %s %s", s.stats.requests, handler, string(jsonBuffer)))
+
+	ifJSONIsFine := func(err error, processingFunc func()) {
+		if err != nil {
+			jsonErr = err
+			return
+		}
+		processingFunc()
+	}
+
 	switch handler {
 	case "getURIs":
 		getURIRequest := &requests.URIs{}
-		jsonErr = json.Unmarshal(jsonBuffer, &getURIRequest)
-		log.Debug("  getURIRequest: " + fmt.Sprint(getURIRequest))
-		uris := s.repo.GetURIs(getURIRequest.Dimension, getURIRequest.Ids)
-		log.Debug("    resolved: " + fmt.Sprint(uris))
-		reply = uris
-		break
+		ifJSONIsFine(json.Unmarshal(jsonBuffer, &getURIRequest), func() {
+			log.Debug("  getURIRequest: " + fmt.Sprint(getURIRequest))
+			uris := s.repo.GetURIs(getURIRequest.Dimension, getURIRequest.Ids)
+			log.Debug("    resolved: " + fmt.Sprint(uris))
+			reply = uris
+		})
 	case "content":
 		contentRequest := &requests.Content{}
-		jsonErr = json.Unmarshal(jsonBuffer, &contentRequest)
-		log.Debug("contentRequest:", contentRequest)
-		content, apiErr := s.repo.GetContent(contentRequest)
-		log.Debug(apiErr)
-		reply = content
-		break
+		ifJSONIsFine(json.Unmarshal(jsonBuffer, &contentRequest), func() {
+			log.Debug("contentRequest:", contentRequest)
+			content, contentAPIErr := s.repo.GetContent(contentRequest)
+			apiErr = contentAPIErr
+			reply = content
+		})
 	case "getNodes":
 		nodesRequest := &requests.Nodes{}
-		jsonErr = json.Unmarshal(jsonBuffer, &nodesRequest)
-		log.Debug("  nodesRequest: " + fmt.Sprint(nodesRequest))
-		nodesMap := s.repo.GetNodes(nodesRequest)
-		reply = nodesMap
-		break
+		ifJSONIsFine(json.Unmarshal(jsonBuffer, &nodesRequest), func() {
+			log.Debug("  nodesRequest: " + fmt.Sprint(nodesRequest))
+			nodesMap := s.repo.GetNodes(nodesRequest)
+			reply = nodesMap
+		})
 	case "update":
 		updateRequest := &requests.Update{}
-		jsonErr = json.Unmarshal(jsonBuffer, &updateRequest)
-		log.Debug("  updateRequest: " + fmt.Sprint(updateRequest))
-		updateResponse := s.repo.Update()
-		reply = updateResponse
-		break
+		ifJSONIsFine(json.Unmarshal(jsonBuffer, &updateRequest), func() {
+			log.Debug("  updateRequest: " + fmt.Sprint(updateRequest))
+			updateResponse := s.repo.Update()
+			reply = updateResponse
+		})
 	case "getRepo":
 		repoRequest := &requests.Repo{}
-		jsonErr = json.Unmarshal(jsonBuffer, &repoRequest)
-		log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
-		repoResponse := s.repo.GetRepo()
-		reply = repoResponse
-		break
+		ifJSONIsFine(json.Unmarshal(jsonBuffer, &repoRequest), func() {
+			log.Debug("  getRepoRequest: " + fmt.Sprint(repoRequest))
+			repoResponse := s.repo.GetRepo()
+			reply = repoResponse
+		})
 	default:
 		err = errors.New(log.Error("  can not handle this one " + handler))
 		errorResponse := responses.NewError(1, "unknown handler")
 		reply = errorResponse
 	}
 	if jsonErr != nil {
-		log.Error("  could not read incoming json: " + fmt.Sprint(jsonErr))
+		err = jsonErr
+		log.Error("  could not read incoming json:", jsonErr)
 		errorResponse := responses.NewError(2, "could not read incoming json "+jsonErr.Error())
 		reply = errorResponse
 	} else if apiErr != nil {
+		log.Error("  an API error occured:", apiErr)
+		err = apiErr
 		reply = responses.NewError(3, "internal error "+apiErr.Error())
 	}
-	encodedBytes, jsonErr := json.MarshalIndent(map[string]interface{}{"reply": reply}, "", " ")
-	if jsonErr != nil {
-		err = jsonErr
-		log.Error("  could not encode reply " + fmt.Sprint(jsonErr))
+	encodedBytes, jsonReplyErr := json.MarshalIndent(map[string]interface{}{"reply": reply}, "", " ")
+	if jsonReplyErr != nil {
+		err = jsonReplyErr
+		log.Error("  could not encode reply " + fmt.Sprint(jsonReplyErr))
 	} else {
 		replyBytes = encodedBytes
 	}
@@ -126,14 +138,15 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 	var headerBuffer [1]byte
 	header := ""
 	for {
+		// let us read with 1 byte steps on conn until we find "{"
 		_, readErr := conn.Read(headerBuffer[0:])
 		if readErr != nil {
 			log.Debug("  looks like the client closed the connection - this is my readError: " + fmt.Sprint(readErr))
 			return
 		}
 		// read next byte
-		current := string(headerBuffer[0:])
-		if current == "{" {
+		current := headerBuffer[0:]
+		if string(current) == "{" {
 			// json has started
 			headerParts := strings.Split(header, ":")
 			header = ""
@@ -141,17 +154,23 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 			jsonLength, _ := strconv.Atoi(headerParts[1])
 			log.Debug(fmt.Sprintf("  found json with %d bytes", jsonLength))
 			if jsonLength > 0 {
+				// let us try to read some json
 				jsonBuffer := make([]byte, jsonLength)
+				// that is "{"
 				jsonBuffer[0] = 123
 				_, jsonReadErr := conn.Read(jsonBuffer[1:])
 				if jsonReadErr != nil {
 					log.Error("  could not read json - giving up with this client connection" + fmt.Sprint(jsonReadErr))
 					return
 				}
-				log.Debug("  read json: " + string(jsonBuffer))
+				if log.SelectedLevel == log.LevelDebug {
+					log.Debug("  read json: " + string(jsonBuffer))
+				}
+
+				// execution time
 				reply, handlingError := s.handleSocketRequest(requestHandler, jsonBuffer)
 				if handlingError != nil {
-					log.Error("socket.handleConnection: handlingError " + fmt.Sprint(handlingError))
+					log.Error("socket.handleConnection handlingError :", handlingError)
 					if reply == nil {
 						log.Error("giving up with nil reply")
 						conn.Close()
