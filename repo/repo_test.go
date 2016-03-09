@@ -108,7 +108,7 @@ func getTestRepo(path string, t *testing.T) *Repo {
 func TestResolveContent(t *testing.T) {
 	r := getTestRepo("/repo-two-dimensions.json", t)
 
-	contentRequest := makeValidRequest()
+	contentRequest := mock.MakeValidContentRequest()
 
 	siteContent, err := r.GetContent(contentRequest)
 	if siteContent.URI != contentRequest.URI {
@@ -137,50 +137,29 @@ func TestLinkIds(t *testing.T) {
 
 }
 
-func makeValidRequest() *requests.Content {
-	dimensions := []string{"dimension_foo"}
-	return &requests.Content{
-		URI: "/a",
-		Env: &requests.Env{
-			Dimensions: dimensions,
-			Groups:     []string{},
-		},
-		Nodes: map[string]*requests.Node{
-			"id-root": &requests.Node{
-				ID:         "id-root",
-				Dimension:  dimensions[0],
-				MimeTypes:  []string{"application/x-node"},
-				Expand:     true,
-				DataFields: []string{},
-			},
-		},
-	}
-
-}
-
 func TestInvalidRequest(t *testing.T) {
 
 	r := getTestRepo("/repo-two-dimensions.json", t)
 
-	if r.validateContentRequest(makeValidRequest()) != nil {
+	if r.validateContentRequest(mock.MakeValidContentRequest()) != nil {
 		t.Fatal("failed validation a valid request")
 	}
 
 	tests := map[string]*requests.Content{}
 
-	rEmptyURI := makeValidRequest()
+	rEmptyURI := mock.MakeValidContentRequest()
 	rEmptyURI.URI = ""
 	tests["empty uri"] = rEmptyURI
 
-	rEmptyEnv := makeValidRequest()
+	rEmptyEnv := mock.MakeValidContentRequest()
 	rEmptyEnv.Env = nil
 	tests["empty env"] = rEmptyEnv
 
-	rEmptyEnvDimensions := makeValidRequest()
+	rEmptyEnvDimensions := mock.MakeValidContentRequest()
 	rEmptyEnvDimensions.Env.Dimensions = []string{}
 	tests["empty env dimensions"] = rEmptyEnvDimensions
 
-	//rNodesValidID := makeValidRequest()
+	//rNodesValidID := mock.MakeValidContentRequest()
 	//rNodesValidID.Nodes["id-root"].Id = ""
 	//tests["nodes must have a valid id"] = rNodesValidID
 

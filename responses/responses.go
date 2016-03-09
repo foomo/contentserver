@@ -1,9 +1,15 @@
 package responses
 
+import "fmt"
+
 // Error describes an error for humans and machines
 type Error struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("code: %q, message: %q", e.Code, e.Message)
 }
 
 // NewError - a brand new error

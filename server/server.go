@@ -102,10 +102,6 @@ func (s *socketServer) handle(handler Handler, jsonBytes []byte) (replyBytes []b
 		errorResponse := responses.NewError(1, "unknown handler")
 		reply = errorResponse
 	}
-	return s.reply(reply, jsonErr, apiErr)
-}
-
-func (s *socketServer) reply(reply interface{}, jsonErr error, apiErr error) (replyBytes []byte, err error) {
 	if jsonErr != nil {
 		err = jsonErr
 		log.Error("  could not read incoming json:", jsonErr)
@@ -116,6 +112,10 @@ func (s *socketServer) reply(reply interface{}, jsonErr error, apiErr error) (re
 		err = apiErr
 		reply = responses.NewError(3, "internal error "+apiErr.Error())
 	}
+	return s.encodeReply(reply)
+}
+
+func (s *socketServer) encodeReply(reply interface{}) (replyBytes []byte, err error) {
 	encodedBytes, jsonReplyErr := json.MarshalIndent(map[string]interface{}{
 		"reply": reply,
 	}, "", " ")
@@ -128,13 +128,19 @@ func (s *socketServer) reply(reply interface{}, jsonErr error, apiErr error) (re
 	return replyBytes, err
 }
 
-func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int) {
+func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int, err error) {
 	headerParts := strings.Split(header, ":")
-	jsonLength, _ = strconv.Atoi(headerParts[1])
-	return Handler(headerParts[0]), jsonLength
+	if len(headerParts) != 2 {
+		return "", 0, errors.New("invalid header")
+	}
+	jsonLength, err = strconv.Atoi(headerParts[1])
+	if err != nil {
+		err = fmt.Errorf("could not parse length in header: %q", header)
+	}
+	return Handler(headerParts[0]), jsonLength, err
 }
 
-func (s *socketServer) execute(conn net.Conn, handler Handler, jsonBytes []byte) {
+func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
 	s.stats.countRequest()
 	log.Record("socket.handleSocketRequest(%d): %s", s.stats.requests, handler)
 	if log.SelectedLevel == log.LevelDebug {
@@ -143,12 +149,11 @@ func (s *socketServer) execute(conn net.Conn, handler Handler, jsonBytes []byte)
 	reply, handlingError := s.handle(handler, jsonBytes)
 	if handlingError != nil {
 		log.Error("socket.handleConnection handlingError :", handlingError)
-		if reply == nil {
-			log.Error("giving up with nil reply")
-			conn.Close()
-			return
-		}
 	}
+	return reply
+}
+
+func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
 	headerBytes := []byte(strconv.Itoa(len(reply)))
 	reply = append(headerBytes, reply...)
 	log.Debug("  replying: " + string(reply))
@@ -158,6 +163,7 @@ func (s *socketServer) execute(conn net.Conn, handler Handler, jsonBytes []byte)
 		return
 	}
 	log.Debug("  replied. waiting for next request on open connection")
+
 }
 
 func (s *socketServer) handleConnection(conn net.Conn) {
@@ -168,16 +174,26 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 		// let us read with 1 byte steps on conn until we find "{"
 		_, readErr := conn.Read(headerBuffer[0:])
 		if readErr != nil {
-			log.Debug("  looks like the client closed the connection - this is my readError: " + fmt.Sprint(readErr))
+			log.Debug("  looks like the client closed the connection: ", readErr)
 			return
 		}
 		// read next byte
 		current := headerBuffer[0:]
 		if string(current) == "{" {
+			// json has started
+			handler, jsonLength, headerErr := extractHandlerAndJSONLentgh(header)
 			// reset header
 			header = ""
-			// json has started
-			handler, jsonLength := extractHandlerAndJSONLentgh(header)
+			if headerErr != nil {
+				log.Error("invalid request could not read header", headerErr)
+				encodedErr, encodingErr := s.encodeReply(responses.NewError(4, "invalid header "+headerErr.Error()))
+				if encodingErr == nil {
+					s.writeResponse(conn, encodedErr)
+				} else {
+					log.Error("could not respond to invalid request", encodingErr)
+				}
+				return
+			}
 			log.Debug(fmt.Sprintf("  found json with %d bytes", jsonLength))
 			if jsonLength > 0 {
 				// let us try to read some json
@@ -192,11 +208,11 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 				if log.SelectedLevel == log.LevelDebug {
 					log.Debug("  read json: " + string(jsonBytes))
 				}
-				s.execute(conn, handler, jsonBytes)
-				return
+				s.writeResponse(conn, s.execute(handler, jsonBytes))
+				// note: connection remains open
+				continue
 			}
 			log.Error("can not read empty json")
-			conn.Close()
 			return
 		}
 		// adding to header byte by byte
@@ -230,6 +246,11 @@ func Run(server string, address string, varDir string) error {
 			continue
 		}
 		// a goroutine handles conn so that the loop can accept other connections
-		go s.handleConnection(conn)
+		go func() {
+			log.Debug("accepted connection")
+			s.handleConnection(conn)
+			conn.Close()
+			log.Debug("connection closed")
+		}()
 	}
 }
