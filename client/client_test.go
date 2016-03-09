@@ -70,7 +70,30 @@ func TestGetRepo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(r)
+	if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) != float64(1) {
+		t.Fatal("failed to drill deep for data")
+	}
+}
+
+func TestGetNodes(t *testing.T) {
+	c := getTestClient(t)
+	nodesRequest := mock.MakeNodesRequest()
+	nodes, err := c.GetNodes(nodesRequest.Env, nodesRequest.Nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testNode, ok := nodes["test"]
+	if !ok {
+		t.Fatal("that should be a node")
+	}
+	testData, ok := testNode.Item.Data["foo"]
+	if !ok {
+		t.Fatal("where is foo")
+	}
+	if testData != "bar" {
+		t.Fatal("testData should have bennd bar not", testData)
+	}
+
 }
 
 func TestGetContent(t *testing.T) {

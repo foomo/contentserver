@@ -52,12 +52,18 @@ func (c *Client) GetURIs(dimension string, IDs []string) (uriMap map[string]stri
 	return
 }
 
-func (c *Client) GetNodes(r *requests.Nodes) (nodes map[string]*content.Node, err error) {
-	nodes = map[string]*content.Node{}
-	err = c.call(server.HandlerUpdate, r, &nodes)
+// GetNodes request nodes
+func (c *Client) GetNodes(env *requests.Env, nodes map[string]*requests.Node) (nodesResponse map[string]*content.Node, err error) {
+	r := &requests.Nodes{
+		Env:   env,
+		Nodes: nodes,
+	}
+	nodesResponse = map[string]*content.Node{}
+	err = c.call(server.HandlerGetNodes, r, &nodesResponse)
 	return
 }
 
+// GetRepo get the whole repo
 func (c *Client) GetRepo() (response map[string]*content.RepoNode, err error) {
 	response = map[string]*content.RepoNode{}
 	err = c.call(server.HandlerGetRepo, &requests.Repo{}, &response)
