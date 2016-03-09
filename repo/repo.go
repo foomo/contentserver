@@ -66,9 +66,13 @@ func (repo *Repo) GetURIs(dimension string, ids []string) map[string]string {
 
 // GetNodes get nodes
 func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
+	return repo.getNodes(r.Nodes, r.Env.Groups)
+}
+
+func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, groups []string) map[string]*content.Node {
 	nodes := map[string]*content.Node{}
 	path := []*content.Item{}
-	for nodeName, nodeRequest := range r.Nodes {
+	for nodeName, nodeRequest := range nodeRequests {
 		log.Debug("  adding node " + nodeName + " " + nodeRequest.ID)
 		dimensionNode, ok := repo.Directory[nodeRequest.Dimension]
 		nodes[nodeName] = nil
@@ -78,7 +82,7 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 		}
 		treeNode, ok := dimensionNode.Directory[nodeRequest.ID]
 		if ok {
-			nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, r.Env.Groups, nodeRequest.DataFields)
+			nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields)
 		} else {
 			log.Warning("you are requesting an invalid tree node for " + nodeName + " : " + nodeRequest.ID)
 		}
@@ -135,20 +139,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		resolvedDimension = r.Env.Dimensions[0]
 	}
 	// add navigation trees
-	for treeName, treeRequest := range r.Nodes {
-		log.Debug("  adding tree " + treeName + " " + treeRequest.ID)
-		rootNode, ok := repo.Directory[resolvedDimension]
-		if !ok {
-			log.Warning("could not resolve rootNode for resolved dimension " + resolvedDimension)
-			c.Nodes[treeName] = nil
-			continue
-		}
-		if treeNode, ok := rootNode.Directory[treeRequest.ID]; ok {
-			c.Nodes[treeName] = repo.getNode(treeNode, treeRequest.Expand, treeRequest.MimeTypes, c.Path, 0, r.Env.Groups, treeRequest.DataFields)
-		} else {
-			log.Warning("you are requesting an invalid tree node for " + treeName + " : " + treeRequest.ID)
-		}
-	}
+	c.Nodes = repo.getNodes(r.Nodes, r.Env.Groups)
 	return c, nil
 }
 

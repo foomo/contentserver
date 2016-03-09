@@ -9,12 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/requests"
 )
 
 // GetMockData mock data to run a repo
 func GetMockData(t testing.TB) (server *httptest.Server, varDir string) {
-
+	log.SelectedLevel = log.LevelError
 	_, filename, _, _ := runtime.Caller(0)
 	mockDir := path.Dir(filename)
 
@@ -28,6 +29,24 @@ func GetMockData(t testing.TB) (server *httptest.Server, varDir string) {
 		panic(err)
 	}
 	return server, varDir
+}
+
+// MakeNodesRequest a request to get some nodes
+func MakeNodesRequest() *requests.Nodes {
+	return &requests.Nodes{
+		Env: &requests.Env{
+			Dimensions: []string{"dimension_foo"},
+		},
+		Nodes: map[string]*requests.Node{
+			"test": &requests.Node{
+				ID:         "id-root",
+				Dimension:  "dimension_foo",
+				MimeTypes:  []string{},
+				Expand:     true,
+				DataFields: []string{"foo"},
+			},
+		},
+	}
 }
 
 // MakeValidURIsRequest URIs reuqest

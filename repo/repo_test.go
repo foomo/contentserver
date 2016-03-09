@@ -105,6 +105,21 @@ func getTestRepo(path string, t *testing.T) *Repo {
 	return r
 }
 
+func TestGetNodes(t *testing.T) {
+	r := getTestRepo("/repo-two-dimensions.json", t)
+	nodesRequest := mock.MakeNodesRequest()
+	nodes := r.GetNodes(nodesRequest)
+	testNode, ok := nodes["test"]
+	if !ok {
+		t.Fatal("wtf that should be a node")
+	}
+	testData, ok := testNode.Item.Data["foo"]
+	t.Log("testData", testData)
+	if !ok {
+		t.Fatal("failed to fetch test data")
+	}
+}
+
 func TestResolveContent(t *testing.T) {
 	r := getTestRepo("/repo-two-dimensions.json", t)
 
