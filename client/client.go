@@ -24,6 +24,46 @@ type Client struct {
 	conn   net.Conn
 }
 
+// Update tell the server to update itself
+func (c *Client) Update() (response *responses.Update, err error) {
+	response = &responses.Update{}
+	err = c.call(server.HandlerUpdate, &requests.Update{}, response)
+	return
+}
+
+// GetContent request site content
+func (c *Client) GetContent(request *requests.Content) (response *content.SiteContent, err error) {
+	response = &content.SiteContent{}
+	err = c.call(server.HandlerGetContent, request, response)
+	return
+}
+
+// GetURIs resolve uris for ids in a dimension
+func (c *Client) GetURIs(dimension string, IDs []string) (uriMap map[string]string, err error) {
+	uriMap = map[string]string{}
+	err = c.call(
+		server.HandlerGetURIs,
+		&requests.URIs{
+			Dimension: dimension,
+			IDs:       IDs,
+		},
+		&uriMap,
+	)
+	return
+}
+
+func (c *Client) GetNodes(r *requests.Nodes) (nodes map[string]*content.Node, err error) {
+	nodes = map[string]*content.Node{}
+	err = c.call(server.HandlerUpdate, r, &nodes)
+	return
+}
+
+func (c *Client) GetRepo() (response map[string]*content.RepoNode, err error) {
+	response = map[string]*content.RepoNode{}
+	err = c.call(server.HandlerGetRepo, &requests.Repo{}, &response)
+	return
+}
+
 func (c *Client) closeConnection() error {
 	if c.conn != nil {
 		err := c.conn.Close()
@@ -46,7 +86,7 @@ func (c *Client) getConnection() (conn net.Conn, err error) {
 	return c.conn, nil
 }
 
-func (c *Client) call(handler string, request interface{}, response interface{}) error {
+func (c *Client) call(handler server.Handler, request interface{}, response interface{}) error {
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("could not marshal request : %q", err)
@@ -100,7 +140,6 @@ func (c *Client) call(handler string, request interface{}, response interface{})
 			break
 		}
 	}
-
 	// unmarshal response
 	responseJSONErr := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
 	if responseJSONErr != nil {
@@ -114,18 +153,4 @@ func (c *Client) call(handler string, request interface{}, response interface{})
 	}
 	//c.closeConnection()
 	return nil
-}
-
-// Update tell the server to update itself
-func (c *Client) Update() (response *responses.Update, err error) {
-	response = &responses.Update{}
-	err = c.call(server.HandlerUpdate, &requests.Update{}, response)
-	return
-}
-
-// GetContent request site content
-func (c *Client) GetContent(request *requests.Content) (response *content.SiteContent, err error) {
-	response = &content.SiteContent{}
-	err = c.call(server.HandlerContent, request, response)
-	return
 }

@@ -14,14 +14,20 @@ import (
 	"github.com/foomo/contentserver/responses"
 )
 
+// Handler type
 type Handler string
 
 const (
-	HandlerGetURIs  Handler = "getURIs"
-	HandlerContent          = "content"
-	HandlerGetNodes         = "getNodes"
-	HandlerUpdate           = "update"
-	HandlerGetRepo          = "getRepo"
+	// HandlerGetURIs get uris, many at once, to keep it fast
+	HandlerGetURIs Handler = "getURIs"
+	// HandlerGetContent get (site) content
+	HandlerGetContent = "getContent"
+	// HandlerGetNodes get nodes
+	HandlerGetNodes = "getNodes"
+	// HandlerUpdate update repo
+	HandlerUpdate = "update"
+	// HandlerGetRepo get the whole repo
+	HandlerGetRepo = "getRepo"
 )
 
 // simple internal request counter
@@ -75,9 +81,9 @@ func (s *socketServer) handle(handler Handler, jsonBytes []byte) (replyBytes []b
 	case HandlerGetURIs:
 		getURIRequest := &requests.URIs{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {
-			reply = s.repo.GetURIs(getURIRequest.Dimension, getURIRequest.Ids)
+			reply = s.repo.GetURIs(getURIRequest.Dimension, getURIRequest.IDs)
 		})
-	case HandlerContent:
+	case HandlerGetContent:
 		contentRequest := &requests.Content{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &contentRequest), func() {
 			reply, apiErr = s.repo.GetContent(contentRequest)
@@ -142,13 +148,13 @@ func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int
 
 func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
 	s.stats.countRequest()
-	log.Record("socket.handleSocketRequest(%d): %s", s.stats.requests, handler)
+	log.Record("socketServer.execute(%d): %s", s.stats.requests, handler)
 	if log.SelectedLevel == log.LevelDebug {
 		log.Debug("  incoming json buffer:", string(jsonBytes))
 	}
 	reply, handlingError := s.handle(handler, jsonBytes)
 	if handlingError != nil {
-		log.Error("socket.handleConnection handlingError :", handlingError)
+		log.Error("socketServer.execute handlingError :", handlingError)
 	}
 	return reply
 }
@@ -157,9 +163,13 @@ func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
 	headerBytes := []byte(strconv.Itoa(len(reply)))
 	reply = append(headerBytes, reply...)
 	log.Debug("  replying: " + string(reply))
-	_, writeError := conn.Write(reply)
+	n, writeError := conn.Write(reply)
 	if writeError != nil {
-		log.Error("socket.handleConnection: could not write my reply: " + fmt.Sprint(writeError))
+		log.Error("socketServer.writeResponse: could not write my reply: " + fmt.Sprint(writeError))
+		return
+	}
+	if n < len(reply) {
+		log.Error(fmt.Sprintf("socketServer.writeResponse: write too short %q instead of %q", n, len(reply)))
 		return
 	}
 	log.Debug("  replied. waiting for next request on open connection")
@@ -167,7 +177,7 @@ func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
 }
 
 func (s *socketServer) handleConnection(conn net.Conn) {
-	log.Debug("socket.handleConnection")
+	log.Debug("socketServer.handleConnection")
 	var headerBuffer [1]byte
 	header := ""
 	for {

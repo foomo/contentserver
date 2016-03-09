@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,7 +23,7 @@ func dump(t *testing.T, v interface{}) {
 	t.Log(string(jsonBytes))
 }
 
-func getTestClient(t *testing.T) *Client {
+func getTestClient(t testing.TB) *Client {
 	log.SelectedLevel = log.LevelError
 	addr := "127.0.0.1:9999"
 	if !testServerIsRunning {
@@ -51,24 +52,71 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
+func TestGetURIs(t *testing.T) {
+	c := getTestClient(t)
+	request := mock.MakeValidURIsRequest()
+	uriMap, err := c.GetURIs(request.Dimension, request.IDs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uriMap[request.IDs[0]] != "/a" {
+		t.Fatal(uriMap)
+	}
+}
+
+func TestGetRepo(t *testing.T) {
+	c := getTestClient(t)
+	r, err := c.GetRepo()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(r)
+}
+
 func TestGetContent(t *testing.T) {
 	c := getTestClient(t)
 	request := mock.MakeValidContentRequest()
-	for i := 0; i < 1000; i++ {
-		response, err := c.GetContent(request)
-		if err != nil {
-			t.Fatal("unexpected err", err)
-		}
-		if request.URI != response.URI {
-			dump(t, request)
-			dump(t, response)
-			t.Fatal("uri mismatch")
-		}
+	response, err := c.GetContent(request)
+	if err != nil {
+		t.Fatal("unexpected err", err)
+	}
+	if request.URI != response.URI {
+		dump(t, request)
+		dump(t, response)
+		t.Fatal("uri mismatch")
+	}
+	if response.Status != content.StatusOk {
+		t.Fatal("unexpected status")
+	}
+}
 
-		if response.Status != content.StatusOk {
-			t.Fatal("unexpected status")
-		}
+// not very meaningful yet
+func BenchmarkServerAndClient(b *testing.B) {
+	var wg sync.WaitGroup
+	stats := make([]int, 100)
+	for group := 0; group < 100; group++ {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			c := getTestClient(b)
+			request := mock.MakeValidContentRequest()
+			for i := 0; i < 1000; i++ {
+				response, err := c.GetContent(request)
+				if err != nil {
+					b.Fatal("unexpected err", err)
+				}
+				if request.URI != response.URI {
+					b.Fatal("uri mismatch")
+				}
+				if response.Status != content.StatusOk {
+					b.Fatal("unexpected status")
+				}
+				stats[g] = i
+			}
+		}(group)
 
 	}
-
+	// Wait for all HTTP fetches to complete.
+	wg.Wait()
+	b.Log(stats)
 }

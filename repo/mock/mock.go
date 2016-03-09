@@ -13,7 +13,7 @@ import (
 )
 
 // GetMockData mock data to run a repo
-func GetMockData(t *testing.T) (server *httptest.Server, varDir string) {
+func GetMockData(t testing.TB) (server *httptest.Server, varDir string) {
 
 	_, filename, _, _ := runtime.Caller(0)
 	mockDir := path.Dir(filename)
@@ -28,6 +28,14 @@ func GetMockData(t *testing.T) (server *httptest.Server, varDir string) {
 		panic(err)
 	}
 	return server, varDir
+}
+
+// MakeValidURIsRequest URIs reuqest
+func MakeValidURIsRequest() *requests.URIs {
+	return &requests.URIs{
+		Dimension: "dimension_foo",
+		IDs:       []string{"id-a", "id-b"},
+	}
 }
 
 // MakeValidContentRequest a mock content request
