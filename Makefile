@@ -1,7 +1,6 @@
 SHELL := /bin/bash
 
-options:
-	echo "you can clean | test | build | build-arch | package"
+all: build test
 clean:
 	rm -fv bin/contentserve*
 build: clean
