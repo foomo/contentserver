@@ -139,6 +139,11 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		resolvedDimension = r.Env.Dimensions[0]
 	}
 	// add navigation trees
+	for _, node := range r.Nodes {
+		if node.Dimension == "" {
+			node.Dimension = resolvedDimension
+		}
+	}
 	c.Nodes = repo.getNodes(r.Nodes, r.Env.Groups)
 	return c, nil
 }
