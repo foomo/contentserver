@@ -1,6 +1,6 @@
 FROM scratch
 
-COPY bin/contentserver /usr/sbin/contentserver
+COPY bin/contentserver-linux-amd64 /usr/sbin/contentserver
 
 # install ca root certificates
 # https://curl.haxx.se/docs/caextract.html

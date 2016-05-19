@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	uniqushPushVersion = "content-server 1.3.0"
+	uniqushPushVersion = "content-server 1.3.1"
 	showVersionFlag    = flag.Bool("version", false, "version info")
 	address            = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
 	varDir             = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
@@ -66,7 +66,6 @@ func main() {
 			level = log.LevelNotice
 		case logLevelDebug:
 			level = log.LevelDebug
-
 		}
 		log.SelectedLevel = level
 		err := server.Run(flag.Arg(0), *address, *varDir)

@@ -210,11 +210,21 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 				jsonBytes := make([]byte, jsonLength)
 				// that is "{"
 				jsonBytes[0] = 123
-				_, jsonReadErr := conn.Read(jsonBytes[1:])
-				if jsonReadErr != nil {
-					log.Error("  could not read json - giving up with this client connection" + fmt.Sprint(jsonReadErr))
-					return
+				jsonLengthCurrent := 1
+				readRound := 0
+				for jsonLengthCurrent < jsonLength {
+					readRound++
+					readLength, jsonReadErr := conn.Read(jsonBytes[jsonLengthCurrent:jsonLength])
+					if jsonReadErr != nil {
+						//@fixme we need to force a read timeout (SetReadDeadline?), if expected jsonLength is lower than really sent bytes (e.g. if client implements protocol wrong)
+						//@todo should we check for io.EOF here
+						log.Error("  could not read json - giving up with this client connection" + fmt.Sprint(jsonReadErr))
+						return
+					}
+					jsonLengthCurrent += readLength
+					log.Debug(fmt.Sprintf("  read so far %d of %d bytes in read cycle %d", jsonLengthCurrent, jsonLength, readRound))
 				}
+
 				if log.SelectedLevel == log.LevelDebug {
 					log.Debug("  read json: " + string(jsonBytes))
 				}
