@@ -66,16 +66,31 @@ func (repo *Repo) GetURIs(dimension string, ids []string) map[string]string {
 
 // GetNodes get nodes
 func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
-	return repo.getNodes(r.Nodes, r.Env.Groups)
+	return repo.getNodes(r.Nodes, r.Env)
 }
 
-func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, groups []string) map[string]*content.Node {
+func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.Env) map[string]*content.Node {
 	nodes := map[string]*content.Node{}
 	path := []*content.Item{}
+	groups := env.Groups
 	for nodeName, nodeRequest := range nodeRequests {
 		log.Debug("  adding node " + nodeName + " " + nodeRequest.ID)
+
 		dimensionNode, ok := repo.Directory[nodeRequest.Dimension]
 		nodes[nodeName] = nil
+
+		if !ok && nodeRequest.Dimension == "" {
+			log.Debug("  could not get dimension root node for dimension " + nodeRequest.Dimension)
+			for _, dimension := range env.Dimensions {
+				dimensionNode, ok = repo.Directory[dimension]
+				if ok {
+					log.Debug("  searched for root node in env.dimension " + dimension + " with success")
+					break
+				}
+				log.Debug("  searched for root node in env.dimension " + dimension + " without success")
+			}
+		}
+
 		if !ok {
 			log.Warning("could not get dimension root node for nodeRequest.Dimension: " + nodeRequest.Dimension)
 			continue
@@ -144,7 +159,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 			node.Dimension = resolvedDimension
 		}
 	}
-	c.Nodes = repo.getNodes(r.Nodes, r.Env.Groups)
+	c.Nodes = repo.getNodes(r.Nodes, r.Env)
 	return c, nil
 }
 

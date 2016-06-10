@@ -6,11 +6,9 @@ type Env struct {
 	Dimensions []string `json:"dimensions"`
 	// who is it for
 	Groups []string `json:"groups"`
-	// well that would be your state
-	Data interface{} `json:"data"`
 }
 
-// Node - an abdtract node request, use this one to request navigations
+// Node - an abstract node request, use this one to request navigations
 type Node struct {
 	// this one should be obvious
 	ID string `json:"id"`
