@@ -80,11 +80,14 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 		nodes[nodeName] = nil
 
 		if !ok && nodeRequest.Dimension == "" {
+			log.Debug("  could not get dimension root node for dimension " + nodeRequest.Dimension)
 			for _, dimension := range env.Dimensions {
 				dimensionNode, ok = repo.Directory[dimension]
 				if ok {
+					log.Debug("  searched for root node in env.dimension " + dimension + " with success")
 					break
 				}
+				log.Debug("  searched for root node in env.dimension " + dimension + " without success")
 			}
 		}
 
