@@ -5,7 +5,9 @@ COPY bin/contentserver-linux-amd64 /usr/sbin/contentserver
 # install ca root certificates
 # https://curl.haxx.se/docs/caextract.html
 # http://blog.codeship.com/building-minimal-docker-containers-for-go-applications/
-ADD https://curl.haxx.se/ca/cacert.pem /etc/ssl/certs/ca-certificates.crt
+# does not work on docker for mac :(
+# ADD https://curl.haxx.se/ca/cacert.pem /etc/ssl/certs/ca-certificates.crt
+ADD .cacert.pem /etc/ssl/certs/ca-certificates.crt
 
 ENV CONTENT_SERVER_LOG_LEVEL=error
 ENV CONTENT_SERVER_ADDR=0.0.0.0:80
