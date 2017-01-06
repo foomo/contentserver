@@ -220,13 +220,13 @@ func (repo *Repo) resolveContent(dimensions []string, URI string) (resolved bool
 	resolvedDimension = ""
 	repoNode = nil
 	log.Debug("repo.ResolveContent: " + URI)
-	for _, dimension := range dimensions {
-		if d, ok := repo.Directory[dimension]; ok {
-			for i := len(parts); i > 0; i-- {
-				testURI := strings.Join(parts[0:i], content.PathSeparator)
-				if testURI == "" {
-					testURI = content.PathSeparator
-				}
+	for i := len(parts); i > 0; i-- {
+		testURI := strings.Join(parts[0:i], content.PathSeparator)
+		if testURI == "" {
+			testURI = content.PathSeparator
+		}
+		for _, dimension := range dimensions {
+			if d, ok := repo.Directory[dimension]; ok {
 				log.Debug("  testing[" + dimension + "]: " + testURI)
 				if repoNode, ok := d.URIDirectory[testURI]; ok {
 					resolved = true
