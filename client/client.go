@@ -70,37 +70,32 @@ func (c *Client) GetRepo() (response map[string]*content.RepoNode, err error) {
 	return
 }
 
-func (c *Client) closeConnection() error {
-	if c.conn != nil {
-		err := c.conn.Close()
-		if err != nil {
-			return err
-		}
-		c.conn = nil
-	}
-	return nil
-}
+// func (c *Client) closeConnection() error {
+// 	if c.conn != nil {
+// 		err := c.conn.Close()
+// 		if err != nil {
+// 			return err
+// 		}
+// 		c.conn = nil
+// 	}
+// 	return nil
+// }
 
-func (c *Client) getConnection() (conn net.Conn, err error) {
-	if c.conn == nil {
-		conn, err := net.Dial("tcp", c.Server)
-		if err != nil {
-			return nil, err
-		}
-		c.conn = conn
-	}
-	return c.conn, nil
-}
+// func (c *Client) getConnection() (conn net.Conn, err error) {
+// 	// we need some pooling here
+// 	return
+// }
 
 func (c *Client) call(handler server.Handler, request interface{}, response interface{}) error {
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("could not marshal request : %q", err)
 	}
-	conn, err := c.getConnection()
+	conn, err := net.Dial("tcp", c.Server)
 	if err != nil {
 		return fmt.Errorf("can not call server - connection error: %q", err)
 	}
+	defer conn.Close()
 	// write header result will be like handler:2{}
 	jsonBytes = append([]byte(fmt.Sprintf("%s:%d", handler, len(jsonBytes))), jsonBytes...)
 
@@ -122,7 +117,6 @@ func (c *Client) call(handler server.Handler, request interface{}, response inte
 	for {
 		n, err := conn.Read(buf)
 		if err != nil && err != io.EOF {
-			c.closeConnection()
 			return fmt.Errorf("an error occured while reading the response: %q", err)
 		}
 		if n == 0 {
@@ -157,6 +151,5 @@ func (c *Client) call(handler server.Handler, request interface{}, response inte
 		}
 		return fmt.Errorf("could not unmarshal response : %q %q", remoteErrJSONErr, string(responseBytes))
 	}
-	//c.closeConnection()
 	return nil
 }
