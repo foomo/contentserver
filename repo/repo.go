@@ -245,22 +245,28 @@ func (repo *Repo) resolveContent(dimensions []string, URI string) (resolved bool
 	return
 }
 
-func (repo *Repo) getURIForNode(dimension string, repoNode *content.RepoNode) string {
+const maxGetURIForNodeRecursionLevel = 1000
 
+func (repo *Repo) getURIForNode(dimension string, repoNode *content.RepoNode, recursionLevel int64) (uri string) {
 	if len(repoNode.LinkID) == 0 {
-		return repoNode.URI
+		uri = repoNode.URI
+		return
 	}
 	linkedNode, ok := repo.Directory[dimension].Directory[repoNode.LinkID]
 	if ok {
-		return repo.getURIForNode(dimension, linkedNode)
+		if recursionLevel > maxGetURIForNodeRecursionLevel {
+			log.Error("maxGetURIForNodeRecursionLevel reached for", repoNode.ID, "link id", repoNode.LinkID, "in dimension", dimension)
+			return ""
+		}
+		return repo.getURIForNode(dimension, linkedNode, recursionLevel+1)
 	}
-	return ""
+	return
 }
 
 func (repo *Repo) getURI(dimension string, id string) string {
 	repoNode, ok := repo.Directory[dimension].Directory[id]
 	if ok {
-		return repo.getURIForNode(dimension, repoNode)
+		return repo.getURIForNode(dimension, repoNode, 0)
 	}
 	return ""
 }
