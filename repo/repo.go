@@ -72,9 +72,13 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.Env) map[string]*content.Node {
 	nodes := map[string]*content.Node{}
 	path := []*content.Item{}
-	groups := env.Groups
 	for nodeName, nodeRequest := range nodeRequests {
 		log.Debug("  adding node " + nodeName + " " + nodeRequest.ID)
+
+		groups := env.Groups
+		if len(nodeRequest.Groups) > 0 {
+			groups = nodeRequest.Groups
+		}
 
 		dimensionNode, ok := repo.Directory[nodeRequest.Dimension]
 		nodes[nodeName] = nil
@@ -125,15 +129,19 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 	c = content.NewSiteContent()
 	resolved, resolvedURI, resolvedDimension, node := repo.resolveContent(r.Env.Dimensions, r.URI)
 	if resolved {
-		log.Notice("200 for " + r.URI)
-		// forbidden ?!
-		c.Status = content.StatusOk
+		if !node.CanBeAccessedByGroups(r.Env.Groups) {
+			log.Notice("401 for " + r.URI)
+			c.Status = content.StatusForbidden
+		} else {
+			log.Notice("200 for " + r.URI)
+			c.Status = content.StatusOk
+			c.Data = node.Data
+		}
 		c.MimeType = node.MimeType
 		c.Dimension = resolvedDimension
 		c.URI = resolvedURI
 		c.Item = node.ToItem([]string{})
 		c.Path = node.GetPath()
-		c.Data = node.Data
 		// fetch URIs for all dimensions
 		uris := make(map[string]string)
 		for dimensionName := range repo.Directory {
