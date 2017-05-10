@@ -14,6 +14,8 @@ type Node struct {
 	ID string `json:"id"`
 	// from which dimension
 	Dimension string `json:"dimension"`
+	// allowed access groups
+	Groups []string `json:"groups"`
 	// what do you want to see in your navigations, folders, images or unicorns
 	MimeTypes []string `json:"mimeTypes"`
 	// expand the navigation tree or just the path to the resolved content

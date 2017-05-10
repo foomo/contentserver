@@ -111,9 +111,11 @@ func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 // CanBeAccessedByGroups can this node be accessed by at least one the given
 // groups
 func (node *RepoNode) CanBeAccessedByGroups(groups []string) bool {
-	if len(groups) == 0 || len(node.Groups) == 0 {
+	// no groups set on node => anybody can access it
+	if len(node.Groups) == 0 {
 		return true
 	}
+
 	for _, group := range groups {
 		for _, myGroup := range node.Groups {
 			if group == myGroup {
