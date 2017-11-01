@@ -7,7 +7,8 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
 )
 
 const historyRepoJSONPrefix = "contentserver-repo-"
@@ -62,7 +63,7 @@ func (h *history) cleanup() error {
 	for _, f := range files {
 		err := os.Remove(f)
 		if err != nil {
-			return errors.Wrapf(err, "could not remove file %q", f)
+			return errors.New(fmt.Sprintf("could not remove file %s : %s", f, err.Error()))
 		}
 	}
 
@@ -72,7 +73,7 @@ func (h *history) cleanup() error {
 func (h *history) getFilesForCleanup(historyVersions int) (files []string, err error) {
 	contentFiles, err := h.getHistory()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate file cleanup list")
+		return nil, errors.New("could not generate file cleanup list: " + err.Error())
 	}
 	if len(contentFiles) > historyVersions {
 		for i := historyVersions; i < len(contentFiles); i++ {
