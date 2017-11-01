@@ -50,7 +50,7 @@ func (h *history) getHistory() (files []string, err error) {
 			}
 		}
 	}
-	sort.Strings(files)
+	sort.Sort(sort.Reverse(sort.StringSlice(files)))
 	return
 }
 
