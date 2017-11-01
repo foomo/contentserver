@@ -1,13 +1,13 @@
 package repo
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"sort"
 	"strings"
 	"time"
+	"github.com/pkg/errors"
 )
 
 const historyRepoJSONPrefix = "contentserver-repo-"
@@ -55,19 +55,35 @@ func (h *history) getHistory() (files []string, err error) {
 }
 
 func (h *history) cleanup() error {
-	files, err := h.getHistory()
+	files, err := h.getFilesForCleanup(maxHistoryVersions)
 	if err != nil {
 		return err
 	}
-	if len(files) > maxHistoryVersions {
-		for i := maxHistoryVersions; i < len(files); i++ {
-			err := os.Remove(files[i])
-			if err != nil {
-				return fmt.Errorf("could not remove file %q got %q", files[i], err)
-			}
+	for _, f := range files {
+		err := os.Remove(f)
+		if err != nil {
+			return errors.Wrapf(err, "could not remove file %q", f)
 		}
 	}
+
 	return nil
+}
+
+func (h *history) getFilesForCleanup(historyVersions int) (files []string, err error) {
+	contentFiles, err := h.getHistory()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate file cleanup list")
+	}
+	if len(contentFiles) > historyVersions {
+		for i := historyVersions; i < len(contentFiles); i++ {
+			// ignore current repository file to fall back on
+			if contentFiles[i] == h.getCurrentFilename() {
+				continue
+			}
+			files = append(files, contentFiles[i])
+		}
+	}
+	return files, nil
 }
 
 func (h *history) getCurrentFilename() string {

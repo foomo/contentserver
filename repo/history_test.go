@@ -54,8 +54,21 @@ func TestHistoryOrder(t *testing.T) {
 	files, err := h.getHistory()
 
 	assert.NoError(t, err)
-	assert.Len(t, files, 3)
-	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-23.json", files[0])
-	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-22.json", files[1])
-	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-21.json", files[2])
+	assert.Len(t, files, 4)
+	assert.Equal(t, "testdata/order/contentserver-repo-current.json", files[0])
+	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-23.json", files[1])
+	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-22.json", files[2])
+	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-21.json", files[3])
+}
+
+func TestGetFilesForCleanup(t *testing.T) {
+	h := testHistory()
+	h.varDir = "testdata/order"
+
+	files, err := h.getFilesForCleanup(2)
+
+	assert.NoError(t,err)
+	assert.Len(t, files, 2)
+	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-22.json", files[0])
+	assert.Equal(t, "testdata/order/contentserver-repo-2017-10-21.json", files[1])
 }
