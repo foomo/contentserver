@@ -312,7 +312,11 @@ func (repo *Repo) validateContentRequest(req *requests.Content) (err error) {
 			for availableDimension := range repo.Directory {
 				availableDimensions = append(availableDimensions, availableDimension)
 			}
-			return fmt.Errorf("unknown dimension %q in r.Env must be one of %q", envDimension, availableDimensions)
+			return errors.New(fmt.Sprint(
+				"unknown dimension ", envDimension,
+				" in r.Env must be one of ", availableDimensions,
+				" repo has ", len(repo.Directory), " dimensions",
+			))
 		}
 	}
 	return nil
