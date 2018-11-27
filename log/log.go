@@ -38,7 +38,7 @@ func log(msg string, level Level) string {
 		prefix := time.Now().Format(time.RFC3339Nano) + " " + prefices[level]
 		lines := strings.Split(msg, "\n")
 		for i := 0; i < len(lines); i++ {
-			fmt.Println(prefix + lines[i])
+			fmt.Println(level, prefix+lines[i])
 		}
 	}
 	return msg
