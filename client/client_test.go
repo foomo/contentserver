@@ -15,7 +15,7 @@ import (
 	"github.com/foomo/contentserver/server"
 )
 
-var testServerIsRunning = false
+const pathContentserver = "/contentserver"
 
 func dump(t *testing.T, v interface{}) {
 	jsonBytes, err := json.MarshalIndent(v, "", "	")
@@ -51,7 +51,13 @@ func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 	webserverAddr = getAvailableAddr()
 	testServer, varDir := mock.GetMockData(t)
 	log.SelectedLevel = log.LevelError
-	go server.RunServerSocketAndWebServer(testServer.URL+"/repo-two-dimensions.json", socketAddr, webserverAddr, varDir)
+	go server.RunServerSocketAndWebServer(
+		testServer.URL+"/repo-two-dimensions.json",
+		socketAddr,
+		webserverAddr,
+		pathContentserver,
+		varDir,
+	)
 	socketClient, errClient := NewClient(socketAddr, 1, time.Duration(time.Millisecond*100))
 	if errClient != nil {
 		panic(errClient)
@@ -80,12 +86,12 @@ func getTestClients(t testing.TB) (socketClient *Client, httpClient *Client) {
 		testServerSocketAddr = socketAddr
 		testServerWebserverAddr = webserverAddr
 	}
-	socketClient, errClient := NewClient(testServerSocketAddr, 30, time.Duration(time.Millisecond*100))
+	socketClient, errClient := NewClient(testServerSocketAddr, 25, time.Duration(time.Millisecond*100))
 	if errClient != nil {
 		t.Log(errClient)
 		t.Fail()
 	}
-	httpClient, errHTTPClient := NewHTTPClient("http://" + testServerWebserverAddr + server.PathContentserver)
+	httpClient, errHTTPClient := NewHTTPClient("http://" + testServerWebserverAddr + pathContentserver)
 	if errHTTPClient != nil {
 		t.Log(errHTTPClient)
 		t.Fail()
