@@ -2,6 +2,8 @@ package client
 
 import (
 	"encoding/json"
+	"net"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"github.com/foomo/contentserver/content"
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/repo/mock"
+	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/server"
 )
 
@@ -23,123 +26,208 @@ func dump(t *testing.T, v interface{}) {
 	t.Log(string(jsonBytes))
 }
 
-func getTestClient(t testing.TB) *Client {
+func getFreePort() int {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port
+}
+
+func getAvailableAddr() string {
+	return "127.0.0.1:" + strconv.Itoa(getFreePort())
+}
+
+var testServerSocketAddr string
+var testServerWebserverAddr string
+
+func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
+	socketAddr = getAvailableAddr()
+	webserverAddr = getAvailableAddr()
+	testServer, varDir := mock.GetMockData(t)
 	log.SelectedLevel = log.LevelError
-	addr := "127.0.0.1:9999"
-	if !testServerIsRunning {
-		testServerIsRunning = true
-		testServer, varDir := mock.GetMockData(t)
-		go server.Run(testServer.URL+"/repo-two-dimensions.json", addr, varDir)
+	go server.RunServerSocketAndWebServer(testServer.URL+"/repo-two-dimensions.json", socketAddr, webserverAddr, varDir)
+	socketClient, errClient := NewClient(socketAddr, 1, time.Duration(time.Millisecond*100))
+	if errClient != nil {
+		panic(errClient)
+	}
+	i := 0
+	for {
 		time.Sleep(time.Millisecond * 100)
+		r, err := socketClient.GetRepo()
+		if err != nil {
+			continue
+		}
+		if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) == float64(1) {
+			break
+		}
+		if i > 100 {
+			panic("this is taking too long")
+		}
+		i++
 	}
-	return &Client{
-		Server: addr,
+	return
+}
+
+func getTestClients(t testing.TB) (socketClient *Client, httpClient *Client) {
+	if testServerSocketAddr == "" {
+		socketAddr, webserverAddr := initTestServer(t)
+		testServerSocketAddr = socketAddr
+		testServerWebserverAddr = webserverAddr
 	}
+	socketClient, errClient := NewClient(testServerSocketAddr, 30, time.Duration(time.Millisecond*100))
+	if errClient != nil {
+		t.Log(errClient)
+		t.Fail()
+	}
+	httpClient, errHTTPClient := NewHTTPClient("http://" + testServerWebserverAddr + server.PathContentserver)
+	if errHTTPClient != nil {
+		t.Log(errHTTPClient)
+		t.Fail()
+	}
+	return
+}
+
+func testWithClients(t *testing.T, testFunc func(c *Client)) {
+	socketClient, httpClient := getTestClients(t)
+	defer socketClient.ShutDown()
+	defer httpClient.ShutDown()
+	testFunc(socketClient)
+	testFunc(httpClient)
 }
 
 func TestUpdate(t *testing.T) {
-	c := getTestClient(t)
-	response, err := c.Update()
-	if err != nil {
-		t.Fatal("unexpected err", err)
-	}
-	if !response.Success {
-		t.Fatal("update has to return .Sucesss true", response)
-	}
-	stats := response.Stats
-	if !(stats.RepoRuntime > float64(0.0)) || !(stats.OwnRuntime > float64(0.0)) {
-		t.Fatal("stats invalid")
-	}
+	testWithClients(t, func(c *Client) {
+		response, err := c.Update()
+		if err != nil {
+			t.Fatal("unexpected err", err)
+		}
+		if !response.Success {
+			t.Fatal("update has to return .Sucesss true", response)
+		}
+		stats := response.Stats
+		if !(stats.RepoRuntime > float64(0.0)) || !(stats.OwnRuntime > float64(0.0)) {
+			t.Fatal("stats invalid")
+		}
+	})
 }
 
 func TestGetURIs(t *testing.T) {
-	c := getTestClient(t)
-	request := mock.MakeValidURIsRequest()
-	uriMap, err := c.GetURIs(request.Dimension, request.IDs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if uriMap[request.IDs[0]] != "/a" {
-		t.Fatal(uriMap)
-	}
+	testWithClients(t, func(c *Client) {
+		defer c.ShutDown()
+		request := mock.MakeValidURIsRequest()
+		uriMap, err := c.GetURIs(request.Dimension, request.IDs)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if uriMap[request.IDs[0]] != "/a" {
+			t.Fatal(uriMap)
+		}
+	})
 }
 
 func TestGetRepo(t *testing.T) {
-	c := getTestClient(t)
-	r, err := c.GetRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) != float64(1) {
-		t.Fatal("failed to drill deep for data")
-	}
+	testWithClients(t, func(c *Client) {
+		r, err := c.GetRepo()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) != float64(1) {
+			t.Fatal("failed to drill deep for data")
+		}
+	})
 }
 
 func TestGetNodes(t *testing.T) {
-	c := getTestClient(t)
-	nodesRequest := mock.MakeNodesRequest()
-	nodes, err := c.GetNodes(nodesRequest.Env, nodesRequest.Nodes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	testNode, ok := nodes["test"]
-	if !ok {
-		t.Fatal("that should be a node")
-	}
-	testData, ok := testNode.Item.Data["foo"]
-	if !ok {
-		t.Fatal("where is foo")
-	}
-	if testData != "bar" {
-		t.Fatal("testData should have bennd bar not", testData)
-	}
-
+	testWithClients(t, func(c *Client) {
+		nodesRequest := mock.MakeNodesRequest()
+		nodes, err := c.GetNodes(nodesRequest.Env, nodesRequest.Nodes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		testNode, ok := nodes["test"]
+		if !ok {
+			t.Fatal("that should be a node")
+		}
+		testData, ok := testNode.Item.Data["foo"]
+		if !ok {
+			t.Fatal("where is foo")
+		}
+		if testData != "bar" {
+			t.Fatal("testData should have bennd bar not", testData)
+		}
+	})
 }
 
 func TestGetContent(t *testing.T) {
-	c := getTestClient(t)
-	request := mock.MakeValidContentRequest()
-	response, err := c.GetContent(request)
-	if err != nil {
-		t.Fatal("unexpected err", err)
-	}
-	if request.URI != response.URI {
-		dump(t, request)
-		dump(t, response)
-		t.Fatal("uri mismatch")
-	}
-	if response.Status != content.StatusOk {
-		t.Fatal("unexpected status")
+	testWithClients(t, func(c *Client) {
+		request := mock.MakeValidContentRequest()
+		response, err := c.GetContent(request)
+		if err != nil {
+			t.Fatal("unexpected err", err)
+		}
+		if request.URI != response.URI {
+			dump(t, request)
+			dump(t, response)
+			t.Fatal("uri mismatch")
+		}
+		if response.Status != content.StatusOk {
+			t.Fatal("unexpected status")
+		}
+	})
+}
+
+func BenchmarkSocketClientAndServerGetContent(b *testing.B) {
+	socketClient, _ := getTestClients(b)
+	benchmarkServerAndClientGetContent(b, 30, 100, socketClient)
+
+}
+func BenchmarkWebClientAndServerGetContent(b *testing.B) {
+	_, httpClient := getTestClients(b)
+	benchmarkServerAndClientGetContent(b, 30, 100, httpClient)
+}
+
+func benchmarkServerAndClientGetContent(b *testing.B, numGroups, numCalls int, client GetContentClient) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		start := time.Now()
+		benchmarkClientAndServerGetContent(b, numGroups, numCalls, client)
+		dur := time.Since(start)
+		totalCalls := numGroups * numCalls
+		b.Log("requests per second", int(float64(totalCalls)/(float64(dur)/float64(1000000000))), dur, totalCalls)
 	}
 }
 
-// not very meaningful yet
-func BenchmarkServerAndClient(b *testing.B) {
+type GetContentClient interface {
+	GetContent(request *requests.Content) (response *content.SiteContent, err error)
+}
+
+func benchmarkClientAndServerGetContent(b testing.TB, numGroups, numCalls int, client GetContentClient) {
 	var wg sync.WaitGroup
-	stats := make([]int, 100)
-	for group := 0; group < 100; group++ {
-		wg.Add(1)
+	wg.Add(numGroups)
+	for group := 0; group < numGroups; group++ {
 		go func(g int) {
 			defer wg.Done()
-			c := getTestClient(b)
 			request := mock.MakeValidContentRequest()
-			for i := 0; i < 1000; i++ {
-				response, err := c.GetContent(request)
-				if err != nil {
-					b.Fatal("unexpected err", err)
+			for i := 0; i < numCalls; i++ {
+				response, err := client.GetContent(request)
+				if err == nil {
+					if request.URI != response.URI {
+						b.Fatal("uri mismatch")
+					}
+					if response.Status != content.StatusOk {
+						b.Fatal("unexpected status")
+					}
 				}
-				if request.URI != response.URI {
-					b.Fatal("uri mismatch")
-				}
-				if response.Status != content.StatusOk {
-					b.Fatal("unexpected status")
-				}
-				stats[g] = i
 			}
 		}(group)
-
 	}
 	// Wait for all HTTP fetches to complete.
 	wg.Wait()
-	b.Log(stats)
+	return
 }
