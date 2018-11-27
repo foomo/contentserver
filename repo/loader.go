@@ -52,11 +52,19 @@ func (repo *Repo) _updateDimension(dimension string, newNode *content.RepoNode) 
 	if err != nil {
 		return err
 	}
-	repo.Directory[dimension] = &Dimension{
+
+	newRepoDirectory := map[string]*Dimension{}
+	for d, D := range repo.Directory {
+		if d != dimension {
+			newRepoDirectory[d] = D
+		}
+	}
+	newRepoDirectory[dimension] = &Dimension{
 		Node:         newNode,
 		Directory:    newDirectory,
 		URIDirectory: newURIDirectory,
 	}
+	repo.Directory = newRepoDirectory
 	return nil
 }
 
