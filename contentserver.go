@@ -19,9 +19,9 @@ const (
 )
 
 var (
-	uniqushPushVersion = "content-server 1.4.0"
+	uniqushPushVersion = "content-server 1.4.1"
 	showVersionFlag    = flag.Bool("version", false, "version info")
-	address            = flag.String("address", "127.0.0.1:8081", "address to bind socket server host:port")
+	address            = flag.String("address", "", "address to bind socket server host:port")
 	webserverAddress   = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
 	webserverPath      = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
 	varDir             = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
