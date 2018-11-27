@@ -1,16 +1,15 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/repo"
-	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/responses"
 )
 
@@ -63,77 +62,6 @@ type socketServer struct {
 	repo  *repo.Repo
 }
 
-func (s *socketServer) handle(handler Handler, jsonBytes []byte) (replyBytes []byte, err error) {
-
-	var reply interface{}
-	var apiErr error
-	var jsonErr error
-
-	processIfJSONIsOk := func(err error, processingFunc func()) {
-		if err != nil {
-			jsonErr = err
-			return
-		}
-		processingFunc()
-	}
-
-	switch handler {
-	case HandlerGetURIs:
-		getURIRequest := &requests.URIs{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {
-			reply = s.repo.GetURIs(getURIRequest.Dimension, getURIRequest.IDs)
-		})
-	case HandlerGetContent:
-		contentRequest := &requests.Content{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &contentRequest), func() {
-			reply, apiErr = s.repo.GetContent(contentRequest)
-		})
-	case HandlerGetNodes:
-		nodesRequest := &requests.Nodes{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &nodesRequest), func() {
-			reply = s.repo.GetNodes(nodesRequest)
-		})
-	case HandlerUpdate:
-		updateRequest := &requests.Update{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
-			reply = s.repo.Update()
-		})
-	case HandlerGetRepo:
-		repoRequest := &requests.Repo{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &repoRequest), func() {
-			reply = s.repo.GetRepo()
-		})
-	default:
-		err = errors.New(log.Error("  can not handle this one " + handler))
-		errorResponse := responses.NewError(1, "unknown handler")
-		reply = errorResponse
-	}
-	if jsonErr != nil {
-		err = jsonErr
-		log.Error("  could not read incoming json:", jsonErr)
-		errorResponse := responses.NewError(2, "could not read incoming json "+jsonErr.Error())
-		reply = errorResponse
-	} else if apiErr != nil {
-		log.Error("  an API error occured:", apiErr)
-		err = apiErr
-		reply = responses.NewError(3, "internal error "+apiErr.Error())
-	}
-	return s.encodeReply(reply)
-}
-
-func (s *socketServer) encodeReply(reply interface{}) (replyBytes []byte, err error) {
-	encodedBytes, jsonReplyErr := json.MarshalIndent(map[string]interface{}{
-		"reply": reply,
-	}, "", " ")
-	if jsonReplyErr != nil {
-		err = jsonReplyErr
-		log.Error("  could not encode reply " + fmt.Sprint(jsonReplyErr))
-	} else {
-		replyBytes = encodedBytes
-	}
-	return replyBytes, err
-}
-
 func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int, err error) {
 	headerParts := strings.Split(header, ":")
 	if len(headerParts) != 2 {
@@ -148,11 +76,11 @@ func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int
 
 func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
 	s.stats.countRequest()
-	log.Record("socketServer.execute(%d): %s", s.stats.requests, handler)
+	log.Notice("socketServer.execute: ", s.stats.requests, ", ", handler)
 	if log.SelectedLevel == log.LevelDebug {
 		log.Debug("  incoming json buffer:", string(jsonBytes))
 	}
-	reply, handlingError := s.handle(handler, jsonBytes)
+	reply, handlingError := handleRequest(s.repo, handler, jsonBytes)
 	if handlingError != nil {
 		log.Error("socketServer.execute handlingError :", handlingError)
 	}
@@ -180,7 +108,10 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 	log.Debug("socketServer.handleConnection")
 	var headerBuffer [1]byte
 	header := ""
+	i := 0
 	for {
+		i++
+		// fmt.Println("---->", i)
 		// let us read with 1 byte steps on conn until we find "{"
 		_, readErr := conn.Read(headerBuffer[0:])
 		if readErr != nil {
@@ -196,7 +127,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 			header = ""
 			if headerErr != nil {
 				log.Error("invalid request could not read header", headerErr)
-				encodedErr, encodingErr := s.encodeReply(responses.NewError(4, "invalid header "+headerErr.Error()))
+				encodedErr, encodingErr := encodeReply(responses.NewError(4, "invalid header "+headerErr.Error()))
 				if encodingErr == nil {
 					s.writeResponse(conn, encodedErr)
 				} else {
@@ -241,23 +172,64 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 }
 
 // Run - let it run and enjoy on a socket near you
+
 func Run(server string, address string, varDir string) error {
+	return RunServerSocketAndWebServer(server, address, "", varDir)
+}
+
+func RunServerSocketAndWebServer(
+	server string,
+	address string,
+	webserverAdresss string,
+	varDir string,
+) error {
+	if address == "" && webserverAdresss == "" {
+		return errors.New("one of the addresses needs to be set")
+	}
 	log.Record("building repo with content from " + server)
+	r := repo.NewRepo(server, varDir)
+	go r.Update()
+	// update can run in bg
+	chanErr := make(chan error)
+	if address != "" {
+		go runSocketServer(r, address, chanErr)
+	}
+	if webserverAdresss != "" {
+		go runWebserver(r, webserverAdresss, chanErr)
+	}
+	return <-chanErr
+}
+
+func runWebserver(
+	r *repo.Repo,
+	address string,
+	chanErr chan error,
+) {
+	s := &webServer{
+		r: r,
+	}
+	chanErr <- http.ListenAndServe(address, s)
+}
+
+func runSocketServer(
+	repo *repo.Repo,
+	address string,
+	chanErr chan error,
+) {
 	s := &socketServer{
 		stats: newStats(),
-		repo:  repo.NewRepo(server, varDir),
+		repo:  repo,
 	}
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		err = errors.New("RunSocketServer: could not start the on \"" + address + "\" - error: " + fmt.Sprint(err))
 		// failed to create socket
 		log.Error(err)
-		return err
+		chanErr <- err
+		return
 	}
 	// there we go
 	log.Record("RunSocketServer: started to listen on " + address)
-	// update can run in bg
-	go s.repo.Update()
 	for {
 		// this blocks until connection or error
 		conn, err := ln.Accept()
@@ -265,12 +237,13 @@ func Run(server string, address string, varDir string) error {
 			log.Error("RunSocketServer: could not accept connection" + fmt.Sprint(err))
 			continue
 		}
+		log.Debug("new connection")
 		// a goroutine handles conn so that the loop can accept other connections
 		go func() {
 			log.Debug("accepted connection")
 			s.handleConnection(conn)
 			conn.Close()
-			log.Debug("connection closed")
+			// log.Debug("connection closed")
 		}()
 	}
 }
