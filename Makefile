@@ -3,6 +3,8 @@ SHELL := /bin/bash
 TAG=`git describe --exact-match --tags $(git log -n1 --pretty='%h') 2>/dev/null || git rev-parse --abbrev-ref HEAD`
 
 all: build test
+tag:
+	echo $(TAG)
 clean:
 	rm -fv bin/contentserve*
 build: clean
