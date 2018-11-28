@@ -34,9 +34,10 @@ type Nodes struct {
 
 // Content - the standard request to contentserver
 type Content struct {
-	Env   *Env             `json:"env"`
-	URI   string           `json:"URI"`
-	Nodes map[string]*Node `json:"nodes"`
+	Env        *Env             `json:"env"`
+	URI        string           `json:"URI"`
+	Nodes      map[string]*Node `json:"nodes"`
+	DataFields []string         `json:"dataFields"`
 }
 
 // Update - request an update

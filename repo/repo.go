@@ -140,7 +140,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		c.MimeType = node.MimeType
 		c.Dimension = resolvedDimension
 		c.URI = resolvedURI
-		c.Item = node.ToItem([]string{})
+		c.Item = node.ToItem(r.DataFields)
 		c.Path = node.GetPath()
 		// fetch URIs for all dimensions
 		uris := make(map[string]string)

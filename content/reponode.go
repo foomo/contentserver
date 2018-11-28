@@ -76,9 +76,13 @@ func (node *RepoNode) ToItem(dataFields []string) *Item {
 	item.Name = node.Name
 	item.MimeType = node.MimeType
 	item.URI = node.URI
-	for _, dataField := range dataFields {
-		if data, ok := node.Data[dataField]; ok {
-			item.Data[dataField] = data
+	if dataFields == nil {
+		item.Data = node.Data
+	} else {
+		for _, dataField := range dataFields {
+			if data, ok := node.Data[dataField]; ok {
+				item.Data[dataField] = data
+			}
 		}
 	}
 	return item
