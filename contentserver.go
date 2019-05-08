@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/foomo/contentserver/metrics"
+	"github.com/foomo/contentserver/status"
 	"os"
 	"strings"
 
@@ -18,8 +20,15 @@ const (
 	logLevelError   = "error"
 )
 
+const (
+	ServiceName = "Content Server"
+
+	DefaultHealthzHandlerAddress = ":8080"
+	DefaultPrometheusListener    = ":9200"
+)
+
 var (
-	uniqushPushVersion = "content-server 1.4.1"
+	uniqushPushVersion = "content-server 1.5.0"
 	showVersionFlag    = flag.Bool("version", false, "version info")
 	address            = flag.String("address", "", "address to bind socket server host:port")
 	webserverAddress   = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
@@ -70,6 +79,9 @@ func main() {
 			level = log.LevelDebug
 		}
 		log.SelectedLevel = level
+		go metrics.RunPrometheusHandler(DefaultPrometheusListener)
+		go status.RunHealthzHandlerListener(DefaultHealthzHandlerAddress, ServiceName)
+
 		err := server.RunServerSocketAndWebServer(flag.Arg(0), *address, *webserverAddress, *webserverPath, *varDir)
 		if err != nil {
 			fmt.Println("exiting with error", err)

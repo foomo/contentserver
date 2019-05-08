@@ -7,10 +7,6 @@ import (
 	"net/http"
 )
 
-const (
-	DefaultPrometheusListener = ":9200"
-)
-
 func PrometheusHandler() http.Handler {
 	h := http.NewServeMux()
 	h.Handle("/metrics", promhttp.Handler())
@@ -18,10 +14,6 @@ func PrometheusHandler() http.Handler {
 }
 
 func RunPrometheusHandler(listener string) {
-	log.Notice(fmt.Sprintf("starting prometheus handler on address '%s'", DefaultPrometheusListener))
+	log.Notice(fmt.Sprintf("starting prometheus handler on address '%s'", listener))
 	log.Error(http.ListenAndServe(listener, PrometheusHandler()))
-}
-
-func RunPrometheusHandlerOnDefaultAddress() {
-	RunPrometheusHandler(DefaultPrometheusListener)
 }
