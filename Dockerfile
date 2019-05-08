@@ -29,9 +29,9 @@ COPY --from=build-env /contentserver /usr/sbin/contentserver
 
 VOLUME $CONTENT_SERVER_VAR_DIR
 
-EXPOSE 80
-EXPOSE 9200 ## Prometheus Listener
-
 ENTRYPOINT ["/usr/sbin/contentserver"]
 
 CMD ["-address=$CONTENT_SERVER_ADDR", "-log-level=$CONTENT_SERVER_LOG_LEVEL", "-var-dir=$CONTENT_SERVER_VAR_DIR"]
+
+EXPOSE 80
+EXPOSE 9200
