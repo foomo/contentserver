@@ -74,19 +74,23 @@ func runSocketServer(
 	address string,
 	chanErr chan error,
 ) {
-	s := &socketServer{
-		stats: newStats(),
-		repo:  repo,
-	}
-	ln, err := net.Listen("tcp", address)
-	if err != nil {
-		err = errors.New("RunSocketServer: could not start the on \"" + address + "\" - error: " + fmt.Sprint(err))
-		// failed to create socket
-		log.Error(err)
-		chanErr <- err
+	// create socket server
+	s, errSocketServer := newSocketServer(repo)
+	if errSocketServer != nil {
+		log.Error(errSocketServer)
+		chanErr <- errSocketServer
 		return
 	}
-	// there we go
+
+	// listen on socket
+	ln, errListen := net.Listen("tcp", address)
+	if errListen != nil {
+		errListenSocket := errors.New("RunSocketServer: could not start the on \"" + address + "\" - error: " + fmt.Sprint(errListen))
+		log.Error(errListenSocket)
+		chanErr <- errListenSocket
+		return
+	}
+
 	log.Record("RunSocketServer: started to listen on " + address)
 	for {
 		// this blocks until connection or error

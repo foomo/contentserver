@@ -5,19 +5,23 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/foomo/contentserver/status"
+
 	"github.com/foomo/contentserver/repo"
 )
 
 type webServer struct {
-	r    *repo.Repo
-	path string
+	r       *repo.Repo
+	path    string
+	metrics *status.Metrics
 }
 
 // NewWebServer returns a shiny new web server
 func NewWebServer(path string, r *repo.Repo) (s http.Handler, err error) {
 	s = &webServer{
-		r:    r,
-		path: path,
+		r:       r,
+		path:    path,
+		metrics: status.NewMetrics("webserver"),
 	}
 	return
 }
@@ -33,7 +37,7 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to read incoming request", http.StatusBadRequest)
 		return
 	}
-	reply, errReply := handleRequest(s.r, Handler(strings.TrimPrefix(r.URL.Path, s.path+"/")), jsonBytes)
+	reply, errReply := handleRequest(s.r, Handler(strings.TrimPrefix(r.URL.Path, s.path+"/")), jsonBytes, s.metrics)
 	if errReply != nil {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return

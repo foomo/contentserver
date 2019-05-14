@@ -10,39 +10,21 @@ import (
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/repo"
 	"github.com/foomo/contentserver/responses"
+	"github.com/foomo/contentserver/status"
 )
 
-// simple internal request counter
-type stats struct {
-	requests  int64
-	chanCount chan int
-}
-
-func newStats() *stats {
-	s := &stats{
-		requests:  0,
-		chanCount: make(chan int),
-	}
-	go func() {
-		for {
-			select {
-			case <-s.chanCount:
-				s.requests++
-				s.chanCount <- 1
-			}
-		}
-	}()
-	return s
-}
-
-func (s *stats) countRequest() {
-	s.chanCount <- 1
-	<-s.chanCount
-}
-
 type socketServer struct {
-	stats *stats
-	repo  *repo.Repo
+	repo    *repo.Repo
+	metrics *status.Metrics
+}
+
+// newSocketServer returns a shiny new socket server
+func newSocketServer(repo *repo.Repo) (s *socketServer, err error) {
+	s = &socketServer{
+		repo:    repo,
+		metrics: status.NewMetrics("socketserver"),
+	}
+	return
 }
 
 func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int, err error) {
@@ -58,12 +40,10 @@ func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int
 }
 
 func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
-	s.stats.countRequest()
-	log.Notice("socketServer.execute: ", s.stats.requests, ", ", handler)
 	if log.SelectedLevel == log.LevelDebug {
 		log.Debug("  incoming json buffer:", string(jsonBytes))
 	}
-	reply, handlingError := handleRequest(s.repo, handler, jsonBytes)
+	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, s.metrics)
 	if handlingError != nil {
 		log.Error("socketServer.execute handlingError :", handlingError)
 	}
