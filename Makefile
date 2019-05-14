@@ -6,6 +6,8 @@ IMAGE=docker-registry.bestbytes.net/contentserver
 all: build test
 tag:
 	echo $(TAG)
+dep:
+	go mod download && go mod vendor && go install -i ./vendor/...
 clean:
 	rm -fv bin/contentserve*
 build: clean
