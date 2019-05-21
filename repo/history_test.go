@@ -25,7 +25,7 @@ func TestHistoryCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Compare(current, test) != 0 {
+	if !bytes.Equal(current, test) {
 		t.Fatal(fmt.Sprintf("expected %q, got %q", string(test), string(current)))
 	}
 }
@@ -72,7 +72,6 @@ func TestGetFilesForCleanup(t *testing.T) {
 	assertStringEqual(t, "testdata/order/contentserver-repo-2017-10-22.json", files[0])
 	assertStringEqual(t, "testdata/order/contentserver-repo-2017-10-21.json", files[1])
 }
-
 
 func assertStringEqual(t *testing.T, expected, actual string) {
 	if expected != actual {
