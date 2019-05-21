@@ -34,8 +34,11 @@ func (c *connectionPool) run(connectionPoolSize int, waitTimeout time.Duration) 
 		entryTime time.Time
 		chanConn  chan net.Conn
 	}
-	connectionPool := make(map[int]*poolEntry, connectionPoolSize)
-	waitPool := map[int]*waitPoolEntry{}
+
+	var (
+		connectionPool = make(map[int]*poolEntry, connectionPoolSize)
+		waitPool       = map[int]*waitPoolEntry{}
+	)
 	for i := 0; i < connectionPoolSize; i++ {
 		connectionPool[i] = &poolEntry{
 			conn: nil,
@@ -110,8 +113,10 @@ RunLoop:
 			}
 		}
 		// waitpool cleanup
-		waitPoolLoosers := []int{}
-		now := time.Now()
+		var (
+			waitPoolLoosers = []int{}
+			now             = time.Now()
+		)
 		for i, waitPoolEntry := range waitPool {
 			if now.Sub(waitPoolEntry.entryTime) > waitTimeout {
 				waitPoolLoosers = append(waitPoolLoosers, i)

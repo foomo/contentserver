@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/foomo/contentserver/metrics"
-	"github.com/foomo/contentserver/status"
 	"os"
 	"strings"
+
+	"github.com/foomo/contentserver/metrics"
+	"github.com/foomo/contentserver/status"
 
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/server"
@@ -18,11 +19,8 @@ const (
 	logLevelWarning = "warning"
 	logLevelRecord  = "record"
 	logLevelError   = "error"
-)
 
-const (
-	ServiceName = "Content Server"
-
+	ServiceName                  = "Content Server"
 	DefaultHealthzHandlerAddress = ":8080"
 	DefaultPrometheusListener    = ":9200"
 )

@@ -70,9 +70,12 @@ func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
 
 func (s *socketServer) handleConnection(conn net.Conn) {
 	log.Debug("socketServer.handleConnection")
-	var headerBuffer [1]byte
-	header := ""
-	i := 0
+
+	var (
+		headerBuffer [1]byte
+		header       = ""
+		i            = 0
+	)
 	for {
 		i++
 		// fmt.Println("---->", i)

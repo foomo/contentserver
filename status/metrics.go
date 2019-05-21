@@ -4,8 +4,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const MetricLabelHandler = "handler"
-const MetricLabelStatus = "status"
+const (
+	MetricLabelHandler = "handler"
+	MetricLabelStatus  = "status"
+)
 
 type Metrics struct {
 	ServiceRequestCounter  *prometheus.CounterVec // count the number of requests for each service function

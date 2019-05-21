@@ -16,6 +16,11 @@ import (
 
 const pathContentserver = "/contentserver"
 
+var (
+	testServerSocketAddr    string
+	testServerWebserverAddr string
+)
+
 func dump(t *testing.T, v interface{}) {
 	jsonBytes, err := json.MarshalIndent(v, "", "	")
 	if err != nil {
@@ -41,11 +46,6 @@ func getFreePort() int {
 func getAvailableAddr() string {
 	return "127.0.0.1:" + strconv.Itoa(getFreePort())
 }
-
-var (
-	testServerSocketAddr    string
-	testServerWebserverAddr string
-)
 
 func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 	socketAddr = getAvailableAddr()

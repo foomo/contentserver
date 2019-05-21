@@ -52,15 +52,21 @@ func (node *RepoNode) InPath(path []*Item) bool {
 
 // GetPath get a path for a repo node
 func (node *RepoNode) GetPath() []*Item {
-	parentNode := node.parent
-	pathLength := 0
+
+	var (
+		parentNode = node.parent
+		pathLength = 0
+	)
 	for parentNode != nil {
 		parentNode = parentNode.parent
 		pathLength++
 	}
 	parentNode = node.parent
-	i := 0
-	path := make([]*Item, pathLength)
+
+	var (
+		i    = 0
+		path = make([]*Item, pathLength)
+	)
 	for parentNode != nil {
 		path[i] = parentNode.ToItem([]string{})
 		parentNode = parentNode.parent
