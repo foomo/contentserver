@@ -109,8 +109,10 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 	responseJSONErr := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
 	if responseJSONErr != nil {
 		// is it an error ?
-		remoteErr := responses.Error{}
-		remoteErrJSONErr := json.Unmarshal(responseBytes, remoteErr)
+		var (
+			remoteErr        = responses.Error{}
+			remoteErrJSONErr = json.Unmarshal(responseBytes, &remoteErr)
+		)
 		if remoteErrJSONErr == nil {
 			returnConn(remoteErrJSONErr)
 			return remoteErr
