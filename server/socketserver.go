@@ -24,12 +24,9 @@ func newStats() *stats {
 		chanCount: make(chan int),
 	}
 	go func() {
-		for {
-			select {
-			case <-s.chanCount:
-				s.requests++
-				s.chanCount <- 1
-			}
+		for _ = range s.chanCount {
+			s.requests++
+			s.chanCount <- 1
 		}
 	}()
 	return s
