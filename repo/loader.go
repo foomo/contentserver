@@ -38,10 +38,12 @@ func (repo *Repo) updateDimension(dimension string, node *content.RepoNode) erro
 // do not call directly, but only through channel
 func (repo *Repo) _updateDimension(dimension string, newNode *content.RepoNode) error {
 	newNode.WireParents()
-	newDirectory := make(map[string]*content.RepoNode)
-	newURIDirectory := make(map[string]*content.RepoNode)
 
-	err := builDirectory(newNode, newDirectory, newURIDirectory)
+	var (
+		newDirectory    = make(map[string]*content.RepoNode)
+		newURIDirectory = make(map[string]*content.RepoNode)
+		err             = builDirectory(newNode, newDirectory, newURIDirectory)
+	)
 	if err != nil {
 		return errors.New("update dimension \"" + dimension + "\" failed when building its directory:: " + err.Error())
 	}
