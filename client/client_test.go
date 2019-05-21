@@ -235,5 +235,4 @@ func benchmarkClientAndServerGetContent(b testing.TB, numGroups, numCalls int, c
 	}
 	// Wait for all HTTP fetches to complete.
 	wg.Wait()
-	return
 }
