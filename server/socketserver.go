@@ -18,14 +18,12 @@ type socketServer struct {
 	metrics *status.Metrics
 }
 
-// @TODO: remove error ?
 // newSocketServer returns a shiny new socket server
-func newSocketServer(repo *repo.Repo) (s *socketServer, err error) {
-	s = &socketServer{
+func newSocketServer(repo *repo.Repo) *socketServer {
+	return &socketServer{
 		repo:    repo,
 		metrics: status.NewMetrics("socketserver"),
 	}
-	return
 }
 
 func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int, err error) {
@@ -104,12 +102,17 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 			}
 			log.Debug(fmt.Sprintf("  found json with %d bytes", jsonLength))
 			if jsonLength > 0 {
-				// let us try to read some json
-				jsonBytes := make([]byte, jsonLength)
+
+				var (
+					// let us try to read some json
+					jsonBytes         = make([]byte, jsonLength)
+					jsonLengthCurrent = 1
+					readRound         = 0
+				)
+
 				// that is "{"
 				jsonBytes[0] = 123
-				jsonLengthCurrent := 1
-				readRound := 0
+
 				for jsonLengthCurrent < jsonLength {
 					readRound++
 					readLength, jsonReadErr := conn.Read(jsonBytes[jsonLengthCurrent:jsonLength])

@@ -12,19 +12,18 @@ import (
 )
 
 type webServer struct {
-	r       *repo.Repo
 	path    string
+	r       *repo.Repo
 	metrics *status.Metrics
 }
 
 // NewWebServer returns a shiny new web server
-func NewWebServer(path string, r *repo.Repo) (s http.Handler, err error) {
-	s = &webServer{
-		r:       r,
+func NewWebServer(path string, r *repo.Repo) http.Handler {
+	return &webServer{
 		path:    path,
+		r:       r,
 		metrics: status.NewMetrics("webserver"),
 	}
-	return
 }
 
 func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {

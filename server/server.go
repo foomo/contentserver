@@ -8,10 +8,13 @@ import (
 
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/repo"
+	jsoniter "github.com/json-iterator/go"
 
 	// profiling
 	_ "net/http/pprof"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Handler type
 type Handler string
@@ -64,12 +67,7 @@ func runWebserver(
 	path string,
 	chanErr chan error,
 ) {
-	s, errNew := NewWebServer(path, r)
-	if errNew != nil {
-		chanErr <- errNew
-		return
-	}
-	chanErr <- http.ListenAndServe(address, s)
+	chanErr <- http.ListenAndServe(address, NewWebServer(path, r))
 }
 
 func runSocketServer(
@@ -78,12 +76,7 @@ func runSocketServer(
 	chanErr chan error,
 ) {
 	// create socket server
-	s, errSocketServer := newSocketServer(repo)
-	if errSocketServer != nil {
-		log.Error(errSocketServer)
-		chanErr <- errSocketServer
-		return
-	}
+	s := newSocketServer(repo)
 
 	// listen on socket
 	ln, errListen := net.Listen("tcp", address)
