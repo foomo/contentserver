@@ -28,18 +28,21 @@ func newHistory(varDir string) *history {
 }
 
 func (h *history) add(jsonBytes []byte) error {
-	// historic file name
-	filename := path.Join(h.varDir, historyRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+historyRepoJSONSuffix)
-	err := ioutil.WriteFile(filename, jsonBytes, 0644)
+
+	var (
+		// historiy file name
+		filename = path.Join(h.varDir, historyRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+historyRepoJSONSuffix)
+		err      = ioutil.WriteFile(filename, jsonBytes, 0644)
+	)
 	if err != nil {
 		return err
 	}
+
 	// current filename
 	return ioutil.WriteFile(h.getCurrentFilename(), jsonBytes, 0644)
 }
 
 func (h *history) getHistory() (files []string, err error) {
-	files = []string{}
 	fileInfos, err := ioutil.ReadDir(h.varDir)
 	if err != nil {
 		return
