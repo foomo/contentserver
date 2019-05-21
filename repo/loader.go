@@ -130,6 +130,11 @@ func get(URL string) (data []byte, err error) {
 }
 
 func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
+
+	// limit ressources and allow only one update request at once
+	repo.updateLock.Lock()
+	defer repo.updateLock.Unlock()
+
 	startTimeRepo := time.Now().UnixNano()
 	jsonBytes, err = get(repo.server)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo

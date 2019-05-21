@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/foomo/contentserver/content"
@@ -25,6 +26,7 @@ type Dimension struct {
 type Repo struct {
 	server            string
 	Directory         map[string]*Dimension
+	updateLock        *sync.Mutex
 	updateChannel     chan *repoDimension
 	updateDoneChannel chan error
 	history           *history
@@ -43,6 +45,7 @@ func NewRepo(server string, varDir string) *Repo {
 		server:            server,
 		Directory:         map[string]*Dimension{},
 		history:           newHistory(varDir),
+		updateLock:        &sync.Mutex{},
 		updateChannel:     make(chan *repoDimension),
 		updateDoneChannel: make(chan error),
 	}
