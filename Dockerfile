@@ -1,21 +1,37 @@
-FROM scratch
+##############################
+###### STAGE: BUILD     ######
+##############################
+FROM golang:latest AS build-env
 
-COPY bin/contentserver-linux-amd64 /usr/sbin/contentserver
+WORKDIR /src
 
-# install ca root certificates
-# https://curl.haxx.se/docs/caextract.html
-# http://blog.codeship.com/building-minimal-docker-containers-for-go-applications/
-# does not work on docker for mac :(
-# ADD https://curl.haxx.se/ca/cacert.pem /etc/ssl/certs/ca-certificates.crt
-ADD .cacert.pem /etc/ssl/certs/ca-certificates.crt
+COPY ./go.mod ./go.sum ./
+RUN go mod download && go mod vendor && go install -i ./vendor/...
+
+# Import the code from the context.
+COPY ./ ./
+
+RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0  go build -o /contentserver
+
+##############################
+###### STAGE: PACKAGE   ######
+##############################
+FROM alpine
 
 ENV CONTENT_SERVER_LOG_LEVEL=error
 ENV CONTENT_SERVER_ADDR=0.0.0.0:80
 ENV CONTENT_SERVER_VAR_DIR=/var/lib/contentserver
 
+RUN apk add --update --no-cache ca-certificates curl bash && rm -rf /var/cache/apk/*
+
+COPY --from=build-env /contentserver /usr/sbin/contentserver
+
+
 VOLUME $CONTENT_SERVER_VAR_DIR
-EXPOSE 80
 
 ENTRYPOINT ["/usr/sbin/contentserver"]
 
 CMD ["-address=$CONTENT_SERVER_ADDR", "-log-level=$CONTENT_SERVER_LOG_LEVEL", "-var-dir=$CONTENT_SERVER_VAR_DIR"]
+
+EXPOSE 80
+EXPOSE 9200
