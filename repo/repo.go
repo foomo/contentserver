@@ -327,6 +327,6 @@ func (repo *Repo) hasDimension(d string) bool {
 	return hasDimension
 }
 
-func uriKeyForState(state string, uri string) string {
-	return state + "-" + uri
-}
+// func uriKeyForState(state string, uri string) string {
+// 	return state + "-" + uri
+// }

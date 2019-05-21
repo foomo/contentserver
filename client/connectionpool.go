@@ -6,8 +6,8 @@ import (
 )
 
 type connectionPool struct {
-	server         string
-	conn           net.Conn
+	server string
+	// conn           net.Conn
 	chanConnGet    chan chan net.Conn
 	chanConnReturn chan connReturn
 	chanDrainPool  chan int
