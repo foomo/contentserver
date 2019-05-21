@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -63,20 +62,16 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, metrics *sta
 		})
 		addMetrics(metrics, HandlerGetRepo, start, jsonErr, apiErr)
 	default:
-		err = errors.New(log.Error("  can not handle this one " + handler))
-		errorResponse := responses.NewError(1, "unknown handler")
-		reply = errorResponse
+		reply = responses.NewError(1, "unknown handler: "+string(handler))
 		addMetrics(metrics, "default", start, jsonErr, apiErr)
 	}
 
 	// error handling
 	if jsonErr != nil {
 		log.Error("  could not read incoming json:", jsonErr)
-		err = jsonErr
 		reply = responses.NewError(2, "could not read incoming json "+jsonErr.Error())
 	} else if apiErr != nil {
 		log.Error("  an API error occured:", apiErr)
-		err = apiErr
 		reply = responses.NewError(3, "internal error "+apiErr.Error())
 	}
 
