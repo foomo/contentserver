@@ -15,26 +15,30 @@ func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 		}
 	} else {
 		if len(r.Directory) == 0 {
-			t.Fatal("directory should not have been empty, but it is")
+			t.Fatal("directory is empty, but should have been not")
 		}
 	}
 }
 
 func TestLoad404(t *testing.T) {
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + "/repo-no-have"
-	r := NewRepo(server, varDir)
-	response := r.Update()
+	var (
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-no-have"
+		r                  = NewRepo(server, varDir)
+		response           = r.Update()
+	)
 	if response.Success {
 		t.Fatal("can not get a repo, if the server responds with a 404")
 	}
 }
 
 func TestLoadBrokenRepo(t *testing.T) {
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + "/repo-broken-json.json"
-	r := NewRepo(server, varDir)
-	response := r.Update()
+	var (
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-broken-json.json"
+		r                  = NewRepo(server, varDir)
+		response           = r.Update()
+	)
 	if response.Success {
 		t.Fatal("how could we load a broken json")
 	}
@@ -42,13 +46,17 @@ func TestLoadBrokenRepo(t *testing.T) {
 
 func TestLoadRepo(t *testing.T) {
 
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + "/repo-ok.json"
-	r := NewRepo(server, varDir)
+	var (
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-ok.json"
+		r                  = NewRepo(server, varDir)
+	)
 	assertRepoIsEmpty(t, r, true)
+
 	response := r.Update()
 	assertRepoIsEmpty(t, r, false)
-	if response.Success == false {
+
+	if !response.Success {
 		t.Fatal("could not load valid repo")
 	}
 	if response.Stats.OwnRuntime > response.Stats.RepoRuntime {
@@ -61,6 +69,32 @@ func TestLoadRepo(t *testing.T) {
 	// see what happens if we try to start it up again
 	nr := NewRepo(server, varDir)
 	assertRepoIsEmpty(t, nr, false)
+}
+
+func BenchmarkLoadRepo(b *testing.B) {
+
+	var (
+		t                  = &testing.T{}
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-ok.json"
+		r                  = NewRepo(server, varDir)
+	)
+	if len(r.Directory) > 0 {
+		b.Fatal("directory should have been empty, but is not")
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		response := r.Update()
+		if len(r.Directory) == 0 {
+			b.Fatal("directory is empty, but should have been not")
+		}
+
+		if !response.Success {
+			b.Fatal("could not load valid repo")
+		}
+	}
 }
 
 func TestLoadRepoDuplicateUris(t *testing.T) {
