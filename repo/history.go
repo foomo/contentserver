@@ -11,9 +11,11 @@ import (
 	"time"
 )
 
-const historyRepoJSONPrefix = "contentserver-repo-"
-const historyRepoJSONSuffix = ".json"
-const maxHistoryVersions = 20
+const (
+	historyRepoJSONPrefix = "contentserver-repo-"
+	historyRepoJSONSuffix = ".json"
+	maxHistoryVersions    = 20
+)
 
 type history struct {
 	varDir string

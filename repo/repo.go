@@ -12,6 +12,8 @@ import (
 	"github.com/foomo/contentserver/responses"
 )
 
+const maxGetURIForNodeRecursionLevel = 1000
+
 // Dimension dimension in a repo
 type Dimension struct {
 	Directory    map[string]*content.RepoNode
@@ -70,8 +72,11 @@ func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
 }
 
 func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.Env) map[string]*content.Node {
-	nodes := map[string]*content.Node{}
-	path := []*content.Item{}
+
+	var (
+		nodes = map[string]*content.Node{}
+		path  = []*content.Item{}
+	)
 	for nodeName, nodeRequest := range nodeRequests {
 		log.Debug("  adding node " + nodeName + " " + nodeRequest.ID)
 
@@ -223,10 +228,6 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 // resolveContent find content in a repository
 func (repo *Repo) resolveContent(dimensions []string, URI string) (resolved bool, resolvedURI string, resolvedDimension string, repoNode *content.RepoNode) {
 	parts := strings.Split(URI, content.PathSeparator)
-	resolved = false
-	resolvedURI = ""
-	resolvedDimension = ""
-	repoNode = nil
 	log.Debug("repo.ResolveContent: " + URI)
 	for i := len(parts); i > 0; i-- {
 		testURI := strings.Join(parts[0:i], content.PathSeparator)
@@ -252,8 +253,6 @@ func (repo *Repo) resolveContent(dimensions []string, URI string) (resolved bool
 	}
 	return
 }
-
-const maxGetURIForNodeRecursionLevel = 1000
 
 func (repo *Repo) getURIForNode(dimension string, repoNode *content.RepoNode, recursionLevel int64) (uri string) {
 	if len(repoNode.LinkID) == 0 {
