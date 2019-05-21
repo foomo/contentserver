@@ -27,6 +27,12 @@ build-docker: clean build-arch
 	echo "# tagged container `cat .image_id` as $(IMAGE):$(TAG)"
 	rm -vf .image_id .cacert.pem
 
+build-testclient:
+	go build -o bin/testclient -i github.com/foomo/contentserver/testing/client
+
+build-testserver:
+	go build -o bin/testserver -i github.com/foomo/contentserver/testing/server
+
 package: build
 	pkg/build.sh
 
@@ -45,6 +51,15 @@ test:
 
 bench:
 	go test -run=none -bench=. ./...
+
+run-testserver:
+	bin/testserver -json-file var/cse-globus-stage-b-with-main-section.json
+
+run-contentserver:
+	contentserver -var-dir var -webserver-address :9191 -address :9999 -log-level debug http://127.0.0.1:1234
+
+clean-var:
+	rm var/contentserver-repo-2019*
 
 # Profiling
 
