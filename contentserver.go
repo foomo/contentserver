@@ -35,7 +35,10 @@ var (
 	flagWebserverAddress = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
 	flagWebserverPath    = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
 	flagVarDir           = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
-	flagFreeOSMem        = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
+
+	// debugging / profiling
+	flagFreeOSMem = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
+	flagHeapDump  = flag.Int("heap-dump", 0, "dump heap every X minutes")
 
 	logLevelOptions = []string{
 		logLevelError,
@@ -74,6 +77,24 @@ func main() {
 			for _ = range time.After(time.Duration(*flagFreeOSMem) * time.Minute) {
 				log.Notice("FreeOSMemory")
 				debug.FreeOSMemory()
+			}
+		}()
+	}
+
+	if *flagHeapDump > 0 {
+		log.Notice("[INFO] dumping heap every ", *flagHeapDump, " minutes!")
+		go func() {
+			for _ = range time.After(time.Duration(*flagFreeOSMem) * time.Minute) {
+				log.Notice("HeapDump")
+				f, err := os.Create("heapdump")
+				if err != nil {
+					panic("failed to create heap dump file")
+				}
+				debug.WriteHeapDump(f.Fd())
+				err = f.Close()
+				if err != nil {
+					panic("failed to create heap dump file")
+				}
 			}
 		}()
 	}
