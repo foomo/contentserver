@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/json"
 	"net"
 	"strconv"
 	"sync"

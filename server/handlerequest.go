@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,8 +9,11 @@ import (
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/status"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/prometheus/client_golang/prometheus"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, metrics *status.Metrics) (replyBytes []byte, err error) {
 

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +10,10 @@ import (
 
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/server"
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type serverResponse struct {
 	Reply interface{}

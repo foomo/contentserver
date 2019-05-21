@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +9,10 @@ import (
 
 	"github.com/foomo/contentserver/content"
 	"github.com/foomo/contentserver/log"
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func (repo *Repo) updateRoutine() {
 	go func() {

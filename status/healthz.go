@@ -1,12 +1,14 @@
 package status
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/foomo/contentserver/log"
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func RunHealthzHandlerListener(address string, serviceName string) {
 	log.Notice(fmt.Sprintf("starting healthz handler on '%s'" + address))
