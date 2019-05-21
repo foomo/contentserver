@@ -156,7 +156,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 	if log.SelectedLevel == log.LevelDebug {
 		log.Debug(fmt.Sprintf("resolved: %v, uri: %v, dim: %v, n: %v", resolved, resolvedURI, resolvedDimension, node))
 	}
-	if resolved == false {
+	if !resolved {
 		log.Debug("repo.GetContent", r.URI, "could not be resolved falling back to default dimension", r.Env.Dimensions[0])
 		// r.Env.Dimensions is validated => we can access it
 		resolvedDimension = r.Env.Dimensions[0]
