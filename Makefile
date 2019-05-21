@@ -32,3 +32,7 @@ docker-build:
 
 docker-push:
 	docker push $(IMAGE):$(TAG)
+
+profile-test:
+	go test -run=none -bench=ClientServerParallel4 -cpuprofile=cprof net/http
+	go tool pprof --text http.test cprof
