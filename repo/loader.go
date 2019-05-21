@@ -14,18 +14,15 @@ import (
 
 func (repo *Repo) updateRoutine() {
 	go func() {
-		for {
-			log.Debug("update routine is about to select")
-			select {
-			case newDimension := <-repo.updateChannel:
-				log.Debug("update routine received a new dimension: " + newDimension.Dimension)
-				err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
-				log.Debug("update routine received result")
-				if err != nil {
-					log.Debug("	update routine error: " + err.Error())
-				}
-				repo.updateDoneChannel <- err
+		for newDimension := range repo.updateChannel {
+			log.Debug("update routine received a new dimension: " + newDimension.Dimension)
+
+			err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
+			log.Debug("update routine received result")
+			if err != nil {
+				log.Debug("	update routine error: " + err.Error())
 			}
+			repo.updateDoneChannel <- err
 		}
 	}()
 }
