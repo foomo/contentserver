@@ -8,6 +8,9 @@ import (
 
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/repo"
+
+	// profiling
+	_ "net/http/pprof"
 )
 
 // Handler type
