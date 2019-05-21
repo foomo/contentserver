@@ -1,14 +1,14 @@
 package repo
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"sort"
 	"strings"
 	"time"
-	"errors"
-	"fmt"
 )
 
 const historyRepoJSONPrefix = "contentserver-repo-"
@@ -63,7 +63,7 @@ func (h *history) cleanup() error {
 	for _, f := range files {
 		err := os.Remove(f)
 		if err != nil {
-			return errors.New(fmt.Sprintf("could not remove file %s : %s", f, err.Error()))
+			return fmt.Errorf("could not remove file %s : %s", f, err.Error())
 		}
 	}
 
