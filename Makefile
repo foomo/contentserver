@@ -24,8 +24,8 @@ build-docker: clean build-arch
 
 package: build
 	pkg/build.sh
-test:
-	go test ./...
+
+# docker
 
 docker-build:
 	docker build -t $(IMAGE):$(TAG) .
@@ -33,6 +33,25 @@ docker-build:
 docker-push:
 	docker push $(IMAGE):$(TAG)
 
-profile-test:
-	go test -run=none -bench=ClientServerParallel4 -cpuprofile=cprof net/http
-	go tool pprof --text http.test cprof
+# testing / benchmarks
+
+test:
+	go test ./...
+
+bench:
+	go test -run=none -bench=. ./...
+
+# profiling
+
+test-cpu-profile:
+	go test -cpuprofile=cprof-client github.com/foomo/contentserver/client
+	go tool pprof --text client.test cprof-client
+
+	go test -cpuprofile=cprof-repo github.com/foomo/contentserver/repo
+	go tool pprof --text repo.test cprof-repo
+
+test-gctrace:
+	GODEBUG=gctrace=1 go test ./...
+
+test-malloctrace:
+	GODEBUG=allocfreetrace=1 go test ./...

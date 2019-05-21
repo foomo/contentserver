@@ -1,5 +1,5 @@
-http.test
-cprof
+*.test
+cprof-*
 var
 .*
 *~
