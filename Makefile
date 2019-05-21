@@ -3,6 +3,8 @@ SHELL := /bin/bash
 TAG?=latest
 IMAGE=docker-registry.bestbytes.net/contentserver
 
+# Utils
+
 all: build test
 tag:
 	echo $(TAG)
@@ -10,6 +12,9 @@ dep:
 	go mod download && go mod vendor && go install -i ./vendor/...
 clean:
 	rm -fv bin/contentserve*
+
+# Build
+
 build: clean
 	go build -o bin/contentserver
 build-arch: clean
@@ -25,7 +30,7 @@ build-docker: clean build-arch
 package: build
 	pkg/build.sh
 
-# docker
+# Docker
 
 docker-build:
 	docker build -t $(IMAGE):$(TAG) .
@@ -33,7 +38,7 @@ docker-build:
 docker-push:
 	docker push $(IMAGE):$(TAG)
 
-# testing / benchmarks
+# Testing / benchmarks
 
 test:
 	go test ./...
@@ -41,7 +46,7 @@ test:
 bench:
 	go test -run=none -bench=. ./...
 
-# profiling
+# Profiling
 
 test-cpu-profile:
 	go test -cpuprofile=cprof-client github.com/foomo/contentserver/client
