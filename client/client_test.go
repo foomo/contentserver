@@ -43,21 +43,28 @@ func getAvailableAddr() string {
 	return "127.0.0.1:" + strconv.Itoa(getFreePort())
 }
 
-var testServerSocketAddr string
-var testServerWebserverAddr string
+var (
+	testServerSocketAddr    string
+	testServerWebserverAddr string
+)
 
 func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 	socketAddr = getAvailableAddr()
 	webserverAddr = getAvailableAddr()
 	testServer, varDir := mock.GetMockData(t)
 	log.SelectedLevel = log.LevelError
-	go server.RunServerSocketAndWebServer(
-		testServer.URL+"/repo-two-dimensions.json",
-		socketAddr,
-		webserverAddr,
-		pathContentserver,
-		varDir,
-	)
+	go func() {
+		err := server.RunServerSocketAndWebServer(
+			testServer.URL+"/repo-two-dimensions.json",
+			socketAddr,
+			webserverAddr,
+			pathContentserver,
+			varDir,
+		)
+		if err != nil {
+			t.Fatal("test server crashed: ", err)
+		}
+	}()
 	socketClient, errClient := NewClient(socketAddr, 1, time.Duration(time.Millisecond*100))
 	if errClient != nil {
 		panic(errClient)

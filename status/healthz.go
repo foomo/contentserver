@@ -3,8 +3,9 @@ package status
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/foomo/contentserver/log"
 	"net/http"
+
+	"github.com/foomo/contentserver/log"
 )
 
 func RunHealthzHandlerListener(address string, serviceName string) {
@@ -13,13 +14,18 @@ func RunHealthzHandlerListener(address string, serviceName string) {
 }
 
 func HealthzHandler(serviceName string) http.Handler {
-	data := map[string]string{
-		"service": serviceName,
-	}
-	status, _ := json.Marshal(data)
-	h := http.NewServeMux()
+	var (
+		data = map[string]string{
+			"service": serviceName,
+		}
+		status, _ = json.Marshal(data)
+		h         = http.NewServeMux()
+	)
 	h.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Write(status)
+		_, err := w.Write(status)
+		if err != nil {
+			log.Error("failed to write healthz status: ", err)
+		}
 	}))
 
 	return h

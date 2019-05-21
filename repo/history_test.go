@@ -22,7 +22,10 @@ func TestHistoryCurrent(t *testing.T) {
 		h    = testHistory()
 		test = []byte("test")
 	)
-	h.add(test)
+	err := h.add(test)
+	if err != nil {
+		t.Fatal("failed to add: ", err)
+	}
 	current, err := h.getCurrent()
 	if err != nil {
 		t.Fatal(err)
@@ -35,10 +38,16 @@ func TestHistoryCurrent(t *testing.T) {
 func TestHistoryCleanup(t *testing.T) {
 	h := testHistory()
 	for i := 0; i < 50; i++ {
-		h.add([]byte(fmt.Sprint(i)))
+		err := h.add([]byte(fmt.Sprint(i)))
+		if err != nil {
+			t.Fatal("failed to add: ", err)
+		}
 		time.Sleep(time.Millisecond * 5)
 	}
-	h.cleanup()
+	err := h.cleanup()
+	if err != nil {
+		t.Fatal("failed to run cleanup: ", err)
+	}
 	files, err := h.getHistory()
 	if err != nil {
 		t.Fatal(err)

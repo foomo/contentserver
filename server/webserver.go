@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/status"
 
 	"github.com/foomo/contentserver/repo"
@@ -42,5 +43,8 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(reply)
+	_, err := w.Write(reply)
+	if err != nil {
+		log.Error("failed to write webServer reply: ", err)
+	}
 }
