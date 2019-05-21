@@ -13,17 +13,18 @@ import (
 
 func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte) (replyBytes []byte, err error) {
 
-	var reply interface{}
-	var apiErr error
-	var jsonErr error
-
-	processIfJSONIsOk := func(err error, processingFunc func()) {
-		if err != nil {
-			jsonErr = err
-			return
+	var (
+		reply             interface{}
+		apiErr            error
+		jsonErr           error
+		processIfJSONIsOk = func(err error, processingFunc func()) {
+			if err != nil {
+				jsonErr = err
+				return
+			}
+			processingFunc()
 		}
-		processingFunc()
-	}
+	)
 
 	switch handler {
 	case HandlerGetURIs:
@@ -56,28 +57,31 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte) (replyBytes 
 		errorResponse := responses.NewError(1, "unknown handler")
 		reply = errorResponse
 	}
+
+	// check for errors and set reply
 	if jsonErr != nil {
-		err = jsonErr
 		log.Error("  could not read incoming json:", jsonErr)
-		errorResponse := responses.NewError(2, "could not read incoming json "+jsonErr.Error())
-		reply = errorResponse
+		err = jsonErr
+		reply = responses.NewError(2, "could not read incoming json "+jsonErr.Error())
 	} else if apiErr != nil {
 		log.Error("  an API error occured:", apiErr)
 		err = apiErr
 		reply = responses.NewError(3, "internal error "+apiErr.Error())
 	}
+
 	return encodeReply(reply)
 }
 
+// encodeReply takes an interface and encodes it as JSON
+// it returns the resulting JSON and a marshalling error
 func encodeReply(reply interface{}) (replyBytes []byte, err error) {
-	encodedBytes, jsonReplyErr := json.MarshalIndent(map[string]interface{}{
+
+	// @TODO: why use marshal indent here???
+	replyBytes, err = json.MarshalIndent(map[string]interface{}{
 		"reply": reply,
 	}, "", " ")
-	if jsonReplyErr != nil {
-		err = jsonReplyErr
-		log.Error("  could not encode reply " + fmt.Sprint(jsonReplyErr))
-	} else {
-		replyBytes = encodedBytes
+	if err != nil {
+		log.Error("  could not encode reply " + fmt.Sprint(err))
 	}
-	return replyBytes, err
+	return
 }
