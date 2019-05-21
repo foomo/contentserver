@@ -18,8 +18,10 @@ func testHistory() *history {
 }
 
 func TestHistoryCurrent(t *testing.T) {
-	h := testHistory()
-	test := []byte("test")
+	var (
+		h    = testHistory()
+		test = []byte("test")
+	)
 	h.add(test)
 	current, err := h.getCurrent()
 	if err != nil {
@@ -51,7 +53,6 @@ func TestHistoryOrder(t *testing.T) {
 	h.varDir = "testdata/order"
 
 	files, err := h.getHistory()
-
 	if err != nil {
 		t.Fatal("error not expected")
 	}
