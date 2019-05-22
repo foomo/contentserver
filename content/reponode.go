@@ -22,13 +22,13 @@ type RepoNode struct {
 	// published from - to is going to be an array of fromTos
 }
 
-// NewRepoNode constructor
-func NewRepoNode() *RepoNode {
-	return &RepoNode{
-		Data:  make(map[string]interface{}),
-		Nodes: make(map[string]*RepoNode),
-	}
-}
+// // NewRepoNode constructor
+// func NewRepoNode() *RepoNode {
+// 	return &RepoNode{
+// 		Data:  make(map[string]interface{}, 0), // set initial size to zero explicitely?
+// 		Nodes: make(map[string]*RepoNode, 0),
+// 	}
+// }
 
 // WireParents helper method to reference from child to parent in a tree
 // recursively

@@ -143,7 +143,7 @@ func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 		log.Debug("we have no json to load - the repo server did not reply", err)
 		return repoRuntime, jsonBytes, err
 	}
-	log.Debug("loading json from: "+repo.server, string(jsonBytes))
+	log.Debug("loading json from: "+repo.server, "length:", len(jsonBytes))
 	nodes, err := loadNodesFromJSON(jsonBytes)
 	if err != nil {
 		// could not load nodes from json

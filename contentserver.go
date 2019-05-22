@@ -11,6 +11,9 @@ import (
 	"github.com/foomo/contentserver/metrics"
 	"github.com/foomo/contentserver/status"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/server"
 )
@@ -66,6 +69,10 @@ func exitUsage(code int) {
 func main() {
 	flag.Parse()
 
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	if *flagShowVersionFlag {
 		fmt.Printf("%v\n", uniqushPushVersion)
 		return
@@ -74,9 +81,12 @@ func main() {
 	if *flagFreeOSMem > 0 {
 		log.Notice("[INFO] freeing OS memory every ", *flagFreeOSMem, " minutes!")
 		go func() {
-			for _ = range time.After(time.Duration(*flagFreeOSMem) * time.Minute) {
-				log.Notice("FreeOSMemory")
-				debug.FreeOSMemory()
+			for {
+				select {
+				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
+					log.Notice("FreeOSMemory")
+					debug.FreeOSMemory()
+				}
 			}
 		}()
 	}
@@ -84,16 +94,19 @@ func main() {
 	if *flagHeapDump > 0 {
 		log.Notice("[INFO] dumping heap every ", *flagHeapDump, " minutes!")
 		go func() {
-			for _ = range time.After(time.Duration(*flagFreeOSMem) * time.Minute) {
-				log.Notice("HeapDump")
-				f, err := os.Create("heapdump")
-				if err != nil {
-					panic("failed to create heap dump file")
-				}
-				debug.WriteHeapDump(f.Fd())
-				err = f.Close()
-				if err != nil {
-					panic("failed to create heap dump file")
+			for {
+				select {
+				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
+					log.Notice("HeapDump")
+					f, err := os.Create("heapdump")
+					if err != nil {
+						panic("failed to create heap dump file")
+					}
+					debug.WriteHeapDump(f.Fd())
+					err = f.Close()
+					if err != nil {
+						panic("failed to create heap dump file")
+					}
 				}
 			}
 		}()

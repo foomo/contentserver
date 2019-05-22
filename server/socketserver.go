@@ -40,7 +40,8 @@ func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int
 
 func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
 	if log.SelectedLevel == log.LevelDebug {
-		log.Debug("  incoming json buffer:", string(jsonBytes))
+		log.Debug("  incoming json buffer of length: ", len(jsonBytes))
+		// log.Debug("  incoming json buffer:", string(jsonBytes))
 	}
 	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, s.metrics)
 	if handlingError != nil {
@@ -127,7 +128,8 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 				}
 
 				if log.SelectedLevel == log.LevelDebug {
-					log.Debug("  read json: " + string(jsonBytes))
+					log.Debug("  read json, length: ", len(jsonBytes))
+					// log.Debug("  read json: " + string(jsonBytes))
 				}
 				s.writeResponse(conn, s.execute(handler, jsonBytes))
 				// note: connection remains open
