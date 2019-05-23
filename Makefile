@@ -58,6 +58,9 @@ run-testserver:
 run-contentserver:
 	contentserver -var-dir var -webserver-address :9191 -address :9999 http://127.0.0.1:1234
 
+run-prometheus:
+	prometheus --config.file=prometheus/prometheus.yml
+
 clean-var:
 	rm var/contentserver-repo-2019*
 

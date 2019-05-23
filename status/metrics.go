@@ -63,14 +63,14 @@ func newMetrics() *Metrics {
 			"Duration in seconds for each successful repo.update() call",
 		),
 		ContentRequestCounter: newCounterVec(
-			"num_sockets_total",
-			"Total number of currently open socket connections",
-			metricLabelRemote,
-		),
-		NumSocketsGauge: newGaugeVec(
 			"content_request_count",
 			"Number of requests for content",
 			metricLabelSource,
+		),
+		NumSocketsGauge: newGaugeVec(
+			"num_sockets_total",
+			"Total number of currently open socket connections",
+			metricLabelRemote,
 		),
 	}
 }

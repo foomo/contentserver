@@ -26,7 +26,7 @@ const (
 
 	ServiceName                  = "Content Server"
 	DefaultHealthzHandlerAddress = ":8080"
-	DefaultPrometheusListener    = ":9200"
+	DefaultPrometheusListener    = "127.0.0.1:9111"
 )
 
 var (

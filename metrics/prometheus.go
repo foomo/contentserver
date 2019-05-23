@@ -8,17 +8,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func PrometheusHandler() http.Handler {
-	h := http.NewServeMux()
-	h.Handle("/metrics", promhttp.Handler())
-	return h
-}
+const metricsRoute = "/metrics"
 
 func RunPrometheusHandler(listener string) {
 	Log.Info("starting prometheus handler on",
 		zap.String("address", listener),
+		zap.String("route", metricsRoute),
 	)
-	Log.Error("server failed: ",
-		zap.Error(http.ListenAndServe(listener, PrometheusHandler())),
+	Log.Error("prometheus listener failed",
+		zap.Error(http.ListenAndServe(listener, promhttp.Handler())),
 	)
 }
