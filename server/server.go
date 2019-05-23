@@ -10,9 +10,6 @@ import (
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/repo"
 	jsoniter "github.com/json-iterator/go"
-
-	// profiling
-	_ "net/http/pprof"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary

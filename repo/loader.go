@@ -121,8 +121,8 @@ func (repo *Repo) tryToRestoreCurrent() error {
 		}
 		return repo.loadJSONBytes(currentJSONBytes)
 	default:
-		log.Notice("invalidation request ignored, queue seems to be full")
-		return errors.New("queue full")
+		log.Notice("update request ignored, queue seems to be full")
+		return errors.New("Update request queue is full. Please try again later.")
 	}
 }
 
