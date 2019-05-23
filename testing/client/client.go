@@ -16,15 +16,15 @@ func main() {
 	}
 
 	for i := 1; i <= 50; i++ {
-		go func() {
+		go func(num int) {
 			log.Println("start update")
 			resp, errUpdate := c.Update()
 			if errUpdate != nil {
 				spew.Dump(resp)
 				log.Fatal(errUpdate)
 			}
-			log.Println(i, "update done", resp)
-		}()
+			log.Println(num, "update done", resp)
+		}(i)
 		time.Sleep(5 * time.Second)
 	}
 
