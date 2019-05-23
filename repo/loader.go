@@ -17,14 +17,15 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 func (repo *Repo) updateRoutine() {
 	go func() {
 		for newDimension := range repo.updateChannel {
-			log.Debug("update routine received a new dimension: " + newDimension.Dimension)
+			log.Notice("update routine received a new dimension: " + newDimension.Dimension)
 
 			err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
-			log.Debug("update routine received result")
+			log.Notice("update routine received result")
 			if err != nil {
 				log.Debug("	update routine error: " + err.Error())
 			}
 			repo.updateDoneChannel <- err
+			repo.updateCompleteChannel <- true
 		}
 	}()
 }
@@ -110,11 +111,19 @@ func loadNodesFromJSON(jsonBytes []byte) (nodes map[string]*content.RepoNode, er
 }
 
 func (repo *Repo) tryToRestoreCurrent() error {
-	currentJSONBytes, err := repo.history.getCurrent()
-	if err != nil {
-		return err
+
+	select {
+	case repo.updateInProgressChannel <- time.Now():
+		log.Notice("update request added to queue")
+		currentJSONBytes, err := repo.history.getCurrent()
+		if err != nil {
+			return err
+		}
+		return repo.loadJSONBytes(currentJSONBytes)
+	default:
+		log.Notice("invalidation request ignored, queue seems to be full")
+		return errors.New("queue full")
 	}
-	return repo.loadJSONBytes(currentJSONBytes)
 }
 
 func get(URL string) (data []byte, err error) {
@@ -130,11 +139,6 @@ func get(URL string) (data []byte, err error) {
 }
 
 func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
-
-	// limit ressources and allow only one update request at once
-	repo.updateLock.Lock()
-	defer repo.updateLock.Unlock()
-
 	startTimeRepo := time.Now().UnixNano()
 	jsonBytes, err = get(repo.server)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
@@ -155,6 +159,18 @@ func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 		return repoRuntime, jsonBytes, err
 	}
 	return repoRuntime, jsonBytes, nil
+}
+
+// limit ressources and allow only one update request at once
+func (repo *Repo) tryUpdate() (repoRuntime int64, jsonBytes []byte, err error) {
+	select {
+	case repo.updateInProgressChannel <- time.Now():
+		log.Notice("update request added to queue")
+		return repo.update()
+	default:
+		log.Notice("invalidation request ignored, queue seems to be full")
+		return 0, nil, errors.New("queue full")
+	}
 }
 
 func (repo *Repo) loadJSONBytes(jsonBytes []byte) error {

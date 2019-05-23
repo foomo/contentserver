@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/repo"
@@ -40,23 +41,35 @@ func Run(server string, address string, varDir string) error {
 func RunServerSocketAndWebServer(
 	server string,
 	address string,
-	webserverAdresss string,
+	webserverAddress string,
 	webserverPath string,
 	varDir string,
 ) error {
-	if address == "" && webserverAdresss == "" {
+	if address == "" && webserverAddress == "" {
 		return errors.New("one of the addresses needs to be set")
 	}
 	log.Record("building repo with content from " + server)
 	r := repo.NewRepo(server, varDir)
-	go r.Update()
+
+	// start initial update and handle error
+	go func() {
+		resp := r.Update()
+		if !resp.Success {
+			log.Error("failed to update: ", resp)
+			os.Exit(1)
+		}
+	}()
+
 	// update can run in bg
 	chanErr := make(chan error)
+
 	if address != "" {
+		log.Notice("starting socketserver on: ", address)
 		go runSocketServer(r, address, chanErr)
 	}
-	if webserverAdresss != "" {
-		go runWebserver(r, webserverAdresss, webserverPath, chanErr)
+	if webserverAddress != "" {
+		log.Notice("starting webserver on: ", webserverAddress)
+		go runWebserver(r, webserverAddress, webserverPath, chanErr)
 	}
 	return <-chanErr
 }

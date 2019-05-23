@@ -25,7 +25,7 @@ func main() {
 			}
 			log.Println(num, "update done", resp)
 		}(i)
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
 	log.Println("done")

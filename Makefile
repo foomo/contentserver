@@ -56,7 +56,7 @@ run-testserver:
 	bin/testserver -json-file var/cse-globus-stage-b-with-main-section.json
 
 run-contentserver:
-	contentserver -var-dir var -webserver-address :9191 -address :9999 -log-level debug http://127.0.0.1:1234
+	contentserver -var-dir var -webserver-address :9191 -address :9999 -log-level notice http://127.0.0.1:1234
 
 clean-var:
 	rm var/contentserver-repo-2019*

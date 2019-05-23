@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/foomo/contentserver/content"
@@ -24,12 +23,14 @@ type Dimension struct {
 
 // Repo content repositiory
 type Repo struct {
-	server            string
-	Directory         map[string]*Dimension
-	updateLock        *sync.Mutex
-	updateChannel     chan *repoDimension
-	updateDoneChannel chan error
-	history           *history
+	server    string
+	Directory map[string]*Dimension
+	// updateLock        sync.Mutex
+	updateChannel           chan *repoDimension
+	updateDoneChannel       chan error
+	history                 *history
+	updateInProgressChannel chan time.Time
+	updateCompleteChannel   chan bool
 }
 
 type repoDimension struct {
@@ -42,15 +43,26 @@ func NewRepo(server string, varDir string) *Repo {
 	log.Notice("creating new repo for " + server)
 	log.Notice("	using var dir:" + varDir)
 	repo := &Repo{
-		server:            server,
-		Directory:         map[string]*Dimension{},
-		history:           newHistory(varDir),
-		updateLock:        &sync.Mutex{},
-		updateChannel:     make(chan *repoDimension),
-		updateDoneChannel: make(chan error),
+		server:                  server,
+		Directory:               map[string]*Dimension{},
+		history:                 newHistory(varDir),
+		updateChannel:           make(chan *repoDimension),
+		updateDoneChannel:       make(chan error),
+		updateInProgressChannel: make(chan time.Time, 1),
+		updateCompleteChannel:   make(chan bool),
 	}
+	go func() {
+		for {
+			select {
+			case t := <-repo.updateInProgressChannel:
+				log.Notice("got timestamp: ", t, "waiting for update to complete")
+				<-repo.updateCompleteChannel
+				log.Notice("update completed!")
+			}
+		}
+	}()
 	go repo.updateRoutine()
-	log.Record("trying to restore pervious state")
+	log.Record("trying to restore previous state")
 	restoreErr := repo.tryToRestoreCurrent()
 	if restoreErr != nil {
 		log.Record("	could not restore previous repo content:" + restoreErr.Error())
@@ -194,9 +206,11 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		return float64(float64(nanoSeconds) / float64(1000000000.0))
 	}
 	startTime := time.Now().UnixNano()
-	updateRepotime, jsonBytes, updateErr := repo.update()
+	updateRepotime, jsonBytes, updateErr := repo.tryUpdate()
 	updateResponse = &responses.Update{}
 	updateResponse.Stats.RepoRuntime = floatSeconds(updateRepotime)
+
+	log.Notice("Update triggered")
 
 	if updateErr != nil {
 		updateResponse.Success = false
