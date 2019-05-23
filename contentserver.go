@@ -3,19 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/apex/log"
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/metrics"
-	"github.com/foomo/contentserver/status"
-
-	"net/http"
-	_ "net/http/pprof"
-
-	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/server"
+	"github.com/foomo/contentserver/status"
+	"go.uber.org/zap"
 )
 
 const (
@@ -38,6 +38,7 @@ var (
 	flagWebserverAddress = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
 	flagWebserverPath    = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
 	flagVarDir           = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
+	flagDebug            = flag.Bool("debug", true, "toggle debug mode")
 
 	// debugging / profiling
 	flagFreeOSMem = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
@@ -69,6 +70,8 @@ func exitUsage(code int) {
 func main() {
 	flag.Parse()
 
+	SetupLogging(*flagDebug, "contentserver.log")
+
 	go func() {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
@@ -79,12 +82,14 @@ func main() {
 	}
 
 	if *flagFreeOSMem > 0 {
-		log.Notice("[INFO] freeing OS memory every ", *flagFreeOSMem, " minutes!")
+		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
+		Log.Info("freeing OS memory every $interval minutes", zap.Int("interval", *flagFreeOSMem))
 		go func() {
 			for {
 				select {
 				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					log.Notice("FreeOSMemory")
+					Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
+					log.Info("FreeOSMemory")
 					debug.FreeOSMemory()
 				}
 			}
@@ -92,12 +97,12 @@ func main() {
 	}
 
 	if *flagHeapDump > 0 {
-		log.Notice("[INFO] dumping heap every ", *flagHeapDump, " minutes!")
+		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
 		go func() {
 			for {
 				select {
 				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					log.Notice("HeapDump")
+					log.Info("HeapDump")
 					f, err := os.Create("heapdump")
 					if err != nil {
 						panic("failed to create heap dump file")
@@ -114,21 +119,6 @@ func main() {
 
 	if len(flag.Args()) == 1 {
 		fmt.Println(*flagAddress, flag.Arg(0))
-
-		level := log.LevelRecord
-		switch *logLevel {
-		case logLevelError:
-			level = log.LevelError
-		case logLevelRecord:
-			level = log.LevelRecord
-		case logLevelWarning:
-			level = log.LevelWarning
-		case logLevelNotice:
-			level = log.LevelNotice
-		case logLevelDebug:
-			level = log.LevelDebug
-		}
-		log.SelectedLevel = level
 
 		// kickoff metric handlers
 		go metrics.RunPrometheusHandler(DefaultPrometheusListener)

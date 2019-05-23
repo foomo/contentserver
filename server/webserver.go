@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/status"
+	"go.uber.org/zap"
 
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 )
 
@@ -44,6 +45,6 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err := w.Write(reply)
 	if err != nil {
-		log.Error("failed to write webServer reply: ", err)
+		Log.Error("failed to write webServer reply", zap.Error(err))
 	}
 }

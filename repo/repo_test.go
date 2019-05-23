@@ -4,9 +4,15 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/foomo/contentserver/logger"
+	_ "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo/mock"
 	"github.com/foomo/contentserver/requests"
 )
+
+func init() {
+	SetupLogging(true, "contentserver_repo_test.log")
+}
 
 func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 	if empty {

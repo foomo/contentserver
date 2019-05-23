@@ -9,13 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/foomo/contentserver/log"
 	"github.com/foomo/contentserver/requests"
 )
 
 // GetMockData mock data to run a repo
 func GetMockData(t testing.TB) (server *httptest.Server, varDir string) {
-	log.SelectedLevel = log.LevelError
+
 	_, filename, _, _ := runtime.Caller(0)
 	mockDir := path.Dir(filename)
 

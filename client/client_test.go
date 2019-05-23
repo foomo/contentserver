@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/foomo/contentserver/content"
-	"github.com/foomo/contentserver/log"
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo/mock"
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/server"
@@ -20,6 +20,10 @@ var (
 	testServerSocketAddr    string
 	testServerWebserverAddr string
 )
+
+func init() {
+	SetupLogging(true, "contentserver_client_test.log")
+}
 
 func dump(t *testing.T, v interface{}) {
 	jsonBytes, err := json.MarshalIndent(v, "", "	")
@@ -51,7 +55,7 @@ func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 	socketAddr = getAvailableAddr()
 	webserverAddr = getAvailableAddr()
 	testServer, varDir := mock.GetMockData(t)
-	log.SelectedLevel = log.LevelError
+
 	go func() {
 		err := server.RunServerSocketAndWebServer(
 			testServer.URL+"/repo-two-dimensions.json",

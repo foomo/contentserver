@@ -8,33 +8,41 @@ import (
 	"time"
 
 	"github.com/foomo/contentserver/content"
-	"github.com/foomo/contentserver/log"
+	. "github.com/foomo/contentserver/logger"
 	jsoniter "github.com/json-iterator/go"
+	"go.uber.org/zap"
 )
 
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
+var (
+	json = jsoniter.ConfigCompatibleWithStandardLibrary
+)
+
+type updateResponse struct {
+	repoRuntime int64
+	jsonBytes   []byte
+	err         error
+}
 
 func (repo *Repo) updateRoutine() {
-	go func() {
-		for newDimension := range repo.updateChannel {
-			log.Notice("update routine received a new dimension: " + newDimension.Dimension)
+	for newDimension := range repo.updateChannel {
+		Log.Info("update routine received a new dimension", zap.String("dimension", newDimension.Dimension))
 
-			err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
-			log.Notice("update routine received result")
-			if err != nil {
-				log.Debug("	update routine error: " + err.Error())
-			}
-			repo.updateDoneChannel <- err
-			repo.updateCompleteChannel <- true
+		err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
+		Log.Info("update routine received result")
+		if err != nil {
+			Log.Debug("update dimension failed", zap.Error(err))
 		}
-	}()
+		repo.updateDoneChannel <- err
+	}
 }
 
 func (repo *Repo) updateDimension(dimension string, node *content.RepoNode) error {
+	Log.Debug("trying to push dimension into update channel", zap.String("dimension", dimension), zap.String("nodeName", node.Name))
 	repo.updateChannel <- &repoDimension{
 		Dimension: dimension,
 		Node:      node,
 	}
+	Log.Debug("waiting for done signal")
 	return <-repo.updateDoneChannel
 }
 
@@ -71,7 +79,9 @@ func (repo *Repo) _updateDimension(dimension string, newNode *content.RepoNode) 
 }
 
 func builDirectory(dirNode *content.RepoNode, directory map[string]*content.RepoNode, uRIDirectory map[string]*content.RepoNode) error {
-	log.Debug("repo.buildDirectory: " + dirNode.ID)
+
+	// Log.Debug("buildDirectory", zap.String("ID", dirNode.ID))
+
 	existingNode, ok := directory[dirNode.ID]
 	if ok {
 		return errors.New("duplicate node with id:" + existingNode.ID)
@@ -111,19 +121,11 @@ func loadNodesFromJSON(jsonBytes []byte) (nodes map[string]*content.RepoNode, er
 }
 
 func (repo *Repo) tryToRestoreCurrent() error {
-
-	select {
-	case repo.updateInProgressChannel <- time.Now():
-		log.Notice("update request added to queue")
-		currentJSONBytes, err := repo.history.getCurrent()
-		if err != nil {
-			return err
-		}
-		return repo.loadJSONBytes(currentJSONBytes)
-	default:
-		log.Notice("update request ignored, queue seems to be full")
-		return errors.New("Update request queue is full. Please try again later.")
+	currentJSONBytes, err := repo.history.getCurrent()
+	if err != nil {
+		return err
 	}
+	return repo.loadJSONBytes(currentJSONBytes)
 }
 
 func get(URL string) (data []byte, err error) {
@@ -144,10 +146,10 @@ func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
 	if err != nil {
 		// we have no json to load - the repo server did not reply
-		log.Debug("we have no json to load - the repo server did not reply", err)
+		Log.Debug("failed to load json", zap.Error(err))
 		return repoRuntime, jsonBytes, err
 	}
-	log.Debug("loading json from: "+repo.server, "length:", len(jsonBytes))
+	Log.Debug("loading json", zap.String("server", repo.server), zap.Int("length", len(jsonBytes)))
 	nodes, err := loadNodesFromJSON(jsonBytes)
 	if err != nil {
 		// could not load nodes from json
@@ -163,12 +165,14 @@ func (repo *Repo) update() (repoRuntime int64, jsonBytes []byte, err error) {
 
 // limit ressources and allow only one update request at once
 func (repo *Repo) tryUpdate() (repoRuntime int64, jsonBytes []byte, err error) {
+	c := make(chan updateResponse)
 	select {
-	case repo.updateInProgressChannel <- time.Now():
-		log.Notice("update request added to queue")
-		return repo.update()
+	case repo.updateInProgressChannel <- c:
+		Log.Info("update request added to queue")
+		ur := <-c
+		return ur.repoRuntime, ur.jsonBytes, ur.err
 	default:
-		log.Notice("invalidation request ignored, queue seems to be full")
+		Log.Info("update request ignored, queue is full")
 		return 0, nil, errors.New("queue full")
 	}
 }
@@ -176,22 +180,22 @@ func (repo *Repo) tryUpdate() (repoRuntime int64, jsonBytes []byte, err error) {
 func (repo *Repo) loadJSONBytes(jsonBytes []byte) error {
 	nodes, err := loadNodesFromJSON(jsonBytes)
 	if err != nil {
-		log.Debug("could not parse json", string(jsonBytes))
+		Log.Debug("could not parse json", zap.String("json", string(jsonBytes)))
 		return err
 	}
 	err = repo.loadNodes(nodes)
 	if err == nil {
 		historyErr := repo.history.add(jsonBytes)
 		if historyErr != nil {
-			log.Warning("could not add valid json to history:" + historyErr.Error())
+			Log.Error("could not add valid json to history", zap.Error(historyErr))
 		} else {
-			log.Record("added valid json to history")
+			Log.Info("added valid json to history")
 		}
 		cleanUpErr := repo.history.cleanup()
 		if cleanUpErr != nil {
-			log.Warning("an error occured while cleaning up my history:", cleanUpErr)
+			Log.Error("an error occured while cleaning up my history", zap.Error(cleanUpErr))
 		} else {
-			log.Record("cleaned up history")
+			Log.Info("cleaned up history")
 		}
 	}
 	return err
@@ -201,10 +205,10 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	newDimensions := []string{}
 	for dimension, newNode := range newNodes {
 		newDimensions = append(newDimensions, dimension)
-		log.Debug("loading nodes for dimension " + dimension)
+		Log.Debug("loading nodes for dimension", zap.String("dimension", dimension))
 		loadErr := repo.updateDimension(dimension, newNode)
 		if loadErr != nil {
-			log.Debug("	failed to load " + dimension + ": " + loadErr.Error())
+			Log.Debug("failed to load", zap.String("dimension", dimension), zap.Error(loadErr))
 			return loadErr
 		}
 	}
@@ -219,7 +223,7 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	// we need to throw away orphaned dimensions
 	for dimension := range repo.Directory {
 		if !dimensionIsValid(dimension) {
-			log.Notice("removing orphaned dimension:" + dimension)
+			Log.Info("removing orphaned dimension", zap.String("dimension", dimension))
 			delete(repo.Directory, dimension)
 		}
 	}

@@ -7,7 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/foomo/contentserver/log"
+	"go.uber.org/zap"
+
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/status"
@@ -39,13 +41,10 @@ func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int
 }
 
 func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
-	if log.SelectedLevel == log.LevelDebug {
-		log.Debug("  incoming json buffer of length: ", len(jsonBytes))
-		// log.Debug("  incoming json buffer:", string(jsonBytes))
-	}
+	Log.Debug("incoming json buffer", zap.Int("length", len(jsonBytes)))
 	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, s.metrics)
 	if handlingError != nil {
-		log.Error("socketServer.execute handlingError :", handlingError)
+		Log.Error("socketServer.execute failed", zap.Error(handlingError))
 	}
 	return reply
 }
@@ -53,22 +52,24 @@ func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte)
 func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
 	headerBytes := []byte(strconv.Itoa(len(reply)))
 	reply = append(headerBytes, reply...)
-	log.Debug("  replying: " + string(reply))
+	Log.Debug("replying", zap.String("reply", string(reply)))
 	n, writeError := conn.Write(reply)
 	if writeError != nil {
-		log.Error("socketServer.writeResponse: could not write my reply: " + fmt.Sprint(writeError))
+		Log.Error("socketServer.writeResponse: could not write reply", zap.Error(writeError))
 		return
 	}
 	if n < len(reply) {
-		log.Error(fmt.Sprintf("socketServer.writeResponse: write too short %q instead of %q", n, len(reply)))
+		Log.Error("socketServer.writeResponse: write too short",
+			zap.Int("got", n),
+			zap.Int("expected", len(reply)),
+		)
 		return
 	}
-	log.Debug("  replied. waiting for next request on open connection")
-
+	Log.Debug("replied. waiting for next request on open connection")
 }
 
 func (s *socketServer) handleConnection(conn net.Conn) {
-	log.Debug("socketServer.handleConnection")
+	Log.Debug("socketServer.handleConnection")
 
 	var (
 		headerBuffer [1]byte
@@ -81,7 +82,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 		// let us read with 1 byte steps on conn until we find "{"
 		_, readErr := conn.Read(headerBuffer[0:])
 		if readErr != nil {
-			log.Debug("  looks like the client closed the connection: ", readErr)
+			Log.Debug("looks like the client closed the connection", zap.Error(readErr))
 			return
 		}
 		// read next byte
@@ -92,16 +93,16 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 			// reset header
 			header = ""
 			if headerErr != nil {
-				log.Error("invalid request could not read header", headerErr)
+				Log.Error("invalid request could not read header", zap.Error(headerErr))
 				encodedErr, encodingErr := encodeReply(responses.NewError(4, "invalid header "+headerErr.Error()))
 				if encodingErr == nil {
 					s.writeResponse(conn, encodedErr)
 				} else {
-					log.Error("could not respond to invalid request", encodingErr)
+					Log.Error("could not respond to invalid request", zap.Error(encodingErr))
 				}
 				return
 			}
-			log.Debug(fmt.Sprintf("  found json with %d bytes", jsonLength))
+			Log.Debug("found json", zap.Int("length", jsonLength))
 			if jsonLength > 0 {
 
 				var (
@@ -120,22 +121,24 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 					if jsonReadErr != nil {
 						//@fixme we need to force a read timeout (SetReadDeadline?), if expected jsonLength is lower than really sent bytes (e.g. if client implements protocol wrong)
 						//@todo should we check for io.EOF here
-						log.Error("  could not read json - giving up with this client connection" + fmt.Sprint(jsonReadErr))
+						Log.Error("could not read json - giving up with this client connection", zap.Error(jsonReadErr))
 						return
 					}
 					jsonLengthCurrent += readLength
-					log.Debug(fmt.Sprintf("  read so far %d of %d bytes in read cycle %d", jsonLengthCurrent, jsonLength, readRound))
+					Log.Debug("read cycle status",
+						zap.Int("jsonLengthCurrent", jsonLengthCurrent),
+						zap.Int("jsonLength", jsonLength),
+						zap.Int("readRound", readRound),
+					)
 				}
 
-				if log.SelectedLevel == log.LevelDebug {
-					log.Debug("  read json, length: ", len(jsonBytes))
-					// log.Debug("  read json: " + string(jsonBytes))
-				}
+				Log.Debug("read json", zap.Int("length", len(jsonBytes)))
+
 				s.writeResponse(conn, s.execute(handler, jsonBytes))
 				// note: connection remains open
 				continue
 			}
-			log.Error("can not read empty json")
+			Log.Error("can not read empty json")
 			return
 		}
 		// adding to header byte by byte

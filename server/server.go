@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/foomo/contentserver/log"
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 	jsoniter "github.com/json-iterator/go"
+	"go.uber.org/zap"
 )
 
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
+var (
+	json = jsoniter.ConfigCompatibleWithStandardLibrary
+)
 
 // Handler type
 type Handler string
@@ -45,14 +48,21 @@ func RunServerSocketAndWebServer(
 	if address == "" && webserverAddress == "" {
 		return errors.New("one of the addresses needs to be set")
 	}
-	log.Record("building repo with content from " + server)
+	Log.Info("building repo with content", zap.String("server", server))
+
 	r := repo.NewRepo(server, varDir)
 
 	// start initial update and handle error
 	go func() {
 		resp := r.Update()
 		if !resp.Success {
-			log.Error("failed to update: ", resp)
+			Log.Error("failed to update",
+				zap.String("error", resp.ErrorMessage),
+				zap.Int("NumberOfNodes", resp.Stats.NumberOfNodes),
+				zap.Int("NumberOfURIs", resp.Stats.NumberOfURIs),
+				zap.Float64("OwnRuntime", resp.Stats.OwnRuntime),
+				zap.Float64("RepoRuntime", resp.Stats.RepoRuntime),
+			)
 			os.Exit(1)
 		}
 	}()
@@ -61,11 +71,11 @@ func RunServerSocketAndWebServer(
 	chanErr := make(chan error)
 
 	if address != "" {
-		log.Notice("starting socketserver on: ", address)
+		Log.Info("starting socketserver", zap.String("address", address))
 		go runSocketServer(r, address, chanErr)
 	}
 	if webserverAddress != "" {
-		log.Notice("starting webserver on: ", webserverAddress)
+		Log.Info("starting webserver", zap.String("webserverAddress", webserverAddress))
 		go runWebserver(r, webserverAddress, webserverPath, chanErr)
 	}
 	return <-chanErr
@@ -91,24 +101,26 @@ func runSocketServer(
 	// listen on socket
 	ln, errListen := net.Listen("tcp", address)
 	if errListen != nil {
-		errListenSocket := errors.New("RunSocketServer: could not start the on \"" + address + "\" - error: " + fmt.Sprint(errListen))
-		log.Error(errListenSocket)
-		chanErr <- errListenSocket
+		Log.Error("runSocketServer: could not start",
+			zap.String("address", address),
+			zap.Error(errListen),
+		)
+		chanErr <- errors.New("runSocketServer: could not start the on \"" + address + "\" - error: " + fmt.Sprint(errListen))
 		return
 	}
 
-	log.Record("RunSocketServer: started to listen on " + address)
+	Log.Info("runSocketServer: started listening", zap.String("address", address))
 	for {
 		// this blocks until connection or error
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Error("RunSocketServer: could not accept connection" + fmt.Sprint(err))
+			Log.Error("runSocketServer: could not accept connection", zap.Error(err))
 			continue
 		}
-		log.Debug("new connection")
+
 		// a goroutine handles conn so that the loop can accept other connections
 		go func() {
-			log.Debug("accepted connection")
+			Log.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
 			s.handleConnection(conn)
 			conn.Close()
 			// log.Debug("connection closed")

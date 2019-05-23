@@ -1,11 +1,11 @@
 package metrics
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/foomo/contentserver/log"
+	. "github.com/foomo/contentserver/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 )
 
 func PrometheusHandler() http.Handler {
@@ -15,6 +15,10 @@ func PrometheusHandler() http.Handler {
 }
 
 func RunPrometheusHandler(listener string) {
-	log.Notice(fmt.Sprintf("starting prometheus handler on address '%s'", listener))
-	log.Error(http.ListenAndServe(listener, PrometheusHandler()))
+	Log.Info("starting prometheus handler on",
+		zap.String("address", listener),
+	)
+	Log.Error("server failed: ",
+		zap.Error(http.ListenAndServe(listener, PrometheusHandler())),
+	)
 }

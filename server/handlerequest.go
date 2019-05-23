@@ -1,10 +1,11 @@
 package server
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/foomo/contentserver/log"
+	"go.uber.org/zap"
+
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/responses"
@@ -67,10 +68,10 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, metrics *sta
 
 	// error handling
 	if jsonErr != nil {
-		log.Error("  could not read incoming json:", jsonErr)
+		Log.Error("could not read incoming json", zap.Error(jsonErr))
 		reply = responses.NewError(2, "could not read incoming json "+jsonErr.Error())
 	} else if apiErr != nil {
-		log.Error("  an API error occured:", apiErr)
+		Log.Error("an API error occured", zap.Error(apiErr))
 		reply = responses.NewError(3, "internal error "+apiErr.Error())
 	}
 
@@ -107,7 +108,7 @@ func encodeReply(reply interface{}) (replyBytes []byte, err error) {
 		"reply": reply,
 	}, "", " ")
 	if err != nil {
-		log.Error("  could not encode reply " + fmt.Sprint(err))
+		Log.Error("could not encode reply", zap.Error(err))
 	}
 	return
 }
