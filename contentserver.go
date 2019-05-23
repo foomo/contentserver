@@ -7,7 +7,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/apex/log"
@@ -43,22 +42,6 @@ var (
 	// debugging / profiling
 	flagFreeOSMem = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
 	flagHeapDump  = flag.Int("heap-dump", 0, "dump heap every X minutes")
-
-	logLevelOptions = []string{
-		logLevelError,
-		logLevelRecord,
-		logLevelWarning,
-		logLevelNotice,
-		logLevelDebug,
-	}
-	logLevel = flag.String(
-		"log-level",
-		logLevelRecord,
-		fmt.Sprintf(
-			"one of %s",
-			strings.Join(logLevelOptions, ", "),
-		),
-	)
 )
 
 func exitUsage(code int) {
