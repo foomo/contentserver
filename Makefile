@@ -75,3 +75,13 @@ test-gctrace:
 
 test-malloctrace:
 	GODEBUG=allocfreetrace=1 go test ./...
+
+trace:
+	curl http://localhost:6060/debug/pprof/trace?seconds=60 > cs-trace
+	go tool trace cs-trace
+
+pprof-heap-web:
+	go tool pprof -http=":8081" http://localhost:6060/debug/pprof/heap
+
+pprof-cpu-web:
+	go tool pprof -http=":8081" http://localhost:6060/debug/pprof/profile
