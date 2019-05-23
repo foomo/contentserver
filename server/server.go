@@ -9,12 +9,14 @@ import (
 
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
+	"github.com/foomo/contentserver/status"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 )
 
 var (
-	json = jsoniter.ConfigCompatibleWithStandardLibrary
+	json    = jsoniter.ConfigCompatibleWithStandardLibrary
+	metrics = status.NewMetrics()
 )
 
 // Handler type

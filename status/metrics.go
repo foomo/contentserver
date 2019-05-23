@@ -7,6 +7,8 @@ import (
 const (
 	MetricLabelHandler = "handler"
 	MetricLabelStatus  = "status"
+	MetricLabelSource  = "source"
+	namespace          = "contentserver"
 )
 
 type Metrics struct {
@@ -14,32 +16,30 @@ type Metrics struct {
 	ServiceRequestDuration *prometheus.SummaryVec // count the duration of requests for each service function
 }
 
-func NewMetrics(namespace string) *Metrics {
+func NewMetrics() *Metrics {
 	return &Metrics{
-		ServiceRequestCounter:  serviceRequestCounter("api", namespace),
-		ServiceRequestDuration: serviceRequestDuration("api", namespace),
+		ServiceRequestCounter:  serviceRequestCounter(),
+		ServiceRequestDuration: serviceRequestDuration(),
 	}
 }
 
-func serviceRequestCounter(subsystem, namespace string) *prometheus.CounterVec {
+func serviceRequestCounter() *prometheus.CounterVec {
 	vec := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: namespace,
-			Subsystem: subsystem,
-			Name:      "count_service_requests",
+			Name:      "service_request_count",
 			Help:      "count of requests per func",
-		}, []string{MetricLabelHandler, MetricLabelStatus})
+		}, []string{MetricLabelHandler, MetricLabelStatus, MetricLabelSource})
 	prometheus.MustRegister(vec)
 	return vec
 }
 
-func serviceRequestDuration(subsystem, namespace string) *prometheus.SummaryVec {
+func serviceRequestDuration() *prometheus.SummaryVec {
 	vec := prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: namespace,
-		Subsystem: subsystem,
-		Name:      "time_nanoseconds",
-		Help:      "nanoseconds to unmarshal requests, execute a service function and marshal its reponses",
-	}, []string{MetricLabelHandler, MetricLabelStatus})
+		Name:      "service_request_duration_seconds",
+		Help:      "seconds to unmarshal requests, execute a service function and marshal its reponses",
+	}, []string{MetricLabelHandler, MetricLabelStatus, MetricLabelSource})
 	prometheus.MustRegister(vec)
 	return vec
 }

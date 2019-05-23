@@ -23,8 +23,7 @@ type socketServer struct {
 // newSocketServer returns a shiny new socket server
 func newSocketServer(repo *repo.Repo) *socketServer {
 	return &socketServer{
-		repo:    repo,
-		metrics: status.NewMetrics("socketserver"),
+		repo: repo,
 	}
 }
 
@@ -42,7 +41,7 @@ func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int
 
 func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
 	Log.Debug("incoming json buffer", zap.Int("length", len(jsonBytes)))
-	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, s.metrics)
+	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, "socketserver")
 	if handlingError != nil {
 		Log.Error("socketServer.execute failed", zap.Error(handlingError))
 	}

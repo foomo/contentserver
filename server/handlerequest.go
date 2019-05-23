@@ -13,7 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, metrics *status.Metrics) (replyBytes []byte, err error) {
+func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 
 	var (
 		reply             interface{}
@@ -36,35 +36,30 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, metrics *sta
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {
 			reply = r.GetURIs(getURIRequest.Dimension, getURIRequest.IDs)
 		})
-		addMetrics(metrics, HandlerGetURIs, start, jsonErr, apiErr)
 	case HandlerGetContent:
 		contentRequest := &requests.Content{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &contentRequest), func() {
 			reply, apiErr = r.GetContent(contentRequest)
 		})
-		addMetrics(metrics, HandlerGetContent, start, jsonErr, apiErr)
 	case HandlerGetNodes:
 		nodesRequest := &requests.Nodes{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &nodesRequest), func() {
 			reply = r.GetNodes(nodesRequest)
 		})
-		addMetrics(metrics, HandlerGetNodes, start, jsonErr, apiErr)
 	case HandlerUpdate:
 		updateRequest := &requests.Update{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
 			reply = r.Update()
 		})
-		addMetrics(metrics, HandlerUpdate, start, jsonErr, apiErr)
 	case HandlerGetRepo:
 		repoRequest := &requests.Repo{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &repoRequest), func() {
 			reply = r.GetRepo()
 		})
-		addMetrics(metrics, HandlerGetRepo, start, jsonErr, apiErr)
 	default:
 		reply = responses.NewError(1, "unknown handler: "+string(handler))
-		addMetrics(metrics, "default", start, jsonErr, apiErr)
 	}
+	addMetrics(metrics, handler, start, jsonErr, apiErr, source)
 
 	// error handling
 	if jsonErr != nil {
@@ -78,7 +73,7 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, metrics *sta
 	return encodeReply(reply)
 }
 
-func addMetrics(metrics *status.Metrics, handlerName Handler, start time.Time, errJSON error, errAPI error) {
+func addMetrics(metrics *status.Metrics, handlerName Handler, start time.Time, errJSON error, errAPI error, source string) {
 
 	var (
 		duration = time.Since(start)
@@ -91,22 +86,22 @@ func addMetrics(metrics *status.Metrics, handlerName Handler, start time.Time, e
 	metrics.ServiceRequestCounter.With(prometheus.Labels{
 		status.MetricLabelHandler: string(handlerName),
 		status.MetricLabelStatus:  s,
+		status.MetricLabelSource:  source,
 	}).Inc()
 
 	metrics.ServiceRequestDuration.With(prometheus.Labels{
 		status.MetricLabelHandler: string(handlerName),
 		status.MetricLabelStatus:  s,
-	}).Observe(float64(duration.Nanoseconds()))
+		status.MetricLabelSource:  source,
+	}).Observe(float64(duration.Seconds()))
 }
 
 // encodeReply takes an interface and encodes it as JSON
 // it returns the resulting JSON and a marshalling error
 func encodeReply(reply interface{}) (replyBytes []byte, err error) {
-
-	// @TODO: why use marshal indent here???
-	replyBytes, err = json.MarshalIndent(map[string]interface{}{
+	replyBytes, err = json.Marshal(map[string]interface{}{
 		"reply": reply,
-	}, "", " ")
+	})
 	if err != nil {
 		Log.Error("could not encode reply", zap.Error(err))
 	}
