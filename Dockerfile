@@ -21,6 +21,7 @@ FROM alpine
 ENV CONTENT_SERVER_LOG_LEVEL=error
 ENV CONTENT_SERVER_ADDR=0.0.0.0:80
 ENV CONTENT_SERVER_VAR_DIR=/var/lib/contentserver
+ENV LOG_JSON=1
 
 RUN apk add --update --no-cache ca-certificates curl bash && rm -rf /var/cache/apk/*
 
