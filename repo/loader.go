@@ -9,6 +9,7 @@ import (
 
 	"github.com/foomo/contentserver/content"
 	. "github.com/foomo/contentserver/logger"
+	"github.com/foomo/contentserver/status"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 )
@@ -172,8 +173,9 @@ func (repo *Repo) tryUpdate() (repoRuntime int64, jsonBytes []byte, err error) {
 		ur := <-c
 		return ur.repoRuntime, ur.jsonBytes, ur.err
 	default:
-		Log.Info("update request ignored, queue is full")
-		return 0, nil, errors.New("queue full")
+		Log.Info("update request rejected, queue is full")
+		status.M.UpdatesRejectedCounter.WithLabelValues().Inc()
+		return 0, nil, errors.New("update rejected: queue full")
 	}
 }
 

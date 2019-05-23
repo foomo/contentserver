@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/foomo/contentserver/status"
+
 	"github.com/foomo/contentserver/content"
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/requests"
@@ -62,13 +64,20 @@ func NewRepo(server string, varDir string) *Repo {
 
 				repoRuntime, jsonBytes, errUpdate := repo.update()
 
+				if errUpdate != nil {
+					status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
+				}
+
 				resChan <- updateResponse{
 					repoRuntime: repoRuntime,
 					jsonBytes:   jsonBytes,
 					err:         errUpdate,
 				}
 
-				Log.Info("update completed", zap.Duration("duration", time.Since(start)))
+				duration := time.Since(start)
+				Log.Info("update completed", zap.Duration("duration", duration))
+				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
+				status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
 			}
 		}
 	}()

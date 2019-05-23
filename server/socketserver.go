@@ -69,6 +69,7 @@ func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
 
 func (s *socketServer) handleConnection(conn net.Conn) {
 	Log.Debug("socketServer.handleConnection")
+	status.M.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Inc()
 
 	var (
 		headerBuffer [1]byte
@@ -82,6 +83,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 		_, readErr := conn.Read(headerBuffer[0:])
 		if readErr != nil {
 			Log.Debug("looks like the client closed the connection", zap.Error(readErr))
+			status.M.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Dec()
 			return
 		}
 		// read next byte
@@ -121,6 +123,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 						//@fixme we need to force a read timeout (SetReadDeadline?), if expected jsonLength is lower than really sent bytes (e.g. if client implements protocol wrong)
 						//@todo should we check for io.EOF here
 						Log.Error("could not read json - giving up with this client connection", zap.Error(jsonReadErr))
+						status.M.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Dec()
 						return
 					}
 					jsonLengthCurrent += readLength
@@ -138,6 +141,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 				continue
 			}
 			Log.Error("can not read empty json")
+			status.M.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Dec()
 			return
 		}
 		// adding to header byte by byte

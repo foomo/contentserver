@@ -10,7 +10,6 @@ import (
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/status"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source string) (replyBytes []byte, err error) {
@@ -28,6 +27,7 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 			processingFunc()
 		}
 	)
+	status.M.ContentRequestCounter.WithLabelValues(source).Inc()
 
 	// handle and process
 	switch handler {
@@ -59,7 +59,7 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 	default:
 		reply = responses.NewError(1, "unknown handler: "+string(handler))
 	}
-	addMetrics(metrics, handler, start, jsonErr, apiErr, source)
+	addMetrics(handler, start, jsonErr, apiErr, source)
 
 	// error handling
 	if jsonErr != nil {
@@ -73,7 +73,7 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 	return encodeReply(reply)
 }
 
-func addMetrics(metrics *status.Metrics, handlerName Handler, start time.Time, errJSON error, errAPI error, source string) {
+func addMetrics(handlerName Handler, start time.Time, errJSON error, errAPI error, source string) {
 
 	var (
 		duration = time.Since(start)
@@ -83,17 +83,8 @@ func addMetrics(metrics *status.Metrics, handlerName Handler, start time.Time, e
 		s = "failed"
 	}
 
-	metrics.ServiceRequestCounter.With(prometheus.Labels{
-		status.MetricLabelHandler: string(handlerName),
-		status.MetricLabelStatus:  s,
-		status.MetricLabelSource:  source,
-	}).Inc()
-
-	metrics.ServiceRequestDuration.With(prometheus.Labels{
-		status.MetricLabelHandler: string(handlerName),
-		status.MetricLabelStatus:  s,
-		status.MetricLabelSource:  source,
-	}).Observe(float64(duration.Seconds()))
+	status.M.ServiceRequestCounter.WithLabelValues(string(handlerName), s, source).Inc()
+	status.M.ServiceRequestDuration.WithLabelValues(string(handlerName), s, source).Observe(float64(duration.Seconds()))
 }
 
 // encodeReply takes an interface and encodes it as JSON
