@@ -100,7 +100,7 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 	for nodeName, nodeRequest := range nodeRequests {
 
 		if nodeName == "" || nodeRequest.ID == "" {
-			Log.Error("invalid node request", zap.Error(errors.New("nodeName or nodeRequest.ID empty")))
+			Log.Info("invalid node request", zap.Error(errors.New("nodeName or nodeRequest.ID empty")))
 			continue
 		}
 		Log.Debug("adding node", zap.String("name", nodeName), zap.String("requestID", nodeRequest.ID))
