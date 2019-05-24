@@ -18,7 +18,6 @@ RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0  go build -o /contentserver
 ##############################
 FROM alpine
 
-ENV CONTENT_SERVER_LOG_LEVEL=error
 ENV CONTENT_SERVER_ADDR=0.0.0.0:80
 ENV CONTENT_SERVER_VAR_DIR=/var/lib/contentserver
 ENV LOG_JSON=1
@@ -32,7 +31,7 @@ VOLUME $CONTENT_SERVER_VAR_DIR
 
 ENTRYPOINT ["/usr/sbin/contentserver"]
 
-CMD ["-address=$CONTENT_SERVER_ADDR", "-log-level=$CONTENT_SERVER_LOG_LEVEL", "-var-dir=$CONTENT_SERVER_VAR_DIR"]
+CMD ["-address=$CONTENT_SERVER_ADDR", "-var-dir=$CONTENT_SERVER_VAR_DIR"]
 
 EXPOSE 80
 EXPOSE 9200
