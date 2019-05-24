@@ -37,7 +37,7 @@ var (
 	flagWebserverAddress = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
 	flagWebserverPath    = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
 	flagVarDir           = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
-	flagDebug            = flag.Bool("debug", true, "toggle debug mode")
+	flagDebug            = flag.Bool("debug", false, "toggle debug mode")
 
 	// debugging / profiling
 	flagFreeOSMem = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
