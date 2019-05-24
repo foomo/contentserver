@@ -1,12 +1,14 @@
 package repo
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/foomo/contentserver/status"
+	"github.com/mgutz/ansi"
 
 	"github.com/foomo/contentserver/content"
 	. "github.com/foomo/contentserver/logger"
@@ -29,10 +31,14 @@ type Repo struct {
 	server    string
 	Directory map[string]*Dimension
 	// updateLock        sync.Mutex
-	updateChannel           chan *repoDimension
-	updateDoneChannel       chan error
+	dimensionUpdateChannel     chan *repoDimension
+	dimensionUpdateDoneChannel chan error
+
 	history                 *history
 	updateInProgressChannel chan chan updateResponse
+
+	// jsonBytes []byte
+	jsonBuf bytes.Buffer
 }
 
 type repoDimension struct {
@@ -48,40 +54,17 @@ func NewRepo(server string, varDir string) *Repo {
 		zap.String("varDir", varDir),
 	)
 	repo := &Repo{
-		server:                  server,
-		Directory:               map[string]*Dimension{},
-		history:                 newHistory(varDir),
-		updateChannel:           make(chan *repoDimension),
-		updateDoneChannel:       make(chan error),
-		updateInProgressChannel: make(chan chan updateResponse, 1),
+		server:                     server,
+		Directory:                  map[string]*Dimension{},
+		history:                    newHistory(varDir),
+		dimensionUpdateChannel:     make(chan *repoDimension),
+		dimensionUpdateDoneChannel: make(chan error),
+		updateInProgressChannel:    make(chan chan updateResponse, 0),
 	}
-	go func() {
-		for {
-			select {
-			case resChan := <-repo.updateInProgressChannel:
-				Log.Info("waiting for update to complete")
-				start := time.Now()
 
-				repoRuntime, jsonBytes, errUpdate := repo.update()
-
-				if errUpdate != nil {
-					status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
-				}
-
-				resChan <- updateResponse{
-					repoRuntime: repoRuntime,
-					jsonBytes:   jsonBytes,
-					err:         errUpdate,
-				}
-
-				duration := time.Since(start)
-				Log.Info("update completed", zap.Duration("duration", duration))
-				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
-				status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
-			}
-		}
-	}()
 	go repo.updateRoutine()
+	go repo.dimensionUpdateRoutine()
+
 	Log.Info("trying to restore previous state")
 	restoreErr := repo.tryToRestoreCurrent()
 	if restoreErr != nil {
@@ -235,30 +218,37 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 	floatSeconds := func(nanoSeconds int64) float64 {
 		return float64(float64(nanoSeconds) / float64(1000000000.0))
 	}
-	startTime := time.Now().UnixNano()
-	updateRepotime, jsonBytes, updateErr := repo.tryUpdate()
-	updateResponse = &responses.Update{}
-	updateResponse.Stats.RepoRuntime = floatSeconds(updateRepotime)
 
 	Log.Info("Update triggered")
+	Log.Info(ansi.Yellow + "BUFFER LENGTH BEFORE tryUpdate(): " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
+
+	startTime := time.Now().UnixNano()
+	updateRepotime, updateErr := repo.tryUpdate()
+	updateResponse = &responses.Update{}
+	updateResponse.Stats.RepoRuntime = floatSeconds(updateRepotime)
 
 	if updateErr != nil {
 		updateResponse.Success = false
 		updateResponse.Stats.NumberOfNodes = -1
 		updateResponse.Stats.NumberOfURIs = -1
 		// let us try to restore the world from a file
-		Log.Error("could not update repository:" + updateErr.Error())
+		Log.Error("could not update repository:", zap.Error(updateErr))
+		Log.Info(ansi.Yellow + "BUFFER LENGTH AFTER ERROR: " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
 		updateResponse.ErrorMessage = updateErr.Error()
-		restoreErr := repo.tryToRestoreCurrent()
-		if restoreErr != nil {
-			Log.Error("failed to restore preceding repo version", zap.Error(restoreErr))
-		} else {
-			Log.Info("restored current repo from local history")
+
+		// only try to restore if the update failed during processing
+		if updateErr != errUpdateRejected {
+			restoreErr := repo.tryToRestoreCurrent()
+			if restoreErr != nil {
+				Log.Error("failed to restore preceding repo version", zap.Error(restoreErr))
+			} else {
+				Log.Info("restored current repo from local history")
+			}
 		}
 	} else {
 		updateResponse.Success = true
 		// persist the currently loaded one
-		historyErr := repo.history.add(jsonBytes)
+		historyErr := repo.history.add(repo.jsonBuf.Bytes())
 		if historyErr != nil {
 			Log.Warn("could not persist current repo in history", zap.Error(historyErr))
 		}

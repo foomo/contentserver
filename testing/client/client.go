@@ -15,7 +15,7 @@ func main() {
 		log.Fatal(errClient)
 	}
 
-	for i := 1; i <= 50; i++ {
+	for i := 1; i <= 150; i++ {
 		go func(num int) {
 			log.Println("start update")
 			resp, errUpdate := c.Update()
@@ -25,7 +25,7 @@ func main() {
 			}
 			log.Println(num, "update done", resp)
 		}(i)
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	log.Println("done")

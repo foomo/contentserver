@@ -58,6 +58,9 @@ run-testserver:
 run-contentserver:
 	contentserver -var-dir var -webserver-address :9191 -address :9999 http://127.0.0.1:1234
 
+run-contentserver-freeosmem:
+	contentserver -var-dir var -webserver-address :9191 -address :9999 -free-os-mem 1 http://127.0.0.1:1234
+
 run-prometheus:
 	prometheus --config.file=prometheus/prometheus.yml
 

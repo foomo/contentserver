@@ -1,8 +1,10 @@
 package repo
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -96,6 +98,9 @@ func (h *history) getCurrentFilename() string {
 	return path.Join(h.varDir, historyRepoJSONPrefix+"current"+historyRepoJSONSuffix)
 }
 
-func (h *history) getCurrent() (jsonBytes []byte, err error) {
-	return ioutil.ReadFile(h.getCurrentFilename())
+func (h *history) getCurrent(buf *bytes.Buffer) (err error) {
+	f, err := os.Open(h.getCurrentFilename())
+	defer f.Close()
+	_, err = io.Copy(buf, f)
+	return err
 }
