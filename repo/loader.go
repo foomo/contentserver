@@ -93,6 +93,7 @@ func (repo *Repo) _updateDimension(dimension string, newNode *content.RepoNode) 
 
 	// ---------------------------------------------
 
+	// copy old datastructure to prevent concurrent map access
 	// collect other dimension in the Directory
 	newRepoDirectory := map[string]*Dimension{}
 	for d, D := range repo.Directory {

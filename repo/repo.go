@@ -96,6 +96,11 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 		path  = []*content.Item{}
 	)
 	for nodeName, nodeRequest := range nodeRequests {
+
+		if nodeName == "" || nodeRequest.ID == "" {
+			Log.Error("invalid node request", zap.Error(errors.New("nodeName or nodeRequest.ID empty")))
+			continue
+		}
 		Log.Debug("adding node", zap.String("name", nodeName), zap.String("requestID", nodeRequest.ID))
 
 		groups := env.Groups
