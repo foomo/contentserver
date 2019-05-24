@@ -35,7 +35,13 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to read incoming request", http.StatusBadRequest)
 		return
 	}
-	reply, errReply := handleRequest(s.r, Handler(strings.TrimPrefix(r.URL.Path, s.path+"/")), jsonBytes, "webserver")
+	h := Handler(strings.TrimPrefix(r.URL.Path, s.path+"/"))
+	if h == HandlerGetRepo {
+		s.r.WriteRepoBytes(w)
+		w.Header().Set("Content-Type", "application/json")
+		return
+	}
+	reply, errReply := handleRequest(s.r, h, jsonBytes, "webserver")
 	if errReply != nil {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return

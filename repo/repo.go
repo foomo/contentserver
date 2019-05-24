@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -216,6 +218,15 @@ func (repo *Repo) GetRepo() map[string]*content.RepoNode {
 		response[dimensionName] = dimension.Node
 	}
 	return response
+}
+
+// WriteRepoBytes get the whole repo in all dimensions
+func (repo *Repo) WriteRepoBytes(w io.Writer) {
+	f, err := os.Open(repo.history.getCurrentFilename())
+	_, err = io.Copy(w, f)
+	if err != nil {
+		Log.Error("failed to serve Repo JSON", zap.Error(err))
+	}
 }
 
 // Update - reload contents of repository with json from repo.server

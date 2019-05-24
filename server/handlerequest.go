@@ -51,11 +51,12 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
 			reply = r.Update()
 		})
-	case HandlerGetRepo:
-		repoRequest := &requests.Repo{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &repoRequest), func() {
-			reply = r.GetRepo()
-		})
+	// case HandlerGetRepo:
+	// 	repoRequest := &requests.Repo{}
+	// 	processIfJSONIsOk(json.Unmarshal(jsonBytes, &repoRequest), func() {
+	// 		reply = r.GetRepo()
+	// 	})
+
 	default:
 		reply = responses.NewError(1, "unknown handler: "+string(handler))
 	}
