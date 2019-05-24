@@ -9,7 +9,6 @@ import (
 	"github.com/foomo/contentserver/client"
 )
 
-// https://globus-b.stage.mzg.bestbytes.net/contentserverapi
 var (
 	flagAddr    = flag.String("addr", "http://127.0.0.1:9191/contentserver", "set addr")
 	flagGetRepo = flag.Bool("getRepo", false, "get repo")
@@ -56,5 +55,5 @@ func main() {
 		time.Sleep(time.Duration(*flagDelay) * time.Second)
 	}
 
-	log.Println("done")
+	log.Println("done!")
 }
