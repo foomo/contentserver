@@ -12,9 +12,7 @@ It's up to you how you use it and which data you want to export to the server. O
 
 ### Overview
 
-<a href="https://netcap.io">
-  <img src="graphics/Overview.svg" width="100%" height="500">
-</a>
+<img src="graphics/Overview.svg" width="100%" height="500">
 
 ## Export Data
 
@@ -47,9 +45,7 @@ There is a PHP Proxy implementation for foomo in [Foomo.ContentServer](https://g
 
 ## Update Flowchart
 
-<a href="https://netcap.io">
-  <img src="graphics/Update-Flow.svg" width="100%" height="700">
-</a>
+<img src="graphics/Update-Flow.svg" width="100%" height="700">
 
 ### Usage
 
