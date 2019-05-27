@@ -30,8 +30,6 @@ const (
 )
 
 var (
-	uniqushPushVersion = "content-server 1.6.0"
-
 	flagShowVersionFlag  = flag.Bool("version", false, "version info")
 	flagAddress          = flag.String("address", "", "address to bind socket server host:port")
 	flagWebserverAddress = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
@@ -58,11 +56,6 @@ func main() {
 	go func() {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
-
-	if *flagShowVersionFlag {
-		fmt.Printf("%v\n", uniqushPushVersion)
-		return
-	}
 
 	if *flagFreeOSMem > 0 {
 		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
