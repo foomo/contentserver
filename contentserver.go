@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	uniqushPushVersion = "content-server 1.5.0"
+	uniqushPushVersion = "content-server 1.6.0"
 
 	flagShowVersionFlag  = flag.Bool("version", false, "version info")
 	flagAddress          = flag.String("address", "", "address to bind socket server host:port")

@@ -4,12 +4,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 )
+
+const sourceWebserver = "webserver"
 
 type webServer struct {
 	path string
@@ -37,8 +40,10 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	h := Handler(strings.TrimPrefix(r.URL.Path, s.path+"/"))
 	if h == HandlerGetRepo {
+		start := time.Now()
 		s.r.WriteRepoBytes(w)
 		w.Header().Set("Content-Type", "application/json")
+		addMetrics(h, start, nil, nil, sourceWebserver)
 		return
 	}
 	reply, errReply := handleRequest(s.r, h, jsonBytes, "webserver")

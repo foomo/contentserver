@@ -1,11 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -14,6 +16,8 @@ import (
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/status"
 )
+
+const sourceSocketServer = "socketserver"
 
 type socketServer struct {
 	repo    *repo.Repo
@@ -41,7 +45,19 @@ func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int
 
 func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte) {
 	Log.Debug("incoming json buffer", zap.Int("length", len(jsonBytes)))
-	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, "socketserver")
+
+	if handler == HandlerGetRepo {
+
+		var (
+			b     bytes.Buffer
+			start = time.Now()
+		)
+		s.repo.WriteRepoBytes(&b)
+		addMetrics(handler, start, nil, nil, sourceSocketServer)
+		return b.Bytes()
+	}
+
+	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, sourceSocketServer)
 	if handlingError != nil {
 		Log.Error("socketServer.execute failed", zap.Error(handlingError))
 	}
