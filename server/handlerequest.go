@@ -31,6 +31,8 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 
 	// handle and process
 	switch handler {
+	// case HandlerGetRepo: // This case is handled prior to handleRequest being called.
+	// since the resulting bytes are written directly in to the http.ResponseWriter / net.Connection
 	case HandlerGetURIs:
 		getURIRequest := &requests.URIs{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {
@@ -51,11 +53,6 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
 			reply = r.Update()
 		})
-	// case HandlerGetRepo:
-	// 	repoRequest := &requests.Repo{}
-	// 	processIfJSONIsOk(json.Unmarshal(jsonBytes, &repoRequest), func() {
-	// 		reply = r.GetRepo()
-	// 	})
 
 	default:
 		reply = responses.NewError(1, "unknown handler: "+string(handler))

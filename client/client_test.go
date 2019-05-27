@@ -68,6 +68,7 @@ func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 			t.Fatal("test server crashed: ", err)
 		}
 	}()
+
 	socketClient, errClient := NewClient(socketAddr, 1, time.Duration(time.Millisecond*100))
 	if errClient != nil {
 		panic(errClient)
@@ -79,6 +80,11 @@ func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 		if err != nil {
 			continue
 		}
+
+		if len(r) == 0 {
+			t.Fatal("received empty JSON from GetRepo")
+		}
+
 		if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) == float64(1) {
 			break
 		}
@@ -149,10 +155,18 @@ func TestGetURIs(t *testing.T) {
 
 func TestGetRepo(t *testing.T) {
 	testWithClients(t, func(c *Client) {
+
+		time.Sleep(time.Millisecond * 100)
+
 		r, err := c.GetRepo()
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		if len(r) == 0 {
+			t.Fatal("received empty JSON from GetRepo")
+		}
+
 		if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) != float64(1) {
 			t.Fatal("failed to drill deep for data")
 		}

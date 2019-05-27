@@ -100,6 +100,9 @@ func (h *history) getCurrentFilename() string {
 
 func (h *history) getCurrent(buf *bytes.Buffer) (err error) {
 	f, err := os.Open(h.getCurrentFilename())
+	if err != nil {
+		return err
+	}
 	defer f.Close()
 	_, err = io.Copy(buf, f)
 	return err

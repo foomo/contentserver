@@ -111,6 +111,7 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 			break
 		}
 	}
+
 	// unmarshal response
 	responseJSONErr := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
 	if responseJSONErr != nil {

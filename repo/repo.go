@@ -221,12 +221,21 @@ func (repo *Repo) GetRepo() map[string]*content.RepoNode {
 }
 
 // WriteRepoBytes get the whole repo in all dimensions
+// reads the JSON history file from the Filesystem and copies it directly in to the supplied buffer
+// the result is wrapped as service response, e.g: {"reply": <contentData>}
 func (repo *Repo) WriteRepoBytes(w io.Writer) {
+
 	f, err := os.Open(repo.history.getCurrentFilename())
+	if err != nil {
+		Log.Error("failed to serve Repo JSON", zap.Error(err))
+	}
+
+	w.Write([]byte("{\"reply\":"))
 	_, err = io.Copy(w, f)
 	if err != nil {
 		Log.Error("failed to serve Repo JSON", zap.Error(err))
 	}
+	w.Write([]byte("}"))
 }
 
 // Update - reload contents of repository with json from repo.server

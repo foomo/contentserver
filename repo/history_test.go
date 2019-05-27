@@ -21,17 +21,18 @@ func TestHistoryCurrent(t *testing.T) {
 	var (
 		h    = testHistory()
 		test = []byte("test")
+		b    bytes.Buffer
 	)
 	err := h.add(test)
 	if err != nil {
 		t.Fatal("failed to add: ", err)
 	}
-	current, err := h.getCurrent()
+	err = h.getCurrent(&b)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(current, test) {
-		t.Fatal(fmt.Sprintf("expected %q, got %q", string(test), string(current)))
+	if !bytes.Equal(b.Bytes(), test) {
+		t.Fatal(fmt.Sprintf("expected %q, got %q", string(test), string(b.Bytes())))
 	}
 }
 
