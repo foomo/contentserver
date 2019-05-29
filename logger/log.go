@@ -17,22 +17,26 @@ var (
 // SetupLogging configures the logger
 func SetupLogging(debug bool, outputPath string) {
 
-	var err error
+	var (
+		zc  zap.Config
+		err error
+	)
+
 	if debug {
-		zc := zap.NewDevelopmentConfig()
-		if os.Getenv("LOG_JSON") == "1" {
-			zc.Encoding = "json"
-		}
+		zc = zap.NewDevelopmentConfig()
 		zc.OutputPaths = append(zc.OutputPaths, outputPath)
-		Log, err = zc.Build()
 	} else {
-		zc := zap.NewProductionConfig()
-		if os.Getenv("LOG_JSON") == "1" {
-			zc.Encoding = "json"
-		}
+		zc = zap.NewProductionConfig()
 		zc.OutputPaths = append(zc.OutputPaths, outputPath)
-		Log, err = zc.Build()
 	}
+
+	if os.Getenv("LOG_JSON") == "1" {
+		zc.Encoding = "json"
+	} else {
+		zc.Encoding = "console"
+	}
+
+	Log, err = zc.Build()
 	if err != nil {
 		log.Fatalf("can't initialize zap logger: %v", err)
 	}
