@@ -19,14 +19,15 @@ const (
 
 // Metrics is the structure that holds all prometheus metrics
 type Metrics struct {
-	ServiceRequestCounter   *prometheus.CounterVec // count the number of requests for each service function
-	ServiceRequestDuration  *prometheus.SummaryVec // observe the duration of requests for each service function
-	UpdatesRejectedCounter  *prometheus.CounterVec // count the number of completed updates
-	UpdatesCompletedCounter *prometheus.CounterVec // count the number of rejected updates
-	UpdatesFailedCounter    *prometheus.CounterVec // count the number of updates that had an error
-	UpdateDuration          *prometheus.SummaryVec // observe the duration of each repo.update() call
-	ContentRequestCounter   *prometheus.CounterVec // count the total number of content requests
-	NumSocketsGauge         *prometheus.GaugeVec   // keep track of the total number of open sockets
+	ServiceRequestCounter       *prometheus.CounterVec // count the number of requests for each service function
+	ServiceRequestDuration      *prometheus.SummaryVec // observe the duration of requests for each service function
+	UpdatesRejectedCounter      *prometheus.CounterVec // count the number of completed updates
+	UpdatesCompletedCounter     *prometheus.CounterVec // count the number of rejected updates
+	UpdatesFailedCounter        *prometheus.CounterVec // count the number of updates that had an error
+	UpdateDuration              *prometheus.SummaryVec // observe the duration of each repo.update() call
+	ContentRequestCounter       *prometheus.CounterVec // count the total number of content requests
+	NumSocketsGauge             *prometheus.GaugeVec   // keep track of the total number of open sockets
+	HistoryPersistFailedCounter *prometheus.CounterVec // count the number of failed attempts to persist the content history
 }
 
 // newMetrics can be used to instantiate a metrics instance
@@ -71,6 +72,11 @@ func newMetrics() *Metrics {
 			"num_sockets_total",
 			"Total number of currently open socket connections",
 			metricLabelRemote,
+		),
+		HistoryPersistFailedCounter: newCounterVec(
+			"history_persist_failed_count",
+			"Number of failures to store the content history on the filesystem",
+			metricLabelError,
 		),
 	}
 }

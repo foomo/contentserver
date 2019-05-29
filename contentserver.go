@@ -58,13 +58,11 @@ func main() {
 	}()
 
 	if *flagFreeOSMem > 0 {
-		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
 		Log.Info("freeing OS memory every $interval minutes", zap.Int("interval", *flagFreeOSMem))
 		go func() {
 			for {
 				select {
 				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
 					log.Info("FreeOSMemory")
 					debug.FreeOSMemory()
 				}

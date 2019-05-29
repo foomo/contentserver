@@ -249,6 +249,7 @@ func (repo *Repo) loadJSONBytes() error {
 		historyErr := repo.history.add(repo.jsonBuf.Bytes())
 		if historyErr != nil {
 			Log.Error("could not add valid json to history", zap.Error(historyErr))
+			status.M.HistoryPersistFailedCounter.WithLabelValues(historyErr.Error()).Inc()
 		} else {
 			Log.Info("added valid json to history")
 		}

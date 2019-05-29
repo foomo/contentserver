@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/foomo/contentserver/status"
+
 	"github.com/mgutz/ansi"
 
 	"github.com/foomo/contentserver/content"
@@ -275,7 +277,8 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		// persist the currently loaded one
 		historyErr := repo.history.add(repo.jsonBuf.Bytes())
 		if historyErr != nil {
-			Log.Warn("could not persist current repo in history", zap.Error(historyErr))
+			Log.Error("could not persist current repo in history", zap.Error(historyErr))
+			status.M.HistoryPersistFailedCounter.WithLabelValues(historyErr.Error()).Inc()
 		}
 		// add some stats
 		for dimension := range repo.Directory {
