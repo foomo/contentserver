@@ -1,7 +1,7 @@
 ##############################
 ###### STAGE: BUILD     ######
 ##############################
-FROM golang:latest AS build-env
+FROM golang:1.12.5 AS build-env
 
 WORKDIR /src
 
