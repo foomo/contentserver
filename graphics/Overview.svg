@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="-549 -177 1441 1431" width="1441" height="1431">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" viewBox="-549 -177 1441 1431" width="1441" height="1431">
   <defs>
     <font-face font-family="Helvetica Neue" font-size="16" panose-1="2 0 8 3 0 0 0 9 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="975.0061" descent="-216.99524" font-weight="700">
       <font-face-src>
@@ -24,9 +24,9 @@
     </marker>
   </defs>
   <metadata> Produced by OmniGraffle 7.10.2 
-    <dc:date>2019-05-27 08:17:48 +0000</dc:date>
+    <dc:date>2019-05-29 10:21:17 +0000</dc:date>
   </metadata>
-  <g id="Overview" stroke-dasharray="none" stroke="none" fill="none" fill-opacity="1" stroke-opacity="1">
+  <g id="Overview" stroke-opacity="1" fill="none" stroke="none" stroke-dasharray="none" fill-opacity="1">
     <title>Overview</title>
     <rect fill="white" x="-549" y="-177" width="1441" height="1431"/>
     <g id="Overview: Layer 1">
@@ -35,7 +35,7 @@
         <rect x="546" y="979.7753" width="341" height="273" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
       </g>
       <g id="Graphic_32">
-        <rect x="-69" y="979.816" width="554" height="273" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <rect x="-69" y="979.816" width="554" height="185.45933" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
       </g>
       <g id="Graphic_20">
         <rect x="-65" y="195" width="956" height="619" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
@@ -148,8 +148,8 @@
         </text>
       </g>
       <g id="Graphic_30">
-        <rect x="-12.734375" y="1178.7753" width="441.46875" height="46" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-        <text transform="translate(-7.734375 1191.7753)" fill="black">
+        <rect x="-12.734375" y="1088.724" width="441.46875" height="46" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(-7.734375 1101.724)" fill="black">
           <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="102.52637" y="15">contentserver-repo-current.json</tspan>
         </text>
       </g>
@@ -185,20 +185,8 @@
         </text>
       </g>
       <g id="Graphic_41">
-        <rect x="-12.734375" y="1000.2753" width="441.46875" height="46" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-        <text transform="translate(-7.734375 1013.2753)" fill="black">
-          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="97.70237" y="15">contentserver-repo-[Timestamp].json</tspan>
-        </text>
-      </g>
-      <g id="Graphic_42">
-        <rect x="-12.734375" y="1059.7753" width="441.46875" height="46" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-        <text transform="translate(-7.734375 1072.7753)" fill="black">
-          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="97.70237" y="15">contentserver-repo-[Timestamp].json</tspan>
-        </text>
-      </g>
-      <g id="Graphic_43">
-        <rect x="-12.734375" y="1119.2753" width="441.46875" height="46" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-        <text transform="translate(-7.734375 1132.2753)" fill="black">
+        <rect x="-12.734375" y="1010.3673" width="441.46875" height="46" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(-7.734375 1023.3673)" fill="black">
           <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="97.70237" y="15">contentserver-repo-[Timestamp].json</tspan>
         </text>
       </g>
