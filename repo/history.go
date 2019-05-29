@@ -3,6 +3,7 @@ package repo
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,8 +17,9 @@ import (
 const (
 	historyRepoJSONPrefix = "contentserver-repo-"
 	historyRepoJSONSuffix = ".json"
-	maxHistoryVersions    = 20
 )
+
+var flagMaxHistoryVersions = flag.Int("max-history", 1, "set the maximum number of content backup files")
 
 type history struct {
 	varDir string
@@ -63,7 +65,7 @@ func (h *history) getHistory() (files []string, err error) {
 }
 
 func (h *history) cleanup() error {
-	files, err := h.getFilesForCleanup(maxHistoryVersions)
+	files, err := h.getFilesForCleanup(*flagMaxHistoryVersions)
 	if err != nil {
 		return err
 	}
