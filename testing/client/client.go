@@ -42,13 +42,13 @@ func main() {
 
 		if *flagGetRepo {
 			go func(num int) {
-				log.Println("get repo", num)
-				_, err := c.GetRepo()
+				log.Println("GetRepo", num)
+				resp, err := c.GetRepo()
 				if err != nil {
 					// spew.Dump(resp)
 					log.Fatal("failed to get repo")
 				}
-				log.Println(num, "get repo done")
+				log.Println(num, "GetRepo done, got", len(resp), "dimensions")
 			}(i)
 		}
 
