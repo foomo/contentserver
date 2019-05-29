@@ -53,8 +53,10 @@ func TestHistoryCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != maxHistoryVersions {
-		t.Fatal("history too long", len(files), "instead of", maxHistoryVersions)
+
+	// -1 for ignoring the current content backup file
+	if len(files)-1 != *flagMaxHistoryVersions {
+		t.Fatal("history too long", len(files), "instead of", *flagMaxHistoryVersions)
 	}
 }
 
@@ -80,8 +82,7 @@ func TestGetFilesForCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatal("error not expected")
 	}
-	assertStringEqual(t, "testdata/order/contentserver-repo-2017-10-22.json", files[0])
-	assertStringEqual(t, "testdata/order/contentserver-repo-2017-10-21.json", files[1])
+	assertStringEqual(t, "testdata/order/contentserver-repo-2017-10-21.json", files[0])
 }
 
 func assertStringEqual(t *testing.T, expected, actual string) {

@@ -12,6 +12,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	. "github.com/foomo/contentserver/logger"
+	"go.uber.org/zap"
 )
 
 const (
@@ -19,7 +22,7 @@ const (
 	historyRepoJSONSuffix = ".json"
 )
 
-var flagMaxHistoryVersions = flag.Int("max-history", 1, "set the maximum number of content backup files")
+var flagMaxHistoryVersions = flag.Int("max-history", 2, "set the maximum number of content backup files")
 
 type history struct {
 	varDir string
@@ -42,8 +45,21 @@ func (h *history) add(jsonBytes []byte) error {
 		return err
 	}
 
+	Log.Info("adding content backup", zap.String("file", filename))
+
 	// current filename
-	return ioutil.WriteFile(h.getCurrentFilename(), jsonBytes, 0644)
+	err = ioutil.WriteFile(h.getCurrentFilename(), jsonBytes, 0644)
+	if err != nil {
+		return err
+	}
+
+	err = h.cleanup()
+	if err != nil {
+		Log.Error("an error occured while cleaning up my history", zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 func (h *history) getHistory() (files []string, err error) {
@@ -69,7 +85,9 @@ func (h *history) cleanup() error {
 	if err != nil {
 		return err
 	}
+
 	for _, f := range files {
+		Log.Info("removing outdated backup", zap.String("file", f))
 		err := os.Remove(f)
 		if err != nil {
 			return fmt.Errorf("could not remove file %s : %s", f, err.Error())
@@ -84,8 +102,16 @@ func (h *history) getFilesForCleanup(historyVersions int) (files []string, err e
 	if err != nil {
 		return nil, errors.New("could not generate file cleanup list: " + err.Error())
 	}
-	if len(contentFiles) > historyVersions {
-		for i := historyVersions; i < len(contentFiles); i++ {
+
+	// fmt.Println("contentFiles:")
+	// for _, f := range contentFiles {
+	// 	fmt.Println(f)
+	// }
+
+	// -1 to remove the current backup file from the number of items
+	// so that only files with a timestamp are compared
+	if len(contentFiles)-1 > historyVersions {
+		for i := historyVersions + 1; i < len(contentFiles); i++ {
 			// ignore current repository file to fall back on
 			if contentFiles[i] == h.getCurrentFilename() {
 				continue

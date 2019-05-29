@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/foomo/contentserver/status"
-
-	"github.com/mgutz/ansi"
 
 	"github.com/foomo/contentserver/content"
 	. "github.com/foomo/contentserver/logger"
@@ -247,7 +244,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 	}
 
 	Log.Info("Update triggered")
-	Log.Info(ansi.Yellow + "BUFFER LENGTH BEFORE tryUpdate(): " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
+	// Log.Info(ansi.Yellow + "BUFFER LENGTH BEFORE tryUpdate(): " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
 
 	startTime := time.Now().UnixNano()
 	updateRepotime, updateErr := repo.tryUpdate()
@@ -260,7 +257,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		updateResponse.Stats.NumberOfURIs = -1
 		// let us try to restore the world from a file
 		Log.Error("could not update repository:", zap.Error(updateErr))
-		Log.Info(ansi.Yellow + "BUFFER LENGTH AFTER ERROR: " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
+		// Log.Info(ansi.Yellow + "BUFFER LENGTH AFTER ERROR: " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
 		updateResponse.ErrorMessage = updateErr.Error()
 
 		// only try to restore if the update failed during processing

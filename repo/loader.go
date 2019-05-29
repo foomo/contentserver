@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mgutz/ansi"
-
 	"github.com/foomo/contentserver/content"
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/status"
@@ -53,10 +51,10 @@ func (repo *Repo) updateRoutine() {
 
 func (repo *Repo) dimensionUpdateRoutine() {
 	for newDimension := range repo.dimensionUpdateChannel {
-		Log.Info("update routine received a new dimension", zap.String("dimension", newDimension.Dimension))
+		Log.Info("dimensionUpdateRoutine received a new dimension", zap.String("dimension", newDimension.Dimension))
 
 		err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
-		Log.Info("update routine received result")
+		Log.Info("dimensionUpdateRoutine received result")
 		if err != nil {
 			Log.Debug("update dimension failed", zap.Error(err))
 		}
@@ -184,10 +182,10 @@ func (repo *Repo) get(URL string) (err error) {
 		return fmt.Errorf("Bad HTTP Response: %q", response.Status)
 	}
 
-	Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
+	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
 	repo.jsonBuf.Reset()
 
-	Log.Info(ansi.Green + "LOADING DATA INTO BUFFER" + ansi.Reset)
+	// Log.Info(ansi.Green + "LOADING DATA INTO BUFFER" + ansi.Reset)
 	_, err = io.Copy(&repo.jsonBuf, response.Body)
 	return err
 }
@@ -252,12 +250,6 @@ func (repo *Repo) loadJSONBytes() error {
 			status.M.HistoryPersistFailedCounter.WithLabelValues(historyErr.Error()).Inc()
 		} else {
 			Log.Info("added valid json to history")
-		}
-		cleanUpErr := repo.history.cleanup()
-		if cleanUpErr != nil {
-			Log.Error("an error occured while cleaning up my history", zap.Error(cleanUpErr))
-		} else {
-			Log.Info("cleaned up history")
 		}
 	}
 	return err
