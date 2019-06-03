@@ -30,7 +30,6 @@ const (
 )
 
 var (
-	flagShowVersionFlag  = flag.Bool("version", false, "version info")
 	flagAddress          = flag.String("address", "", "address to bind socket server host:port")
 	flagWebserverAddress = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
 	flagWebserverPath    = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
