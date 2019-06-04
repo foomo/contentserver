@@ -4,22 +4,27 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
+	"go.uber.org/zap"
+
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 )
 
+const sourceWebserver = "webserver"
+
 type webServer struct {
-	r    *repo.Repo
 	path string
+	r    *repo.Repo
 }
 
 // NewWebServer returns a shiny new web server
-func NewWebServer(path string, r *repo.Repo) (s http.Handler, err error) {
-	s = &webServer{
-		r:    r,
+func NewWebServer(path string, r *repo.Repo) http.Handler {
+	return &webServer{
 		path: path,
+		r:    r,
 	}
-	return
 }
 
 func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -33,10 +38,21 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to read incoming request", http.StatusBadRequest)
 		return
 	}
-	reply, errReply := handleRequest(s.r, Handler(strings.TrimPrefix(r.URL.Path, s.path+"/")), jsonBytes)
+	h := Handler(strings.TrimPrefix(r.URL.Path, s.path+"/"))
+	if h == HandlerGetRepo {
+		start := time.Now()
+		s.r.WriteRepoBytes(w)
+		w.Header().Set("Content-Type", "application/json")
+		addMetrics(h, start, nil, nil, sourceWebserver)
+		return
+	}
+	reply, errReply := handleRequest(s.r, h, jsonBytes, "webserver")
 	if errReply != nil {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(reply)
+	_, err := w.Write(reply)
+	if err != nil {
+		Log.Error("failed to write webServer reply", zap.Error(err))
+	}
 }

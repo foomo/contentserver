@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/json"
 	"net"
 	"strconv"
 	"sync"
@@ -9,13 +8,22 @@ import (
 	"time"
 
 	"github.com/foomo/contentserver/content"
-	"github.com/foomo/contentserver/log"
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo/mock"
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/server"
 )
 
 const pathContentserver = "/contentserver"
+
+var (
+	testServerSocketAddr    string
+	testServerWebserverAddr string
+)
+
+func init() {
+	SetupLogging(true, "contentserver_client_test.log")
+}
 
 func dump(t *testing.T, v interface{}) {
 	jsonBytes, err := json.MarshalIndent(v, "", "	")
@@ -43,21 +51,24 @@ func getAvailableAddr() string {
 	return "127.0.0.1:" + strconv.Itoa(getFreePort())
 }
 
-var testServerSocketAddr string
-var testServerWebserverAddr string
-
 func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 	socketAddr = getAvailableAddr()
 	webserverAddr = getAvailableAddr()
 	testServer, varDir := mock.GetMockData(t)
-	log.SelectedLevel = log.LevelError
-	go server.RunServerSocketAndWebServer(
-		testServer.URL+"/repo-two-dimensions.json",
-		socketAddr,
-		webserverAddr,
-		pathContentserver,
-		varDir,
-	)
+
+	go func() {
+		err := server.RunServerSocketAndWebServer(
+			testServer.URL+"/repo-two-dimensions.json",
+			socketAddr,
+			webserverAddr,
+			pathContentserver,
+			varDir,
+		)
+		if err != nil {
+			t.Fatal("test server crashed: ", err)
+		}
+	}()
+
 	socketClient, errClient := NewClient(socketAddr, 1, time.Duration(time.Millisecond*100))
 	if errClient != nil {
 		panic(errClient)
@@ -69,6 +80,11 @@ func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 		if err != nil {
 			continue
 		}
+
+		if len(r) == 0 {
+			t.Fatal("received empty JSON from GetRepo")
+		}
+
 		if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) == float64(1) {
 			break
 		}
@@ -139,10 +155,18 @@ func TestGetURIs(t *testing.T) {
 
 func TestGetRepo(t *testing.T) {
 	testWithClients(t, func(c *Client) {
+
+		time.Sleep(time.Millisecond * 100)
+
 		r, err := c.GetRepo()
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		if len(r) == 0 {
+			t.Fatal("received empty JSON from GetRepo")
+		}
+
 		if r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64) != float64(1) {
 			t.Fatal("failed to drill deep for data")
 		}
@@ -235,5 +259,4 @@ func benchmarkClientAndServerGetContent(b testing.TB, numGroups, numCalls int, c
 	}
 	// Wait for all HTTP fetches to complete.
 	wg.Wait()
-	return
 }

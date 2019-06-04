@@ -1,12 +1,20 @@
 SHELL := /bin/bash
 
-TAG=`git describe --exact-match --tags $(git log -n1 --pretty='%h') 2>/dev/null || git rev-parse --abbrev-ref HEAD`
+TAG?=latest
+IMAGE=docker-registry.bestbytes.net/contentserver
+
+# Utils
 
 all: build test
 tag:
 	echo $(TAG)
+dep:
+	env GO111MODULE=on go mod download && env GO111MODULE=on go mod vendor && go install -i ./vendor/...
 clean:
 	rm -fv bin/contentserve*
+
+# Build
+
 build: clean
 	go build -o bin/contentserver
 build-arch: clean
@@ -15,11 +23,71 @@ build-arch: clean
 build-docker: clean build-arch
 	curl https://curl.haxx.se/ca/cacert.pem > .cacert.pem
 	docker build -q . > .image_id
-	docker tag `cat .image_id` docker-registry.bestbytes.net/contentserver:$(TAG)
-	echo "# tagged container `cat .image_id` as docker-registry.bestbytes.net/contentserver:$(TAG)"
+	docker tag `cat .image_id` $(IMAGE):$(TAG)
+	echo "# tagged container `cat .image_id` as $(IMAGE):$(TAG)"
 	rm -vf .image_id .cacert.pem
+
+build-testclient:
+	go build -o bin/testclient -i github.com/foomo/contentserver/testing/client
+
+build-testserver:
+	go build -o bin/testserver -i github.com/foomo/contentserver/testing/server
 
 package: build
 	pkg/build.sh
+
+# Docker
+
+docker-build:
+	docker build -t $(IMAGE):$(TAG) .
+
+docker-push:
+	docker push $(IMAGE):$(TAG)
+
+# Testing / benchmarks
+
 test:
 	go test ./...
+
+bench:
+	go test -run=none -bench=. ./...
+
+run-testserver:
+	bin/testserver -json-file var/cse-globus-stage-b-with-main-section.json
+
+run-contentserver:
+	contentserver -var-dir var -webserver-address :9191 -address :9999 http://127.0.0.1:1234
+
+run-contentserver-freeosmem:
+	contentserver -var-dir var -webserver-address :9191 -address :9999 -free-os-mem 1 http://127.0.0.1:1234
+
+run-prometheus:
+	prometheus --config.file=prometheus/prometheus.yml
+
+clean-var:
+	rm var/contentserver-repo-2019*
+
+# Profiling
+
+test-cpu-profile:
+	go test -cpuprofile=cprof-client github.com/foomo/contentserver/client
+	go tool pprof --text client.test cprof-client
+
+	go test -cpuprofile=cprof-repo github.com/foomo/contentserver/repo
+	go tool pprof --text repo.test cprof-repo
+
+test-gctrace:
+	GODEBUG=gctrace=1 go test ./...
+
+test-malloctrace:
+	GODEBUG=allocfreetrace=1 go test ./...
+
+trace:
+	curl http://localhost:6060/debug/pprof/trace?seconds=60 > cs-trace
+	go tool trace cs-trace
+
+pprof-heap-web:
+	go tool pprof -http=":8081" http://localhost:6060/debug/pprof/heap
+
+pprof-cpu-web:
+	go tool pprof -http=":8081" http://localhost:6060/debug/pprof/profile

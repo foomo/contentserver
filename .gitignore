@@ -1,5 +1,11 @@
+data
+*.log
+*.test
+cprof-*
+var
 .*
 *~
 /bin/
 /pkg/tmp/
+/vendor
 !.git*

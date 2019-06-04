@@ -3,11 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
-	"strings"
+	"runtime/debug"
+	"time"
 
-	"github.com/foomo/contentserver/log"
+	"github.com/apex/log"
+	. "github.com/foomo/contentserver/logger"
+	"github.com/foomo/contentserver/metrics"
 	"github.com/foomo/contentserver/server"
+	"github.com/foomo/contentserver/status"
+	"go.uber.org/zap"
 )
 
 const (
@@ -16,30 +23,22 @@ const (
 	logLevelWarning = "warning"
 	logLevelRecord  = "record"
 	logLevelError   = "error"
+
+	ServiceName                  = "Content Server"
+	DefaultHealthzHandlerAddress = ":8080"
+	DefaultPrometheusListener    = "127.0.0.1:9111"
 )
 
 var (
-	uniqushPushVersion = "content-server 1.4.1"
-	showVersionFlag    = flag.Bool("version", false, "version info")
-	address            = flag.String("address", "", "address to bind socket server host:port")
-	webserverAddress   = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
-	webserverPath      = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
-	varDir             = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
-	logLevelOptions    = []string{
-		logLevelError,
-		logLevelRecord,
-		logLevelWarning,
-		logLevelNotice,
-		logLevelDebug,
-	}
-	logLevel = flag.String(
-		"log-level",
-		logLevelRecord,
-		fmt.Sprintf(
-			"one of %s",
-			strings.Join(logLevelOptions, ", "),
-		),
-	)
+	flagAddress          = flag.String("address", "", "address to bind socket server host:port")
+	flagWebserverAddress = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
+	flagWebserverPath    = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
+	flagVarDir           = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
+
+	// debugging / profiling
+	flagDebug     = flag.Bool("debug", false, "toggle debug mode")
+	flagFreeOSMem = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
+	flagHeapDump  = flag.Int("heap-dump", 0, "dump heap every X minutes")
 )
 
 func exitUsage(code int) {
@@ -50,27 +49,55 @@ func exitUsage(code int) {
 
 func main() {
 	flag.Parse()
-	if *showVersionFlag {
-		fmt.Printf("%v\n", uniqushPushVersion)
-		return
+
+	SetupLogging(*flagDebug, "contentserver.log")
+
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
+	if *flagFreeOSMem > 0 {
+		Log.Info("freeing OS memory every $interval minutes", zap.Int("interval", *flagFreeOSMem))
+		go func() {
+			for {
+				select {
+				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
+					log.Info("FreeOSMemory")
+					debug.FreeOSMemory()
+				}
+			}
+		}()
 	}
+
+	if *flagHeapDump > 0 {
+		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
+		go func() {
+			for {
+				select {
+				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
+					log.Info("HeapDump")
+					f, err := os.Create("heapdump")
+					if err != nil {
+						panic("failed to create heap dump file")
+					}
+					debug.WriteHeapDump(f.Fd())
+					err = f.Close()
+					if err != nil {
+						panic("failed to create heap dump file")
+					}
+				}
+			}
+		}()
+	}
+
 	if len(flag.Args()) == 1 {
-		fmt.Println(*address, flag.Arg(0))
-		level := log.LevelRecord
-		switch *logLevel {
-		case logLevelError:
-			level = log.LevelError
-		case logLevelRecord:
-			level = log.LevelRecord
-		case logLevelWarning:
-			level = log.LevelWarning
-		case logLevelNotice:
-			level = log.LevelNotice
-		case logLevelDebug:
-			level = log.LevelDebug
-		}
-		log.SelectedLevel = level
-		err := server.RunServerSocketAndWebServer(flag.Arg(0), *address, *webserverAddress, *webserverPath, *varDir)
+		fmt.Println(*flagAddress, flag.Arg(0))
+
+		// kickoff metric handlers
+		go metrics.RunPrometheusHandler(DefaultPrometheusListener)
+		go status.RunHealthzHandlerListener(DefaultHealthzHandlerAddress, ServiceName)
+
+		err := server.RunServerSocketAndWebServer(flag.Arg(0), *flagAddress, *flagWebserverAddress, *flagWebserverPath, *flagVarDir)
 		if err != nil {
 			fmt.Println("exiting with error", err)
 			os.Exit(1)

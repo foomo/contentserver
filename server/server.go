@@ -5,9 +5,16 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 
-	"github.com/foomo/contentserver/log"
+	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
+	jsoniter "github.com/json-iterator/go"
+	"go.uber.org/zap"
+)
+
+var (
+	json = jsoniter.ConfigCompatibleWithStandardLibrary
 )
 
 // Handler type
@@ -34,23 +41,42 @@ func Run(server string, address string, varDir string) error {
 func RunServerSocketAndWebServer(
 	server string,
 	address string,
-	webserverAdresss string,
+	webserverAddress string,
 	webserverPath string,
 	varDir string,
 ) error {
-	if address == "" && webserverAdresss == "" {
+	if address == "" && webserverAddress == "" {
 		return errors.New("one of the addresses needs to be set")
 	}
-	log.Record("building repo with content from " + server)
+	Log.Info("building repo with content", zap.String("server", server))
+
 	r := repo.NewRepo(server, varDir)
-	go r.Update()
+
+	// start initial update and handle error
+	go func() {
+		resp := r.Update()
+		if !resp.Success {
+			Log.Error("failed to update",
+				zap.String("error", resp.ErrorMessage),
+				zap.Int("NumberOfNodes", resp.Stats.NumberOfNodes),
+				zap.Int("NumberOfURIs", resp.Stats.NumberOfURIs),
+				zap.Float64("OwnRuntime", resp.Stats.OwnRuntime),
+				zap.Float64("RepoRuntime", resp.Stats.RepoRuntime),
+			)
+			os.Exit(1)
+		}
+	}()
+
 	// update can run in bg
 	chanErr := make(chan error)
+
 	if address != "" {
+		Log.Info("starting socketserver", zap.String("address", address))
 		go runSocketServer(r, address, chanErr)
 	}
-	if webserverAdresss != "" {
-		go runWebserver(r, webserverAdresss, webserverPath, chanErr)
+	if webserverAddress != "" {
+		Log.Info("starting webserver", zap.String("webserverAddress", webserverAddress))
+		go runWebserver(r, webserverAddress, webserverPath, chanErr)
 	}
 	return <-chanErr
 }
@@ -61,12 +87,7 @@ func runWebserver(
 	path string,
 	chanErr chan error,
 ) {
-	s, errNew := NewWebServer(path, r)
-	if errNew != nil {
-		chanErr <- errNew
-		return
-	}
-	chanErr <- http.ListenAndServe(address, s)
+	chanErr <- http.ListenAndServe(address, NewWebServer(path, r))
 }
 
 func runSocketServer(
@@ -74,31 +95,32 @@ func runSocketServer(
 	address string,
 	chanErr chan error,
 ) {
-	s := &socketServer{
-		stats: newStats(),
-		repo:  repo,
-	}
-	ln, err := net.Listen("tcp", address)
-	if err != nil {
-		err = errors.New("RunSocketServer: could not start the on \"" + address + "\" - error: " + fmt.Sprint(err))
-		// failed to create socket
-		log.Error(err)
-		chanErr <- err
+	// create socket server
+	s := newSocketServer(repo)
+
+	// listen on socket
+	ln, errListen := net.Listen("tcp", address)
+	if errListen != nil {
+		Log.Error("runSocketServer: could not start",
+			zap.String("address", address),
+			zap.Error(errListen),
+		)
+		chanErr <- errors.New("runSocketServer: could not start the on \"" + address + "\" - error: " + fmt.Sprint(errListen))
 		return
 	}
-	// there we go
-	log.Record("RunSocketServer: started to listen on " + address)
+
+	Log.Info("runSocketServer: started listening", zap.String("address", address))
 	for {
 		// this blocks until connection or error
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Error("RunSocketServer: could not accept connection" + fmt.Sprint(err))
+			Log.Error("runSocketServer: could not accept connection", zap.Error(err))
 			continue
 		}
-		log.Debug("new connection")
+
 		// a goroutine handles conn so that the loop can accept other connections
 		go func() {
-			log.Debug("accepted connection")
+			Log.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
 			s.handleConnection(conn)
 			conn.Close()
 			// log.Debug("connection closed")

@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" viewBox="314 98 1205 2185" width="1205" height="2185">
+  <defs>
+    <font-face font-family="Helvetica Neue" font-size="16" panose-1="2 0 5 3 0 0 0 2 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="951.9958" descent="-212.99744" font-weight="400">
+      <font-face-src>
+        <font-face-name name="HelveticaNeue"/>
+      </font-face-src>
+    </font-face>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 7 6" markerWidth="7" markerHeight="6" color="black">
+      <g>
+        <path d="M 4.8 0 L 0 -1.8 L 0 1.8 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <font-face font-family="Futura" font-size="16" panose-1="2 11 6 2 2 2 4 2 3 3" units-per-em="1000" underline-position="-97.65625" underline-thickness="78.125" slope="0" x-height="482.4219" cap-height="761.2305" ascent="1038.5742" descent="-259.76562" font-weight="500">
+      <font-face-src>
+        <font-face-name name="Futura-Medium"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Helvetica Neue" font-size="16" panose-1="2 0 8 3 0 0 0 9 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="975.0061" descent="-216.99524" font-weight="700">
+      <font-face-src>
+        <font-face-name name="HelveticaNeue-Bold"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Futura" font-size="80" panose-1="2 11 6 2 2 2 4 2 3 3" units-per-em="1000" underline-position="-97.65625" underline-thickness="78.125" slope="0" x-height="482.4219" cap-height="761.2305" ascent="1038.5742" descent="-259.76562" font-weight="500">
+      <font-face-src>
+        <font-face-name name="Futura-Medium"/>
+      </font-face-src>
+    </font-face>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.10.2 
+    <dc:date>2019-05-29 10:21:17 +0000</dc:date>
+  </metadata>
+  <g id="Update-Flow" stroke-opacity="1" fill="none" stroke="none" stroke-dasharray="none" fill-opacity="1">
+    <title>Update-Flow</title>
+    <rect fill="white" x="314" y="98" width="1205" height="2185"/>
+    <g id="Update-Flow: Layer 1">
+      <title>Layer 1</title>
+      <g id="Graphic_4">
+        <rect x="526" y="282" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(531 303.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="89.328" y="15">*Repo.Update()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_5">
+        <rect x="526" y="425" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(531 446.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="80.144" y="15">*Repo.tryUpdate()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_7">
+        <rect x="315" y="587" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(320 608.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="23.344" y="15">if updateErr != errUpdateRejected</tspan>
+        </text>
+      </g>
+      <g id="Line_8">
+        <line x1="632.66975" y1="489" x2="516.5623" y2="578.1441" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_10">
+        <rect x="545.27846" y="518.599" width="56" height="32" fill="white"/>
+        <text transform="translate(550.27846 523.599)" fill="black">
+          <tspan font-family="Futura" font-size="16" font-weight="500" fill="black" x="0" y="17">failure</tspan>
+        </text>
+      </g>
+      <g id="Graphic_12">
+        <rect x="315" y="768" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(320 789.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="43.848" y="15">*Repo.tryToRestoreCurrent()</tspan>
+        </text>
+      </g>
+      <g id="Line_13">
+        <line x1="464" y1="651" x2="464" y2="754.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_15">
+        <line x1="675" y1="346" x2="675" y2="411.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_16">
+        <rect x="1045" y="768" width="473" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1050 789.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="8.42" y="15">*Repo.updateInProgressChan &lt;- make(chan updateResponse)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_18">
+        <rect x="736" y="768" width="222" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(741 789.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="15.032" y="15">return errUpdateRejected</tspan>
+        </text>
+      </g>
+      <g id="Graphic_19">
+        <rect x="522.1144" y="518.599" width="102.32812" height="32" fill="white"/>
+        <text transform="translate(527.1144 523.599)" fill="black">
+          <tspan font-family="Futura" font-size="16" font-weight="500" fill="black" x="0" y="17">update error</tspan>
+        </text>
+      </g>
+      <g id="Line_20">
+        <line x1="691.2974" y1="489" x2="824.9201" y2="755.4686" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_21">
+        <line x1="732.4672" y1="489" x2="1212.8041" y2="760.6497" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_22">
+        <rect x="716.2705" y="603.8538" width="81.28906" height="32" fill="white"/>
+        <text transform="translate(721.2705 608.8538)" fill="black">
+          <tspan font-family="Futura" font-size="16" font-weight="500" fill="black" x="0" y="17">queue full</tspan>
+        </text>
+      </g>
+      <g id="Graphic_23">
+        <rect x="924.7738" y="608.0878" width="93.11719" height="32" fill="white"/>
+        <text transform="translate(929.7738 613.0878)" fill="black">
+          <tspan font-family="Futura" font-size="16" font-weight="500" fill="black" x="2.46875" y="17">queue free </tspan>
+        </text>
+      </g>
+      <g id="Graphic_24">
+        <rect x="315" y="964" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(320 985.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="59.832" y="15">return updateResponse</tspan>
+        </text>
+      </g>
+      <g id="Line_25">
+        <line x1="464" y1="832" x2="464" y2="950.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_28">
+        <rect x="736" y="883" width="782" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(741 904.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="700" fill="black" x="299.496" y="16">*Repo.updateRoutine()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_29">
+        <rect x="736" y="946" width="782" height="1072" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_31">
+        <rect x="767" y="982" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(772 1003.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="13.305457" y="15">resChan &lt;- *Repo.updateInProgressChannel:</tspan>
+        </text>
+      </g>
+      <g id="Graphic_32">
+        <rect x="816" y="1069" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(821 1090.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="121.24146" y="15">*Repo.update()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_33">
+        <rect x="878.4145" y="1156" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(883.4145 1177.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="134.88146" y="15">*Repo.get()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_34">
+        <rect x="949" y="1243" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(954 1264.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="67.75346" y="15">*Repo.loadNodesFromJSON()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_35">
+        <rect x="1013" y="1330" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1018 1351.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="107.47346" y="15">*Repo.loadNodes()</tspan>
+        </text>
+      </g>
+      <g id="Line_36">
+        <line x1="1237.837" y1="832" x2="1181.0111" y2="874.2976" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8.0,8.0" stroke-width="2"/>
+      </g>
+      <g id="Graphic_37">
+        <rect x="1056" y="1417" width="409.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1061 1420.828)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="0" y="15">for dimension, newNode := range nodes {</tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="0" y="33.448">    *Repo.updateDimension(dimension, newNode)</tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="0" y="51.895996">}</tspan>
+        </text>
+      </g>
+      <g id="Graphic_38">
+        <rect x="1106" y="1508" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1111 1529.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="700" fill="black" x="47.369457" y="16">*Repo.dimensionUpdateRoutine()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_39">
+        <rect x="1106" y="1571" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1111 1592.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="79.44946" y="15">*Repo._updateDimension()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_40">
+        <rect x="1106" y="1634" width="359.1709" height="343" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_41">
+        <rect x="1127" y="1648" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1132 1669.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="60.152" y="15">newNode.WireParents()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_42">
+        <rect x="1127" y="1731.5" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1132 1753)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="90.072" y="15">buildDirectory()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_43">
+        <rect x="1127" y="1815" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1132 1836.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="99.872" y="15">wireAliases()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_44">
+        <rect x="1127" y="1898.5" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1132 1920)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="20.8" y="15">dimensionUpdateDoneChan &lt;- err</tspan>
+        </text>
+      </g>
+      <g id="Graphic_45">
+        <rect x="736" y="2078" width="359.1709" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(741 2099.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="71.76146" y="15">*Repo.history.add(jsonBytes)</tspan>
+        </text>
+      </g>
+      <g id="Line_46">
+        <line x1="946.0763" y1="2019" x2="930.6539" y2="2064.7752" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8.0,8.0" stroke-width="2"/>
+      </g>
+      <g id="Graphic_48">
+        <rect x="766.5855" y="2219" width="298" height="63" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(771.5855 2240.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="32.208" y="15">resultChan &lt;- updateResponse</tspan>
+        </text>
+      </g>
+      <g id="Line_47">
+        <line x1="915.5855" y1="2142" x2="915.5855" y2="2205.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_49">
+        <line x1="1018.9012" y1="1133" x2="1027.1646" y2="1144.5183" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_50">
+        <line x1="1084.3681" y1="1220" x2="1094.0898" y2="1231.9824" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_51">
+        <line x1="1152.4935" y1="1307" x2="1161.0333" y2="1318.6088" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_52">
+        <line x1="1217.9878" y1="1394" x2="1227.2391" y2="1405.8363" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_53">
+        <line x1="1276" y1="1712" x2="1276" y2="1717.6" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_54">
+        <line x1="1276" y1="1795.5" x2="1276" y2="1801.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_55">
+        <line x1="1276" y1="1879" x2="1276" y2="1884.6" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_57">
+        <text transform="translate(411 103)" fill="black">
+          <tspan font-family="Futura" font-size="80" font-weight="500" fill="black" x="0" y="83">Contentserver</tspan>
+          <tspan font-family="Futura" font-size="80" font-weight="500" fill="black" y="83">:</tspan>
+          <tspan font-family="Futura" font-size="80" font-weight="500" fill="black" y="83"> Update Flow</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

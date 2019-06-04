@@ -1,5 +1,10 @@
 language: go
-go:
-  - 1.10
-  - 1.11
-  - tip
+go: "1.12"
+os:
+  - linux
+dist: trusty
+sudo: false
+install: true
+script:
+  - make dep
+  - make test

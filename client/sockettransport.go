@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +10,10 @@ import (
 
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/server"
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type serverResponse struct {
 	Reply interface{}
@@ -62,8 +64,10 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 	jsonBytes = append([]byte(fmt.Sprintf("%s:%d", handler, len(jsonBytes))), jsonBytes...)
 
 	// send request
-	written := 0
-	l := len(jsonBytes)
+	var (
+		written = 0
+		l       = len(jsonBytes)
+	)
 	for written < l {
 		n, err := conn.Write(jsonBytes[written:])
 		if err != nil {
@@ -74,9 +78,11 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 	}
 
 	// read response
-	responseBytes := []byte{}
-	buf := make([]byte, 4096)
-	responseLength := 0
+	var (
+		responseBytes  = []byte{}
+		buf            = make([]byte, 4096)
+		responseLength = 0
+	)
 	for {
 		n, err := conn.Read(buf)
 		if err != nil && err != io.EOF {
@@ -105,12 +111,15 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 			break
 		}
 	}
+
 	// unmarshal response
 	responseJSONErr := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
 	if responseJSONErr != nil {
 		// is it an error ?
-		remoteErr := responses.Error{}
-		remoteErrJSONErr := json.Unmarshal(responseBytes, remoteErr)
+		var (
+			remoteErr        = responses.Error{}
+			remoteErrJSONErr = json.Unmarshal(responseBytes, &remoteErr)
+		)
 		if remoteErrJSONErr == nil {
 			returnConn(remoteErrJSONErr)
 			return remoteErr

@@ -22,13 +22,13 @@ type RepoNode struct {
 	// published from - to is going to be an array of fromTos
 }
 
-// NewRepoNode constructor
-func NewRepoNode() *RepoNode {
-	return &RepoNode{
-		Data:  make(map[string]interface{}),
-		Nodes: make(map[string]*RepoNode),
-	}
-}
+// // NewRepoNode constructor
+// func NewRepoNode() *RepoNode {
+// 	return &RepoNode{
+// 		Data:  make(map[string]interface{}, 0), // set initial size to zero explicitely?
+// 		Nodes: make(map[string]*RepoNode, 0),
+// 	}
+// }
 
 // WireParents helper method to reference from child to parent in a tree
 // recursively
@@ -52,15 +52,21 @@ func (node *RepoNode) InPath(path []*Item) bool {
 
 // GetPath get a path for a repo node
 func (node *RepoNode) GetPath() []*Item {
-	parentNode := node.parent
-	pathLength := 0
+
+	var (
+		parentNode = node.parent
+		pathLength = 0
+	)
 	for parentNode != nil {
 		parentNode = parentNode.parent
 		pathLength++
 	}
 	parentNode = node.parent
-	i := 0
-	path := make([]*Item, pathLength)
+
+	var (
+		i    = 0
+		path = make([]*Item, pathLength)
+	)
 	for parentNode != nil {
 		path[i] = parentNode.ToItem([]string{})
 		parentNode = parentNode.parent

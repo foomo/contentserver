@@ -10,6 +10,10 @@ A Server written in GoLang to mix and resolve content from different content sou
 
 It's up to you how you use it and which data you want to export to the server. Our intention was to write a fast and cache hazzle-free content server to mix different content sources.
 
+### Overview
+
+<img src="graphics/Overview.svg" width="100%" height="500">
+
 ## Export Data
 
 All you have to do is to provide a tree of content nodes as a JSON encoded RepoNode.
@@ -39,19 +43,31 @@ All you have to do is to provide a tree of content nodes as a JSON encoded RepoN
 
 There is a PHP Proxy implementation for foomo in [Foomo.ContentServer](https://github.com/foomo/Foomo.ContentServer). Feel free to use it or to implement your own proxy in the language you love. The API should be easily to implement in every other framework and language, too.
 
+## Update Flowchart
+
+<img src="graphics/Update-Flow.svg" width="100%" height="700">
+
 ### Usage
 
 ```bash
-$ contentserver --help
+$ contentserver -h
 Usage of contentserver:
   -address string
-    	address to bind host:port (default "127.0.0.1:8081")
-  -log-level string
-    	one of error, record, warning, notice, debug (default "record")
+    	address to bind socket server host:port
+  -debug
+    	toggle debug mode
+  -free-os-mem int
+    	free OS mem every X minutes
+  -heap-dump int
+    	dump heap every X minutes
   -var-dir string
     	where to put my data (default "/var/lib/contentserver")
   -version
     	version info
+  -webserver-address string
+    	address to bind web server host:port, when empty no webserver will be spawned
+  -webserver-path string
+    	path to export the webserver on - useful when behind a proxy (default "/contentserver")
 ```
 
 ## License
