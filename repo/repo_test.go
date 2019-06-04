@@ -15,6 +15,17 @@ func init() {
 	SetupLogging(true, "contentserver_repo_test.log")
 }
 
+func NewTestRepo(server, varDir string) *Repo {
+
+	r := NewRepo(server, varDir)
+
+	// because the travis CI VMs are very slow,
+	// we need to add some delay to allow the server to startup
+	time.Sleep(1 * time.Second)
+
+	return r
+}
+
 func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 	if empty {
 		if len(r.Directory) > 0 {
@@ -31,9 +42,9 @@ func TestLoad404(t *testing.T) {
 	var (
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-no-have"
-		r                  = NewRepo(server, varDir)
+		r                  = NewTestRepo(server, varDir)
 	)
-	time.Sleep(500 * time.Millisecond)
+
 	response := r.Update()
 	if response.Success {
 		t.Fatal("can not get a repo, if the server responds with a 404")
@@ -44,9 +55,9 @@ func TestLoadBrokenRepo(t *testing.T) {
 	var (
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-broken-json.json"
-		r                  = NewRepo(server, varDir)
+		r                  = NewTestRepo(server, varDir)
 	)
-	time.Sleep(500 * time.Millisecond)
+
 	response := r.Update()
 	if response.Success {
 		t.Fatal("how could we load a broken json")
@@ -58,7 +69,7 @@ func TestLoadRepo(t *testing.T) {
 	var (
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-ok.json"
-		r                  = NewRepo(server, varDir)
+		r                  = NewTestRepo(server, varDir)
 	)
 	assertRepoIsEmpty(t, r, true)
 
@@ -76,7 +87,7 @@ func TestLoadRepo(t *testing.T) {
 	}
 
 	// see what happens if we try to start it up again
-	nr := NewRepo(server, varDir)
+	nr := NewTestRepo(server, varDir)
 	assertRepoIsEmpty(t, nr, false)
 }
 
@@ -86,7 +97,7 @@ func BenchmarkLoadRepo(b *testing.B) {
 		t                  = &testing.T{}
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-ok.json"
-		r                  = NewRepo(server, varDir)
+		r                  = NewTestRepo(server, varDir)
 	)
 	if len(r.Directory) > 0 {
 		b.Fatal("directory should have been empty, but is not")
@@ -111,10 +122,8 @@ func TestLoadRepoDuplicateUris(t *testing.T) {
 	var (
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-duplicate-uris.json"
-		r                  = NewRepo(server, varDir)
+		r                  = NewTestRepo(server, varDir)
 	)
-
-	time.Sleep(500 * time.Millisecond)
 
 	response := r.Update()
 	if response.Success {
@@ -130,10 +139,8 @@ func TestDimensionHygiene(t *testing.T) {
 	var (
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-two-dimensions.json"
-		r                  = NewRepo(server, varDir)
+		r                  = NewTestRepo(server, varDir)
 	)
-
-	time.Sleep(500 * time.Millisecond)
 
 	response := r.Update()
 	if !response.Success {
@@ -150,11 +157,13 @@ func TestDimensionHygiene(t *testing.T) {
 }
 
 func getTestRepo(path string, t *testing.T) *Repo {
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + path
-	r := NewRepo(server, varDir)
-	time.Sleep(500 * time.Millisecond)
-	response := r.Update()
+
+	var (
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + path
+		r                  = NewTestRepo(server, varDir)
+		response           = r.Update()
+	)
 	if !response.Success {
 		t.Fatal("well those two dimension should be fine")
 	}
@@ -162,10 +171,12 @@ func getTestRepo(path string, t *testing.T) *Repo {
 }
 
 func TestGetNodes(t *testing.T) {
-	r := getTestRepo("/repo-two-dimensions.json", t)
-	nodesRequest := mock.MakeNodesRequest()
-	nodes := r.GetNodes(nodesRequest)
-	testNode, ok := nodes["test"]
+	var (
+		r            = getTestRepo("/repo-two-dimensions.json", t)
+		nodesRequest = mock.MakeNodesRequest()
+		nodes        = r.GetNodes(nodesRequest)
+		testNode, ok = nodes["test"]
+	)
 	if !ok {
 		t.Fatal("wtf that should be a node")
 	}
@@ -177,11 +188,13 @@ func TestGetNodes(t *testing.T) {
 }
 
 func TestResolveContent(t *testing.T) {
-	r := getTestRepo("/repo-two-dimensions.json", t)
 
-	contentRequest := mock.MakeValidContentRequest()
+	var (
+		r                = getTestRepo("/repo-two-dimensions.json", t)
+		contentRequest   = mock.MakeValidContentRequest()
+		siteContent, err = r.GetContent(contentRequest)
+	)
 
-	siteContent, err := r.GetContent(contentRequest)
 	if siteContent.URI != contentRequest.URI {
 		t.Fatal("failed to resolve uri")
 	}
@@ -191,11 +204,14 @@ func TestResolveContent(t *testing.T) {
 }
 
 func TestLinkIds(t *testing.T) {
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + "/repo-link-ok.json"
-	r := NewRepo(server, varDir)
-	time.Sleep(500 * time.Millisecond)
-	response := r.Update()
+
+	var (
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-link-ok.json"
+		r                  = NewTestRepo(server, varDir)
+		response           = r.Update()
+	)
+
 	if !response.Success {
 		t.Fatal("those links should have been fine")
 	}
