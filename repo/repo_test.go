@@ -3,6 +3,7 @@ package repo
 import (
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/foomo/contentserver/logger"
 	_ "github.com/foomo/contentserver/logger"
@@ -31,8 +32,9 @@ func TestLoad404(t *testing.T) {
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-no-have"
 		r                  = NewRepo(server, varDir)
-		response           = r.Update()
 	)
+	time.Sleep(500 * time.Millisecond)
+	response := r.Update()
 	if response.Success {
 		t.Fatal("can not get a repo, if the server responds with a 404")
 	}
@@ -43,8 +45,9 @@ func TestLoadBrokenRepo(t *testing.T) {
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-broken-json.json"
 		r                  = NewRepo(server, varDir)
-		response           = r.Update()
 	)
+	time.Sleep(500 * time.Millisecond)
+	response := r.Update()
 	if response.Success {
 		t.Fatal("how could we load a broken json")
 	}
@@ -104,22 +107,34 @@ func BenchmarkLoadRepo(b *testing.B) {
 }
 
 func TestLoadRepoDuplicateUris(t *testing.T) {
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + "/repo-duplicate-uris.json"
-	r := NewRepo(server, varDir)
+
+	var (
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-duplicate-uris.json"
+		r                  = NewRepo(server, varDir)
+	)
+
+	time.Sleep(500 * time.Millisecond)
+
 	response := r.Update()
 	if response.Success {
 		t.Fatal("there are duplicates, this repo update should have failed")
 	}
 	if !strings.Contains(response.ErrorMessage, "update dimension") {
-		t.Fatal("error message not as expected")
+		t.Fatal("error message not as expected: " + response.ErrorMessage)
 	}
 }
 
 func TestDimensionHygiene(t *testing.T) {
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + "/repo-two-dimensions.json"
-	r := NewRepo(server, varDir)
+
+	var (
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-two-dimensions.json"
+		r                  = NewRepo(server, varDir)
+	)
+
+	time.Sleep(500 * time.Millisecond)
+
 	response := r.Update()
 	if !response.Success {
 		t.Fatal("well those two dimension should be fine")
@@ -138,6 +153,7 @@ func getTestRepo(path string, t *testing.T) *Repo {
 	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + path
 	r := NewRepo(server, varDir)
+	time.Sleep(500 * time.Millisecond)
 	response := r.Update()
 	if !response.Success {
 		t.Fatal("well those two dimension should be fine")
@@ -178,6 +194,7 @@ func TestLinkIds(t *testing.T) {
 	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-link-ok.json"
 	r := NewRepo(server, varDir)
+	time.Sleep(500 * time.Millisecond)
 	response := r.Update()
 	if !response.Success {
 		t.Fatal("those links should have been fine")
