@@ -55,17 +55,17 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 		})
 
 	default:
-		reply = responses.NewError(1, "unknown handler: "+string(handler))
+		reply = responses.NewErrorf(1, "unknown handler: "+string(handler))
 	}
 	addMetrics(handler, start, jsonErr, apiErr, source)
 
 	// error handling
 	if jsonErr != nil {
 		Log.Error("could not read incoming json", zap.Error(jsonErr))
-		reply = responses.NewError(2, "could not read incoming json "+jsonErr.Error())
+		reply = responses.NewErrorf(2, "could not read incoming json %s", jsonErr)
 	} else if apiErr != nil {
 		Log.Error("an API error occured", zap.Error(apiErr))
-		reply = responses.NewError(3, "internal error "+apiErr.Error())
+		reply = responses.NewErrorf(3, "internal error %s", apiErr)
 	}
 
 	return encodeReply(reply)

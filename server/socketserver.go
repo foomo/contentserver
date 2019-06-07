@@ -111,7 +111,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 			header = ""
 			if headerErr != nil {
 				Log.Error("invalid request could not read header", zap.Error(headerErr))
-				encodedErr, encodingErr := encodeReply(responses.NewError(4, "invalid header "+headerErr.Error()))
+				encodedErr, encodingErr := encodeReply(responses.NewErrorf(4, "invalid header %s", headerErr))
 				if encodingErr == nil {
 					s.writeResponse(conn, encodedErr)
 				} else {
