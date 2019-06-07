@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -60,7 +61,7 @@ func NewRepo(server string, varDir string) *Repo {
 		history:                    newHistory(varDir),
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
-		updateInProgressChannel:    make(chan chan updateResponse, 0),
+		updateInProgressChannel:    make(chan chan updateResponse),
 	}
 
 	go repo.updateRoutine()
@@ -94,7 +95,7 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 
 	var (
 		nodes = map[string]*content.Node{}
-		path  = []*content.Item{}
+		path  []*content.Item
 	)
 	for nodeName, nodeRequest := range nodeRequests {
 
@@ -223,15 +224,16 @@ func (repo *Repo) GetRepo() map[string]*content.RepoNode {
 // reads the JSON history file from the Filesystem and copies it directly in to the supplied buffer
 // the result is wrapped as service response, e.g: {"reply": <contentData>}
 func (repo *Repo) WriteRepoBytes(w io.Writer) {
-
 	f, err := os.Open(repo.history.getCurrentFilename())
 	if err != nil {
 		Log.Error("failed to serve Repo JSON", zap.Error(err))
+		return
 	}
+	defer f.Close()
 
-	w.Write([]byte("{\"reply\":"))
-	_, err = io.Copy(w, f)
-	if err != nil {
+	w.Write([]byte(`{"reply":`))
+	// bufio.NewReaderSize speeds up reading in an AWS/GCP environment
+	if _, err := io.Copy(w, bufio.NewReaderSize(f, 2*4096)); err != nil {
 		Log.Error("failed to serve Repo JSON", zap.Error(err))
 	}
 	w.Write([]byte("}"))
@@ -240,7 +242,7 @@ func (repo *Repo) WriteRepoBytes(w io.Writer) {
 // Update - reload contents of repository with json from repo.server
 func (repo *Repo) Update() (updateResponse *responses.Update) {
 	floatSeconds := func(nanoSeconds int64) float64 {
-		return float64(float64(nanoSeconds) / float64(1000000000.0))
+		return float64(nanoSeconds) / float64(1000000000.0)
 	}
 
 	Log.Info("Update triggered")

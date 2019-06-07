@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -132,6 +131,6 @@ func (h *history) getCurrent(buf *bytes.Buffer) (err error) {
 		return err
 	}
 	defer f.Close()
-	_, err = io.Copy(buf, f)
+	_, err = buf.ReadFrom(f)
 	return err
 }

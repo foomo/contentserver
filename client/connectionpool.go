@@ -114,7 +114,7 @@ RunLoop:
 		}
 		// waitpool cleanup
 		var (
-			waitPoolLoosers = []int{}
+			waitPoolLoosers []int
 			now             = time.Now()
 		)
 		for i, waitPoolEntry := range waitPool {

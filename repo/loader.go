@@ -25,27 +25,24 @@ type updateResponse struct {
 }
 
 func (repo *Repo) updateRoutine() {
-	for {
-		select {
-		case resChan := <-repo.updateInProgressChannel:
-			Log.Info("waiting for update to complete", zap.String("chan", fmt.Sprintf("%p", resChan)))
-			start := time.Now()
+	for resChan := range repo.updateInProgressChannel {
+		Log.Info("waiting for update to complete", zap.String("chan", fmt.Sprintf("%p", resChan)))
+		start := time.Now()
 
-			repoRuntime, errUpdate := repo.update()
-			if errUpdate != nil {
-				status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
-			}
-
-			resChan <- updateResponse{
-				repoRuntime: repoRuntime,
-				err:         errUpdate,
-			}
-
-			duration := time.Since(start)
-			Log.Info("update completed", zap.Duration("duration", duration), zap.String("chan", fmt.Sprintf("%p", resChan)))
-			status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
-			status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
+		repoRuntime, errUpdate := repo.update()
+		if errUpdate != nil {
+			status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
 		}
+
+		resChan <- updateResponse{
+			repoRuntime: repoRuntime,
+			err:         errUpdate,
+		}
+
+		duration := time.Since(start)
+		Log.Info("update completed", zap.Duration("duration", duration), zap.String("chan", fmt.Sprintf("%p", resChan)))
+		status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
+		status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
 	}
 }
 
@@ -172,12 +169,11 @@ func (repo *Repo) tryToRestoreCurrent() (err error) {
 	return repo.loadJSONBytes()
 }
 
-func (repo *Repo) get(URL string) (err error) {
+func (repo *Repo) loadRawHTTPBodyIntoBuffer(URL string) (err error) {
 	response, err := http.Get(URL)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("Bad HTTP Response: %q", response.Status)
 	}
@@ -186,20 +182,21 @@ func (repo *Repo) get(URL string) (err error) {
 	repo.jsonBuf.Reset()
 
 	// Log.Info(ansi.Green + "LOADING DATA INTO BUFFER" + ansi.Reset)
+	defer response.Body.Close()
 	_, err = io.Copy(&repo.jsonBuf, response.Body)
 	return err
 }
 
 func (repo *Repo) update() (repoRuntime int64, err error) {
 	startTimeRepo := time.Now().UnixNano()
-	err = repo.get(repo.server)
+	err = repo.loadRawHTTPBodyIntoBuffer(repo.server)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
 	if err != nil {
 		// we have no json to load - the repo server did not reply
 		Log.Debug("failed to load json", zap.Error(err))
 		return repoRuntime, err
 	}
-	Log.Debug("loading json", zap.String("server", repo.server), zap.Int("length", len(repo.jsonBuf.Bytes())))
+	Log.Debug("loading json", zap.String("server", repo.server), zap.Int("length", repo.jsonBuf.Len()))
 	nodes, err := repo.loadNodesFromJSON()
 	if err != nil {
 		// could not load nodes from json
@@ -256,7 +253,7 @@ func (repo *Repo) loadJSONBytes() error {
 }
 
 func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
-	newDimensions := []string{}
+	newDimensions := make([]string, 0, len(newNodes))
 	for dimension, newNode := range newNodes {
 		newDimensions = append(newDimensions, dimension)
 		Log.Debug("loading nodes for dimension", zap.String("dimension", dimension))

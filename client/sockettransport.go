@@ -34,9 +34,9 @@ func newSocketTransport(server string, connectionPoolSize int, waitTimeout time.
 	}
 }
 
-func (st *socketTransport) shutdown() {
-	if st.connPool.chanDrainPool != nil {
-		st.connPool.chanDrainPool <- 1
+func (c *socketTransport) shutdown() {
+	if c.connPool.chanDrainPool != nil {
+		c.connPool.chanDrainPool <- 1
 	}
 }
 
@@ -79,7 +79,7 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 
 	// read response
 	var (
-		responseBytes  = []byte{}
+		responseBytes  = make([]byte, 0, 8192)
 		buf            = make([]byte, 4096)
 		responseLength = 0
 	)

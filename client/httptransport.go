@@ -33,7 +33,7 @@ func (ht *httpTransport) call(handler server.Handler, request interface{}, respo
 	req, errNewRequest := http.NewRequest(
 		http.MethodPost,
 		ht.endpoint+"/"+string(handler),
-		bytes.NewBuffer(requestBytes),
+		bytes.NewReader(requestBytes),
 	)
 	if errNewRequest != nil {
 		return errNewRequest
@@ -53,9 +53,5 @@ func (ht *httpTransport) call(handler server.Handler, request interface{}, respo
 	if errRead != nil {
 		return errRead
 	}
-	errUnmarshal := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
-	if errUnmarshal != nil {
-		return errUnmarshal
-	}
-	return errUnmarshal
+	return json.Unmarshal(responseBytes, &serverResponse{Reply: response})
 }
