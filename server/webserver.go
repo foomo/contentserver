@@ -1,14 +1,10 @@
 package server
 
 import (
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
-	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 )
 
@@ -32,27 +28,18 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no body", http.StatusBadRequest)
 		return
 	}
-	jsonBytes, readErr := ioutil.ReadAll(r.Body)
-	r.Body.Close()
-	if readErr != nil {
-		http.Error(w, "failed to read incoming request", http.StatusBadRequest)
-		return
-	}
+
 	h := Handler(strings.TrimPrefix(r.URL.Path, s.path+"/"))
 	if h == HandlerGetRepo {
 		start := time.Now()
-		s.r.WriteRepoBytes(w)
 		w.Header().Set("Content-Type", "application/json")
+		s.r.WriteRepoBytes(w)
 		addMetrics(h, start, nil, nil, sourceWebserver)
 		return
 	}
-	reply, errReply := handleRequest(s.r, h, jsonBytes, "webserver")
-	if errReply != nil {
-		http.Error(w, errReply.Error(), http.StatusInternalServerError)
-		return
+
+	if err := handleRequest(s.r, h, r.Body, w, "webserver"); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	_, err := w.Write(reply)
-	if err != nil {
-		Log.Error("failed to write webServer reply", zap.Error(err))
-	}
+	r.Body.Close()
 }

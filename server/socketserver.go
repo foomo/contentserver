@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -20,8 +21,7 @@ import (
 const sourceSocketServer = "socketserver"
 
 type socketServer struct {
-	repo    *repo.Repo
-	metrics *status.Metrics
+	repo *repo.Repo
 }
 
 // newSocketServer returns a shiny new socket server
@@ -47,7 +47,6 @@ func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte)
 	Log.Debug("incoming json buffer", zap.Int("length", len(jsonBytes)))
 
 	if handler == HandlerGetRepo {
-
 		var (
 			b     bytes.Buffer
 			start = time.Now()
@@ -57,18 +56,23 @@ func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte)
 		return b.Bytes()
 	}
 
-	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, sourceSocketServer)
-	if handlingError != nil {
-		Log.Error("socketServer.execute failed", zap.Error(handlingError))
+	var buf bytes.Buffer
+	buf.Grow(len(jsonBytes))
+	if err := handleRequest(s.repo, handler, bytes.NewReader(jsonBytes), &buf, sourceSocketServer); err != nil {
+		Log.Error("socketServer.execute failed", zap.Error(err))
 	}
-	return reply
+	return buf.Bytes()
 }
 
-func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
-	headerBytes := []byte(strconv.Itoa(len(reply)))
+func (s *socketServer) writeResponse(w io.Writer, reply []byte) {
+	headerBytes := make([]byte, 0, len(reply)+12)
+	headerBytes = strconv.AppendInt(headerBytes, int64(len(reply)), 10)
 	reply = append(headerBytes, reply...)
-	Log.Debug("replying", zap.String("reply", string(reply)))
-	n, writeError := conn.Write(reply)
+	if Log.Core().Enabled(zap.DebugLevel) {
+		// only log when debug level is really enabled as this costs lots of performance.
+		Log.Debug("replying", zap.String("reply", string(reply)))
+	}
+	n, writeError := w.Write(reply)
 	if writeError != nil {
 		Log.Error("socketServer.writeResponse: could not write reply", zap.Error(writeError))
 		return
@@ -89,33 +93,32 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 
 	var (
 		headerBuffer [1]byte
-		header       = ""
+		header       bytes.Buffer
 		i            = 0
 	)
 	for {
 		i++
 		// fmt.Println("---->", i)
 		// let us read with 1 byte steps on conn until we find "{"
-		_, readErr := conn.Read(headerBuffer[0:])
+		_, readErr := conn.Read(headerBuffer[:])
 		if readErr != nil {
 			Log.Debug("looks like the client closed the connection", zap.Error(readErr))
 			status.M.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Dec()
 			return
 		}
 		// read next byte
-		current := headerBuffer[0:]
-		if string(current) == "{" {
+		if headerBuffer[0] == '{' {
 			// json has started
-			handler, jsonLength, headerErr := extractHandlerAndJSONLentgh(header)
+			handler, jsonLength, headerErr := extractHandlerAndJSONLentgh(header.String())
 			// reset header
-			header = ""
+			header.Reset()
 			if headerErr != nil {
 				Log.Error("invalid request could not read header", zap.Error(headerErr))
-				encodedErr, encodingErr := encodeReply(responses.NewErrorf(4, "invalid header %s", headerErr))
-				if encodingErr == nil {
-					s.writeResponse(conn, encodedErr)
+				var buf bytes.Buffer
+				if err := encodeReply(&buf, responses.NewErrorf(4, "invalid header %s", headerErr)); err == nil {
+					s.writeResponse(conn, buf.Bytes())
 				} else {
-					Log.Error("could not respond to invalid request", zap.Error(encodingErr))
+					Log.Error("could not respond to invalid request", zap.Error(err))
 				}
 				return
 			}
@@ -161,6 +164,6 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 			return
 		}
 		// adding to header byte by byte
-		header += string(headerBuffer[0:])
+		header.WriteByte(headerBuffer[0])
 	}
 }
