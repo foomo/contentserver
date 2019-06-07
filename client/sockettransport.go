@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -60,9 +61,13 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 			err:  err,
 		}
 	}
-	// write header result will be like handler:2{}
-	jsonBytes = append([]byte(fmt.Sprintf("%s:%d", handler, len(jsonBytes))), jsonBytes...)
-
+	{
+		// write header result will be like handler:2{}
+		var buf bytes.Buffer
+		fmt.Fprintf(&buf, "%s:%d", handler, len(jsonBytes))
+		buf.Write(jsonBytes)
+		jsonBytes = buf.Bytes()
+	}
 	// send request
 	var (
 		written = 0
@@ -79,8 +84,8 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 
 	// read response
 	var (
-		responseBytes  = make([]byte, 0, 8192)
-		buf            = make([]byte, 4096)
+		responseBytes  = make([]byte, 0, 8192) // approx size of response data, should be measured
+		buf            = make([]byte, 4096) // for reading from network
 		responseLength = 0
 	)
 	for {
@@ -113,18 +118,14 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 	}
 
 	// unmarshal response
-	responseJSONErr := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
-	if responseJSONErr != nil {
+	if err := json.Unmarshal(responseBytes, &serverResponse{Reply: response}); err != nil {
 		// is it an error ?
-		var (
-			remoteErr        = responses.Error{}
-			remoteErrJSONErr = json.Unmarshal(responseBytes, &remoteErr)
-		)
-		if remoteErrJSONErr == nil {
-			returnConn(remoteErrJSONErr)
-			return remoteErr
+		var remoteErr responses.Error
+		if errInner := json.Unmarshal(responseBytes, &remoteErr); errInner != nil {
+			return fmt.Errorf("could not unmarshal response : %q %q", errInner, string(responseBytes))
 		}
-		return fmt.Errorf("could not unmarshal response : %q %q", remoteErrJSONErr, string(responseBytes))
+		returnConn(err)
+		return remoteErr
 	}
 	returnConn(nil)
 	return nil
