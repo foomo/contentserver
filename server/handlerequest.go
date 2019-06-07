@@ -4,16 +4,25 @@ import (
 	"io"
 	"time"
 
+	"github.com/foomo/contentserver/content"
 	"go.uber.org/zap"
 
 	. "github.com/foomo/contentserver/logger"
-	"github.com/foomo/contentserver/repo"
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/status"
 )
 
-func handleRequest(r *repo.Repo, handler Handler, rdr io.Reader, wr io.Writer, source string) error {
+// repoer implements repo.Repo and mocked out for testing
+type repoer interface {
+	GetURIs(dimension string, ids []string) map[string]string
+	GetContent(*requests.Content) (*content.SiteContent, error)
+	GetNodes(*requests.Nodes) map[string]*content.Node
+	Update() *responses.Update
+	WriteRepoBytes(io.Writer)
+}
+
+func handleRequest(r repoer, handler Handler, rdr io.Reader, wr io.Writer, source string) error {
 
 	var (
 		reply             interface{}
@@ -31,27 +40,27 @@ func handleRequest(r *repo.Repo, handler Handler, rdr io.Reader, wr io.Writer, s
 	status.M.ContentRequestCounter.WithLabelValues(source).Inc()
 
 	// handle and process
-	switch handler {
+	switch decodeFn := json.NewDecoder(rdr).Decode; handler {
 	// case HandlerGetRepo: // This case is handled prior to handleRequest being called.
 	// since the resulting bytes are written directly in to the http.ResponseWriter / net.Connection
 	case HandlerGetURIs:
 		getURIRequest := new(requests.URIs)
-		processIfJSONIsOk(json.NewDecoder(rdr).Decode(getURIRequest), func() {
+		processIfJSONIsOk(decodeFn(getURIRequest), func() {
 			reply = r.GetURIs(getURIRequest.Dimension, getURIRequest.IDs)
 		})
 	case HandlerGetContent:
 		contentRequest := new(requests.Content)
-		processIfJSONIsOk(json.NewDecoder(rdr).Decode(contentRequest), func() {
+		processIfJSONIsOk(decodeFn(contentRequest), func() {
 			reply, apiErr = r.GetContent(contentRequest)
 		})
 	case HandlerGetNodes:
 		nodesRequest := new(requests.Nodes)
-		processIfJSONIsOk(json.NewDecoder(rdr).Decode(nodesRequest), func() {
+		processIfJSONIsOk(decodeFn(nodesRequest), func() {
 			reply = r.GetNodes(nodesRequest)
 		})
 	case HandlerUpdate:
 		updateRequest := new(requests.Update)
-		processIfJSONIsOk(json.NewDecoder(rdr).Decode(updateRequest), func() {
+		processIfJSONIsOk(decodeFn(updateRequest), func() {
 			reply = r.Update()
 		})
 
@@ -73,17 +82,12 @@ func handleRequest(r *repo.Repo, handler Handler, rdr io.Reader, wr io.Writer, s
 }
 
 func addMetrics(handlerName Handler, start time.Time, errJSON error, errAPI error, source string) {
-
-	var (
-		duration = time.Since(start)
-		s        = "succeeded"
-	)
+	s := "succeeded"
 	if errJSON != nil || errAPI != nil {
 		s = "failed"
 	}
-
 	status.M.ServiceRequestCounter.WithLabelValues(string(handlerName), s, source).Inc()
-	status.M.ServiceRequestDuration.WithLabelValues(string(handlerName), s, source).Observe(duration.Seconds())
+	status.M.ServiceRequestDuration.WithLabelValues(string(handlerName), s, source).Observe(time.Since(start).Seconds())
 }
 
 // encodeReply takes an interface and encodes it as JSON

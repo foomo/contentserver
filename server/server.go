@@ -91,7 +91,7 @@ func runWebserver(
 }
 
 func runSocketServer(
-	repo *repo.Repo,
+	repo repoer,
 	address string,
 	chanErr chan error,
 ) {

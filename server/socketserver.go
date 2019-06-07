@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 
 	. "github.com/foomo/contentserver/logger"
-	"github.com/foomo/contentserver/repo"
 	"github.com/foomo/contentserver/responses"
 	"github.com/foomo/contentserver/status"
 )
@@ -21,17 +20,17 @@ import (
 const sourceSocketServer = "socketserver"
 
 type socketServer struct {
-	repo *repo.Repo
+	repo repoer
 }
 
 // newSocketServer returns a shiny new socket server
-func newSocketServer(repo *repo.Repo) *socketServer {
+func newSocketServer(repo repoer) *socketServer {
 	return &socketServer{
 		repo: repo,
 	}
 }
 
-func extractHandlerAndJSONLentgh(header string) (handler Handler, jsonLength int, err error) {
+func extractHandlerAndJSONLength(header string) (handler Handler, jsonLength int, err error) {
 	headerParts := strings.Split(header, ":")
 	if len(headerParts) != 2 {
 		return "", 0, errors.New("invalid header")
@@ -65,7 +64,7 @@ func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte)
 }
 
 func (s *socketServer) writeResponse(w io.Writer, reply []byte) {
-	headerBytes := make([]byte, 0, len(reply)+12)
+	headerBytes := make([]byte, 0, len(reply)+12) // 12 is the approx length of header to store the size of json, next line.
 	headerBytes = strconv.AppendInt(headerBytes, int64(len(reply)), 10)
 	reply = append(headerBytes, reply...)
 	if Log.Core().Enabled(zap.DebugLevel) {
@@ -109,7 +108,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 		// read next byte
 		if headerBuffer[0] == '{' {
 			// json has started
-			handler, jsonLength, headerErr := extractHandlerAndJSONLentgh(header.String())
+			handler, jsonLength, headerErr := extractHandlerAndJSONLength(header.String())
 			// reset header
 			header.Reset()
 			if headerErr != nil {
@@ -132,8 +131,7 @@ func (s *socketServer) handleConnection(conn net.Conn) {
 					readRound         = 0
 				)
 
-				// that is "{"
-				jsonBytes[0] = 123
+				jsonBytes[0] = '{'
 
 				for jsonLengthCurrent < jsonLength {
 					readRound++

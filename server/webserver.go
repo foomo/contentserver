@@ -4,19 +4,17 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/foomo/contentserver/repo"
 )
 
 const sourceWebserver = "webserver"
 
 type webServer struct {
 	path string
-	r    *repo.Repo
+	r    repoer
 }
 
 // NewWebServer returns a shiny new web server
-func NewWebServer(path string, r *repo.Repo) http.Handler {
+func NewWebServer(path string, r repoer) http.Handler {
 	return &webServer{
 		path: path,
 		r:    r,
@@ -41,5 +39,7 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := handleRequest(s.r, h, r.Body, w, "webserver"); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	r.Body.Close()
+	if err := r.Body.Close(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
