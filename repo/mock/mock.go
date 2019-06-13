@@ -25,7 +25,7 @@ func GetMockData(t testing.TB) (server *httptest.Server, varDir string) {
 	}))
 	varDir, err := ioutil.TempDir("", "content-server-test")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return server, varDir
 }
@@ -37,7 +37,7 @@ func MakeNodesRequest() *requests.Nodes {
 			Dimensions: []string{"dimension_foo"},
 		},
 		Nodes: map[string]*requests.Node{
-			"test": &requests.Node{
+			"test": {
 				ID:         "id-root",
 				Dimension:  "dimension_foo",
 				MimeTypes:  []string{},
@@ -66,7 +66,7 @@ func MakeValidContentRequest() *requests.Content {
 			Groups:     []string{},
 		},
 		Nodes: map[string]*requests.Node{
-			"id-root": &requests.Node{
+			"id-root": {
 				ID:         "id-root",
 				Dimension:  dimensions[0],
 				MimeTypes:  []string{"application/x-node"},

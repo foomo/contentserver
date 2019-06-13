@@ -92,10 +92,8 @@ func TestLoadRepo(t *testing.T) {
 }
 
 func BenchmarkLoadRepo(b *testing.B) {
-
 	var (
-		t                  = &testing.T{}
-		mockServer, varDir = mock.GetMockData(t)
+		mockServer, varDir = mock.GetMockData(b)
 		server             = mockServer.URL + "/repo-ok.json"
 		r                  = NewTestRepo(server, varDir)
 	)

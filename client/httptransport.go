@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/foomo/contentserver/server"
@@ -33,7 +32,7 @@ func (ht *httpTransport) call(handler server.Handler, request interface{}, respo
 	req, errNewRequest := http.NewRequest(
 		http.MethodPost,
 		ht.endpoint+"/"+string(handler),
-		bytes.NewBuffer(requestBytes),
+		bytes.NewReader(requestBytes),
 	)
 	if errNewRequest != nil {
 		return errNewRequest
@@ -48,14 +47,6 @@ func (ht *httpTransport) call(handler server.Handler, request interface{}, respo
 	if httpResponse.Body == nil {
 		return errors.New("empty response body")
 	}
-	responseBytes, errRead := ioutil.ReadAll(httpResponse.Body)
-	httpResponse.Body.Close()
-	if errRead != nil {
-		return errRead
-	}
-	errUnmarshal := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
-	if errUnmarshal != nil {
-		return errUnmarshal
-	}
-	return errUnmarshal
+	defer httpResponse.Body.Close()
+	return json.NewDecoder(httpResponse.Body).Decode(&serverResponse{Reply: response})
 }

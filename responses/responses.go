@@ -10,15 +10,15 @@ type Error struct {
 }
 
 func (e Error) Error() string {
-	return fmt.Sprintf("status:%q, code: %q, message: %q", e.Status, e.Code, e.Message)
+	return fmt.Sprintf("status:%d, code:%d, message:%q", e.Status, e.Code, e.Message)
 }
 
-// NewError - a brand new error
-func NewError(code int, message string) *Error {
+// NewError - a brand new error using fmt.Sprintf
+func NewErrorf(code int, message string, args ...interface{}) *Error {
 	return &Error{
 		Status:  500,
 		Code:    code,
-		Message: message,
+		Message: fmt.Sprintf(message, args...),
 	}
 }
 

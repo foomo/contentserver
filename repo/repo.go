@@ -60,7 +60,7 @@ func NewRepo(server string, varDir string) *Repo {
 		history:                    newHistory(varDir),
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
-		updateInProgressChannel:    make(chan chan updateResponse, 0),
+		updateInProgressChannel:    make(chan chan updateResponse),
 	}
 
 	go repo.updateRoutine()
@@ -94,7 +94,7 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 
 	var (
 		nodes = map[string]*content.Node{}
-		path  = []*content.Item{}
+		path  []*content.Item
 	)
 	for nodeName, nodeRequest := range nodeRequests {
 
@@ -240,7 +240,7 @@ func (repo *Repo) WriteRepoBytes(w io.Writer) {
 // Update - reload contents of repository with json from repo.server
 func (repo *Repo) Update() (updateResponse *responses.Update) {
 	floatSeconds := func(nanoSeconds int64) float64 {
-		return float64(float64(nanoSeconds) / float64(1000000000.0))
+		return float64(nanoSeconds) / float64(1000000000.0)
 	}
 
 	Log.Info("Update triggered")
