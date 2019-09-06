@@ -186,12 +186,6 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		c.Dimension = r.Env.Dimensions[0]
 	}
 
-	Log.Debug("got content",
-		zap.Bool("resolved", resolved),
-		zap.String("resolvedURI", resolvedURI),
-		zap.String("resolvedDimension", resolvedDimension),
-		zap.String("nodeName", node.Name),
-	)
 	if !resolved {
 		Log.Debug("failed to resolve, falling back to default dimension",
 			zap.String("URI", r.URI),
