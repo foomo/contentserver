@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -28,6 +29,12 @@ func NewWebServer(path string, r *repo.Repo) http.Handler {
 }
 
 func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			Log.Error("panic in handle connection", zap.String("error", fmt.Sprint(r)))
+		}
+	}()
+
 	if r.Body == nil {
 		http.Error(w, "no body", http.StatusBadRequest)
 		return
