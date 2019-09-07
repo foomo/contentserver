@@ -84,6 +84,12 @@ func (s *socketServer) writeResponse(conn net.Conn, reply []byte) {
 }
 
 func (s *socketServer) handleConnection(conn net.Conn) {
+	defer func() {
+		if r := recover(); r != nil {
+			Log.Error("panic in handle connection", zap.String("error", fmt.Sprint(r)))
+		}
+	}()
+
 	Log.Debug("socketServer.handleConnection")
 	status.M.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Inc()
 

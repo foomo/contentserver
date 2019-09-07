@@ -184,15 +184,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		Log.Info("resolvecontent got status 404", zap.String("URI", r.URI))
 		c.Status = content.StatusNotFound
 		c.Dimension = r.Env.Dimensions[0]
-	}
 
-	Log.Debug("got content",
-		zap.Bool("resolved", resolved),
-		zap.String("resolvedURI", resolvedURI),
-		zap.String("resolvedDimension", resolvedDimension),
-		zap.String("nodeName", node.Name),
-	)
-	if !resolved {
 		Log.Debug("failed to resolve, falling back to default dimension",
 			zap.String("URI", r.URI),
 			zap.String("defaultDimension", r.Env.Dimensions[0]),
@@ -200,6 +192,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		// r.Env.Dimensions is validated => we can access it
 		resolvedDimension = r.Env.Dimensions[0]
 	}
+
 	// add navigation trees
 	for _, node := range r.Nodes {
 		if node.Dimension == "" {
