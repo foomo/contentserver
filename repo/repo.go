@@ -30,6 +30,7 @@ type Dimension struct {
 // Repo content repositiory
 type Repo struct {
 	server    string
+	recovered bool
 	Directory map[string]*Dimension
 	// updateLock        sync.Mutex
 	dimensionUpdateChannel     chan *repoDimension
@@ -55,6 +56,7 @@ func NewRepo(server string, varDir string) *Repo {
 		zap.String("varDir", varDir),
 	)
 	repo := &Repo{
+		recovered:                  false,
 		server:                     server,
 		Directory:                  map[string]*Dimension{},
 		history:                    newHistory(varDir),
@@ -71,9 +73,14 @@ func NewRepo(server string, varDir string) *Repo {
 	if restoreErr != nil {
 		Log.Error("	could not restore previous repo content", zap.Error(restoreErr))
 	} else {
+		repo.recovered = true
 		Log.Info("restored previous repo content")
 	}
 	return repo
+}
+
+func (repo *Repo) Recovered() bool {
+	return repo.recovered
 }
 
 // GetURIs get many uris at once

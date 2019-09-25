@@ -3,14 +3,13 @@ package server
 import (
 	"errors"
 	"fmt"
-	"net"
-	"net/http"
-	"os"
-
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
+	"net"
+	"net/http"
+	"os"
 )
 
 var (
@@ -63,8 +62,13 @@ func RunServerSocketAndWebServer(
 				zap.Float64("OwnRuntime", resp.Stats.OwnRuntime),
 				zap.Float64("RepoRuntime", resp.Stats.RepoRuntime),
 			)
-			os.Exit(1)
+
+			//Exit only if it hasn't recovered
+			if !r.Recovered() {
+				os.Exit(1)
+			}
 		}
+
 	}()
 
 	// update can run in bg

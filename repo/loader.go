@@ -222,9 +222,8 @@ func (repo *Repo) tryUpdate() (repoRuntime int64, err error) {
 		ur := <-c
 		return ur.repoRuntime, ur.err
 	default:
-		Log.Info("update request rejected, queue is full")
-		status.M.UpdatesRejectedCounter.WithLabelValues().Inc()
-		return 0, errUpdateRejected
+		Log.Info("update request accepted, will be processed after the previous update")
+		return 0, nil
 	}
 }
 
