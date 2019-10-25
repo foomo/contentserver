@@ -223,7 +223,7 @@ func (repo *Repo) tryUpdate() (repoRuntime int64, err error) {
 		return ur.repoRuntime, ur.err
 	default:
 		Log.Info("update request accepted, will be processed after the previous update")
-		return 0, nil
+		return 0, errUpdateRejected
 	}
 }
 

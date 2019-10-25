@@ -255,13 +255,15 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		updateResponse.Success = false
 		updateResponse.Stats.NumberOfNodes = -1
 		updateResponse.Stats.NumberOfURIs = -1
-		// let us try to restore the world from a file
-		Log.Error("could not update repository:", zap.Error(updateErr))
-		// Log.Info(ansi.Yellow + "BUFFER LENGTH AFTER ERROR: " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
-		updateResponse.ErrorMessage = updateErr.Error()
 
+		// let us try to restore the world from a file
+		// Log.Info(ansi.Yellow + "BUFFER LENGTH AFTER ERROR: " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
 		// only try to restore if the update failed during processing
+
 		if updateErr != errUpdateRejected {
+			updateResponse.ErrorMessage = updateErr.Error()
+			Log.Error("could not update repository:", zap.Error(updateErr))
+
 			restoreErr := repo.tryToRestoreCurrent()
 			if restoreErr != nil {
 				Log.Error("failed to restore preceding repo version", zap.Error(restoreErr))
