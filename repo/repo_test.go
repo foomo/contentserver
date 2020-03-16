@@ -9,6 +9,7 @@ import (
 	_ "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo/mock"
 	"github.com/foomo/contentserver/requests"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -187,6 +188,23 @@ func TestGetNodes(t *testing.T) {
 	}
 }
 
+func TestGetNodesExposeHidden(t *testing.T) {
+	var (
+		r            = getTestRepo("/repo-ok-exposehidden.json", t)
+		nodesRequest = mock.MakeNodesRequest()
+	)
+	nodesRequest.Nodes["test"].ExposeHiddenNodes = true
+	nodes := r.GetNodes(nodesRequest)
+	testNode, ok := nodes["test"]
+	if !ok {
+		t.Fatal("wtf that should be a node")
+	}
+	_, ok = testNode.Item.Data["foo"]
+	if !ok {
+		t.Fatal("failed to fetch test data")
+	}
+	require.Equal(t, 2, len(testNode.Nodes))
+}
 func TestResolveContent(t *testing.T) {
 
 	var (

@@ -137,7 +137,7 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 		}
 		treeNode, ok := dimensionNode.Directory[nodeRequest.ID]
 		if ok {
-			nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields)
+			nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields, nodeRequest.ExposeHiddenNodes)
 		} else {
 			Log.Error("an invalid tree node was requested",
 				zap.String("nodeName", nodeName),
@@ -344,14 +344,23 @@ func (repo *Repo) getURI(dimension string, id string) string {
 	return ""
 }
 
-func (repo *Repo) getNode(repoNode *content.RepoNode, expanded bool, mimeTypes []string, path []*content.Item, level int, groups []string, dataFields []string) *content.Node {
+func (repo *Repo) getNode(
+	repoNode *content.RepoNode,
+	expanded bool,
+	mimeTypes []string,
+	path []*content.Item,
+	level int,
+	groups []string,
+	dataFields []string,
+	exposeHiddenNodes bool,
+) *content.Node {
 	node := content.NewNode()
 	node.Item = repoNode.ToItem(dataFields)
 	Log.Debug("getNode", zap.String("ID", repoNode.ID))
 	for _, childID := range repoNode.Index {
 		childNode := repoNode.Nodes[childID]
-		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && !childNode.Hidden && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) {
-			node.Nodes[childID] = repo.getNode(childNode, expanded, mimeTypes, path, level+1, groups, dataFields)
+		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && (!childNode.Hidden || exposeHiddenNodes) && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) {
+			node.Nodes[childID] = repo.getNode(childNode, expanded, mimeTypes, path, level+1, groups, dataFields, exposeHiddenNodes)
 			node.Index = append(node.Index, childID)
 		}
 	}

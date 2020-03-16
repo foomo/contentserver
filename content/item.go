@@ -6,6 +6,7 @@ type Item struct {
 	Name     string                 `json:"name"`
 	URI      string                 `json:"URI"`
 	MimeType string                 `json:"mimeType"`
+	Hidden   bool                   `json:"hidden,omitempty"`
 	Data     map[string]interface{} `json:"data"`
 }
 

@@ -20,6 +20,8 @@ type Node struct {
 	MimeTypes []string `json:"mimeTypes"`
 	// expand the navigation tree or just the path to the resolved content
 	Expand bool `json:"expand"`
+	// Expose hidden nodes
+	ExposeHiddenNodes bool `json:"exposeHiddenNodes,omitempty"`
 	// filter with these
 	DataFields []string `json:"dataFields"`
 }

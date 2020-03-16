@@ -81,6 +81,7 @@ func (node *RepoNode) ToItem(dataFields []string) *Item {
 	item.ID = node.ID
 	item.Name = node.Name
 	item.MimeType = node.MimeType
+	item.Hidden = node.Hidden
 	item.URI = node.URI
 	if dataFields == nil {
 		item.Data = node.Data
