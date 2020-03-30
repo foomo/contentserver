@@ -14,4 +14,4 @@ require (
 	go.uber.org/zap v1.10.0
 )
 
-go 1.13
+go 1.14
