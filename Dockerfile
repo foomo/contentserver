@@ -1,12 +1,12 @@
 ##############################
 ###### STAGE: BUILD     ######
 ##############################
-FROM golang:1.12.5 AS build-env
+FROM golang:1.14-alpine AS build-env
 
 WORKDIR /src
 
 COPY ./go.mod ./go.sum ./
-RUN go mod download && go mod vendor && go install -i ./vendor/...
+RUN go mod download && go mod vendor
 
 # Import the code from the context.
 COPY ./ ./
@@ -16,7 +16,7 @@ RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0  go build -o /contentserver
 ##############################
 ###### STAGE: PACKAGE   ######
 ##############################
-FROM alpine
+FROM alpine:3.11
 
 ENV CONTENT_SERVER_ADDR=0.0.0.0:80
 ENV CONTENT_SERVER_VAR_DIR=/var/lib/contentserver
