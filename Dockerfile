@@ -5,13 +5,10 @@ FROM golang:1.14-alpine AS build-env
 
 WORKDIR /src
 
-COPY ./go.mod ./go.sum ./
-RUN go mod download && go mod vendor
-
-# Import the code from the context.
 COPY ./ ./
 
-RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0  go build -o /contentserver
+RUN go mod download && go mod vendor
+RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0  go build -trimpath -o /contentserver
 
 ##############################
 ###### STAGE: PACKAGE   ######
