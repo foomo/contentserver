@@ -37,20 +37,20 @@ func (c *Client) Update() (*responses.Update, error) {
 	type serverResponse struct {
 		Reply *responses.Update
 	}
-	resp := &serverResponse{}
-	if err := c.t.call(server.HandlerUpdate, &requests.Update{}, resp); err != nil {
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerUpdate, &requests.Update{}, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Reply, nil
 }
 
 // GetContent request site content
-func (c *Client) GetContent(request *requests.Content) (response *content.SiteContent, err error) {
+func (c *Client) GetContent(request *requests.Content) (*content.SiteContent, error) {
 	type serverResponse struct {
 		Reply *content.SiteContent
 	}
-	resp := &serverResponse{}
-	if err := c.t.call(server.HandlerGetContent, request, response); err != nil {
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerGetContent, request, &resp); err != nil {
 		return nil, err
 	}
 
@@ -63,8 +63,8 @@ func (c *Client) GetURIs(dimension string, IDs []string) (map[string]string, err
 		Reply map[string]string
 	}
 
-	resp := &serverResponse{}
-	if err := c.t.call(server.HandlerGetURIs, &requests.URIs{Dimension: dimension, IDs: IDs}, resp); err != nil {
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerGetURIs, &requests.URIs{Dimension: dimension, IDs: IDs}, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Reply, nil
@@ -79,8 +79,8 @@ func (c *Client) GetNodes(env *requests.Env, nodes map[string]*requests.Node) (m
 	type serverResponse struct {
 		Reply map[string]*content.Node
 	}
-	resp := &serverResponse{}
-	if err := c.t.call(server.HandlerGetNodes, r, resp); err != nil {
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerGetNodes, r, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Reply, nil
@@ -91,7 +91,7 @@ func (c *Client) GetRepo() (map[string]*content.RepoNode, error) {
 	type serverResponse struct {
 		Reply map[string]*content.RepoNode
 	}
-	resp := &serverResponse{}
+	resp := serverResponse{}
 	if err := c.t.call(server.HandlerGetRepo, &requests.Repo{}, &resp); err != nil {
 		return nil, err
 	}
