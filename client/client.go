@@ -33,49 +33,69 @@ func NewHTTPClient(server string) (c *Client, err error) {
 }
 
 // Update tell the server to update itself
-func (c *Client) Update() (response *responses.Update, err error) {
-	response = &responses.Update{}
-	err = c.t.call(server.HandlerUpdate, &requests.Update{}, response)
-	return
+func (c *Client) Update() (*responses.Update, error) {
+	type serverResponse struct {
+		Reply *responses.Update
+	}
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerUpdate, &requests.Update{}, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Reply, nil
 }
 
 // GetContent request site content
-func (c *Client) GetContent(request *requests.Content) (response *content.SiteContent, err error) {
-	response = &content.SiteContent{}
-	err = c.t.call(server.HandlerGetContent, request, response)
-	return
+func (c *Client) GetContent(request *requests.Content) (*content.SiteContent, error) {
+	type serverResponse struct {
+		Reply *content.SiteContent
+	}
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerGetContent, request, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Reply, nil
 }
 
 // GetURIs resolve uris for ids in a dimension
-func (c *Client) GetURIs(dimension string, IDs []string) (uriMap map[string]string, err error) {
-	uriMap = map[string]string{}
-	err = c.t.call(
-		server.HandlerGetURIs,
-		&requests.URIs{
-			Dimension: dimension,
-			IDs:       IDs,
-		},
-		&uriMap,
-	)
-	return
+func (c *Client) GetURIs(dimension string, IDs []string) (map[string]string, error) {
+	type serverResponse struct {
+		Reply map[string]string
+	}
+
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerGetURIs, &requests.URIs{Dimension: dimension, IDs: IDs}, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Reply, nil
 }
 
 // GetNodes request nodes
-func (c *Client) GetNodes(env *requests.Env, nodes map[string]*requests.Node) (nodesResponse map[string]*content.Node, err error) {
+func (c *Client) GetNodes(env *requests.Env, nodes map[string]*requests.Node) (map[string]*content.Node, error) {
 	r := &requests.Nodes{
 		Env:   env,
 		Nodes: nodes,
 	}
-	nodesResponse = map[string]*content.Node{}
-	err = c.t.call(server.HandlerGetNodes, r, &nodesResponse)
-	return
+	type serverResponse struct {
+		Reply map[string]*content.Node
+	}
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerGetNodes, r, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Reply, nil
 }
 
 // GetRepo get the whole repo
-func (c *Client) GetRepo() (response map[string]*content.RepoNode, err error) {
-	response = map[string]*content.RepoNode{}
-	err = c.t.call(server.HandlerGetRepo, &requests.Repo{}, &response)
-	return
+func (c *Client) GetRepo() (map[string]*content.RepoNode, error) {
+	type serverResponse struct {
+		Reply map[string]*content.RepoNode
+	}
+	resp := serverResponse{}
+	if err := c.t.call(server.HandlerGetRepo, &requests.Repo{}, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Reply, nil
 }
 
 func (c *Client) ShutDown() {

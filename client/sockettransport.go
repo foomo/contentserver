@@ -15,10 +15,6 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-type serverResponse struct {
-	Reply interface{}
-}
-
 type connReturn struct {
 	conn net.Conn
 	err  error
@@ -113,8 +109,8 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 	}
 
 	// unmarshal response
-	responseJSONErr := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
-	if responseJSONErr != nil {
+	errResponse := json.Unmarshal(responseBytes, response)
+	if errResponse != nil {
 		// is it an error ?
 		var (
 			remoteErr        = responses.Error{}
