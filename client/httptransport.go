@@ -42,6 +42,8 @@ func (ht *httpTransport) call(handler server.Handler, request interface{}, respo
 	if errDo != nil {
 		return errDo
 	}
+	defer httpResponse.Body.Close()
+
 	if httpResponse.StatusCode != http.StatusOK {
 		return errors.New("non 200 reply")
 	}
@@ -49,13 +51,8 @@ func (ht *httpTransport) call(handler server.Handler, request interface{}, respo
 		return errors.New("empty response body")
 	}
 	responseBytes, errRead := ioutil.ReadAll(httpResponse.Body)
-	httpResponse.Body.Close()
 	if errRead != nil {
 		return errRead
 	}
-	errUnmarshal := json.Unmarshal(responseBytes, &serverResponse{Reply: response})
-	if errUnmarshal != nil {
-		return errUnmarshal
-	}
-	return errUnmarshal
+	return json.Unmarshal(responseBytes, response)
 }
