@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
+	"github.com/tomasen/realip"
 )
 
 const sourceWebserver = "webserver"
@@ -53,7 +55,9 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		addMetrics(h, start, nil, nil, sourceWebserver)
 		return
 	}
-	reply, errReply := handleRequest(s.r, h, jsonBytes, "webserver")
+	ip := realip.FromRequest(r)
+	ctx := context.WithValue(r.Context(), "remoteAddr", ip)
+	reply, errReply := handleRequest(ctx, s.r, h, jsonBytes, "webserver")
 	if errReply != nil {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return

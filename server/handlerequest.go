@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/zap"
@@ -12,7 +13,7 @@ import (
 	"github.com/foomo/contentserver/status"
 )
 
-func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source string) (replyBytes []byte, err error) {
+func handleRequest(ctx context.Context, r *repo.Repo, handler Handler, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 
 	var (
 		reply             interface{}
@@ -41,12 +42,12 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 	case HandlerGetContent:
 		contentRequest := &requests.Content{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &contentRequest), func() {
-			reply, apiErr = r.GetContent(contentRequest)
+			reply, apiErr = r.GetContent(ctx, contentRequest)
 		})
 	case HandlerGetNodes:
 		nodesRequest := &requests.Nodes{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &nodesRequest), func() {
-			reply = r.GetNodes(nodesRequest)
+			reply = r.GetNodes(ctx, nodesRequest)
 		})
 	case HandlerUpdate:
 		updateRequest := &requests.Update{}

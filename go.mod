@@ -9,6 +9,7 @@ require (
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/prometheus/client_golang v0.9.2
 	github.com/stretchr/testify v1.5.1
+	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0

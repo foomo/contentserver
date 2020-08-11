@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -93,15 +94,16 @@ func (repo *Repo) GetURIs(dimension string, ids []string) map[string]string {
 }
 
 // GetNodes get nodes
-func (repo *Repo) GetNodes(r *requests.Nodes) map[string]*content.Node {
-	return repo.getNodes(r.Nodes, r.Env)
+func (repo *Repo) GetNodes(ctx context.Context, r *requests.Nodes) map[string]*content.Node {
+	return repo.getNodes(ctx, r.Nodes, r.Env)
 }
 
-func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.Env) map[string]*content.Node {
+func (repo *Repo) getNodes(ctx context.Context, nodeRequests map[string]*requests.Node, env *requests.Env) map[string]*content.Node {
 
 	var (
-		nodes = map[string]*content.Node{}
-		path  = []*content.Item{}
+		nodes      = map[string]*content.Node{}
+		path       = []*content.Item{}
+		remoteAddr = ctx.Value("remoteAddr").(string)
 	)
 	for nodeName, nodeRequest := range nodeRequests {
 
@@ -140,6 +142,7 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 			nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields, nodeRequest.ExposeHiddenNodes)
 		} else {
 			Log.Error("an invalid tree node was requested",
+				zap.String("remoteAddr", remoteAddr),
 				zap.String("nodeName", nodeName),
 				zap.String("ID", nodeRequest.ID),
 			)
@@ -157,7 +160,7 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 // In the second step it collects the requested nodes.
 //
 // those two steps are independent.
-func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err error) {
+func (repo *Repo) GetContent(ctx context.Context, r *requests.Content) (c *content.SiteContent, err error) {
 	// add more input validation
 	err = repo.validateContentRequest(r)
 	if err != nil {
@@ -206,7 +209,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 			node.Dimension = resolvedDimension
 		}
 	}
-	c.Nodes = repo.getNodes(r.Nodes, r.Env)
+	c.Nodes = repo.getNodes(ctx, r.Nodes, r.Env)
 	return c, nil
 }
 

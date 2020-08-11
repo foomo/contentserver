@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -56,8 +57,8 @@ func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte)
 		addMetrics(handler, start, nil, nil, sourceSocketServer)
 		return b.Bytes()
 	}
-
-	reply, handlingError := handleRequest(s.repo, handler, jsonBytes, sourceSocketServer)
+	ctx := context.WithValue(context.TODO(), "remoteAddr", "socket") // TODO: set socket remote address
+	reply, handlingError := handleRequest(ctx, s.repo, handler, jsonBytes, sourceSocketServer)
 	if handlingError != nil {
 		Log.Error("socketServer.execute failed", zap.Error(handlingError))
 	}
