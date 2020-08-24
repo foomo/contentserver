@@ -62,7 +62,7 @@ func NewRepo(server string, varDir string) *Repo {
 		history:                    newHistory(varDir),
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
-		updateInProgressChannel:    make(chan chan updateResponse, 0),
+		updateInProgressChannel:    make(chan chan updateResponse, 1),
 	}
 
 	go repo.updateRoutine()
