@@ -7,7 +7,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -47,13 +46,10 @@ func (s *socketServer) execute(handler Handler, jsonBytes []byte) (reply []byte)
 	Log.Debug("incoming json buffer", zap.Int("length", len(jsonBytes)))
 
 	if handler == HandlerGetRepo {
-
 		var (
-			b     bytes.Buffer
-			start = time.Now()
+			b bytes.Buffer
 		)
 		s.repo.WriteRepoBytes(&b)
-		addMetrics(handler, start, nil, nil, sourceSocketServer)
 		return b.Bytes()
 	}
 

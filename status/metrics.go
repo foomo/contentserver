@@ -28,6 +28,7 @@ type Metrics struct {
 	ContentRequestCounter       *prometheus.CounterVec // count the total number of content requests
 	NumSocketsGauge             *prometheus.GaugeVec   // keep track of the total number of open sockets
 	HistoryPersistFailedCounter *prometheus.CounterVec // count the number of failed attempts to persist the content history
+	InvalidNodeTreeRequests     *prometheus.CounterVec // counts the number of invalid tree node requests
 }
 
 // newMetrics can be used to instantiate a metrics instance
@@ -36,6 +37,9 @@ type Metrics struct {
 // the package exposes the initialized Metrics instance as the variable M.
 func newMetrics() *Metrics {
 	return &Metrics{
+		InvalidNodeTreeRequests: newCounterVec("invalid_node_tree_request_count",
+			"Counts the number of invalid tree nodes for a specific node ID",
+			"nodeID"),
 		ServiceRequestCounter: newCounterVec(
 			"service_request_count",
 			"Count of requests for each handler",
@@ -57,7 +61,6 @@ func newMetrics() *Metrics {
 		UpdatesFailedCounter: newCounterVec(
 			"updates_failed_count",
 			"Number of updates that failed due to an error",
-			metricLabelError,
 		),
 		UpdateDuration: newSummaryVec(
 			"update_duration_seconds",

@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime/debug"
@@ -26,7 +25,7 @@ const (
 
 	ServiceName                  = "Content Server"
 	DefaultHealthzHandlerAddress = ":8080"
-	DefaultPrometheusListener    = "127.0.0.1:9111"
+	DefaultPrometheusListener    = "127.0.0.1:9200"
 )
 
 var (
@@ -51,10 +50,6 @@ func main() {
 	flag.Parse()
 
 	SetupLogging(*flagDebug, "contentserver.log")
-
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 
 	if *flagFreeOSMem > 0 {
 		Log.Info("freeing OS memory every $interval minutes", zap.Int("interval", *flagFreeOSMem))

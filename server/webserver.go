@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -31,7 +30,7 @@ func NewWebServer(path string, r *repo.Repo) http.Handler {
 func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
-			Log.Error("panic in handle connection", zap.String("error", fmt.Sprint(r)))
+			Log.Error("Panic in handle connection", zap.String("error", fmt.Sprint(r)))
 		}
 	}()
 
@@ -40,17 +39,14 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonBytes, readErr := ioutil.ReadAll(r.Body)
-	r.Body.Close()
 	if readErr != nil {
 		http.Error(w, "failed to read incoming request", http.StatusBadRequest)
 		return
 	}
 	h := Handler(strings.TrimPrefix(r.URL.Path, s.path+"/"))
 	if h == HandlerGetRepo {
-		start := time.Now()
 		s.r.WriteRepoBytes(w)
 		w.Header().Set("Content-Type", "application/json")
-		addMetrics(h, start, nil, nil, sourceWebserver)
 		return
 	}
 	reply, errReply := handleRequest(s.r, h, jsonBytes, "webserver")

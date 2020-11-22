@@ -12,13 +12,27 @@ import (
 	"github.com/foomo/contentserver/status"
 )
 
-func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source string) (replyBytes []byte, err error) {
+func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source string) ([]byte, error) {
+	start := time.Now()
+
+	reply, err := executeRequest(r, handler, jsonBytes, source)
+	result := "success"
+	if err != nil {
+		result = "error"
+	}
+
+	status.M.ServiceRequestCounter.WithLabelValues(string(handler), result, source).Inc()
+	status.M.ServiceRequestDuration.WithLabelValues(string(handler), result, source).Observe(time.Since(start).Seconds())
+
+	return reply, err
+}
+
+func executeRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 
 	var (
 		reply             interface{}
 		apiErr            error
 		jsonErr           error
-		start             = time.Now()
 		processIfJSONIsOk = func(err error, processingFunc func()) {
 			if err != nil {
 				jsonErr = err
@@ -57,7 +71,6 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 	default:
 		reply = responses.NewError(1, "unknown handler: "+string(handler))
 	}
-	addMetrics(handler, start, jsonErr, apiErr, source)
 
 	// error handling
 	if jsonErr != nil {
@@ -69,20 +82,6 @@ func handleRequest(r *repo.Repo, handler Handler, jsonBytes []byte, source strin
 	}
 
 	return encodeReply(reply)
-}
-
-func addMetrics(handlerName Handler, start time.Time, errJSON error, errAPI error, source string) {
-
-	var (
-		duration = time.Since(start)
-		s        = "succeeded"
-	)
-	if errJSON != nil || errAPI != nil {
-		s = "failed"
-	}
-
-	status.M.ServiceRequestCounter.WithLabelValues(string(handlerName), s, source).Inc()
-	status.M.ServiceRequestDuration.WithLabelValues(string(handlerName), s, source).Observe(float64(duration.Seconds()))
 }
 
 // encodeReply takes an interface and encodes it as JSON

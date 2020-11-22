@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/foomo/contentserver/content"
-	. "github.com/foomo/contentserver/logger"
+	"github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/status"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
@@ -28,12 +28,15 @@ func (repo *Repo) updateRoutine() {
 	for {
 		select {
 		case resChan := <-repo.updateInProgressChannel:
-			Log.Info("waiting for update to complete", zap.String("chan", fmt.Sprintf("%p", resChan)))
+			logger.Log.Info("waiting for update to complete", zap.String("chan", fmt.Sprintf("%p", resChan)))
 			start := time.Now()
 
 			repoRuntime, errUpdate := repo.update()
 			if errUpdate != nil {
-				status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
+				logger.Log.Error("Failed to update contentserver", zap.Error(errUpdate))
+				status.M.UpdatesFailedCounter.WithLabelValues().Inc()
+			} else {
+				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
 			}
 
 			resChan <- updateResponse{
@@ -42,8 +45,7 @@ func (repo *Repo) updateRoutine() {
 			}
 
 			duration := time.Since(start)
-			Log.Info("update completed", zap.Duration("duration", duration), zap.String("chan", fmt.Sprintf("%p", resChan)))
-			status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
+			logger.Log.Info("update completed", zap.Duration("duration", duration), zap.String("chan", fmt.Sprintf("%p", resChan)))
 			status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
 		}
 	}
@@ -51,24 +53,24 @@ func (repo *Repo) updateRoutine() {
 
 func (repo *Repo) dimensionUpdateRoutine() {
 	for newDimension := range repo.dimensionUpdateChannel {
-		Log.Info("dimensionUpdateRoutine received a new dimension", zap.String("dimension", newDimension.Dimension))
+		logger.Log.Info("dimensionUpdateRoutine received a new dimension", zap.String("dimension", newDimension.Dimension))
 
 		err := repo._updateDimension(newDimension.Dimension, newDimension.Node)
-		Log.Info("dimensionUpdateRoutine received result")
+		logger.Log.Info("dimensionUpdateRoutine received result")
 		if err != nil {
-			Log.Debug("update dimension failed", zap.Error(err))
+			logger.Log.Debug("update dimension failed", zap.Error(err))
 		}
 		repo.dimensionUpdateDoneChannel <- err
 	}
 }
 
 func (repo *Repo) updateDimension(dimension string, node *content.RepoNode) error {
-	Log.Debug("trying to push dimension into update channel", zap.String("dimension", dimension), zap.String("nodeName", node.Name))
+	logger.Log.Debug("trying to push dimension into update channel", zap.String("dimension", dimension), zap.String("nodeName", node.Name))
 	repo.dimensionUpdateChannel <- &repoDimension{
 		Dimension: dimension,
 		Node:      node,
 	}
-	Log.Debug("waiting for done signal")
+	logger.Log.Debug("waiting for done signal")
 	return <-repo.dimensionUpdateDoneChannel
 }
 
@@ -179,7 +181,7 @@ func (repo *Repo) get(URL string) (err error) {
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("Bad HTTP Response: %q", response.Status)
+		return fmt.Errorf("bad HTTP Response: %q", response.Status)
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
@@ -196,10 +198,10 @@ func (repo *Repo) update() (repoRuntime int64, err error) {
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
 	if err != nil {
 		// we have no json to load - the repo server did not reply
-		Log.Debug("failed to load json", zap.Error(err))
+		logger.Log.Debug("Failed to load json", zap.Error(err))
 		return repoRuntime, err
 	}
-	Log.Debug("loading json", zap.String("server", repo.server), zap.Int("length", len(repo.jsonBuf.Bytes())))
+	logger.Log.Debug("loading json", zap.String("server", repo.server), zap.Int("length", len(repo.jsonBuf.Bytes())))
 	nodes, err := repo.loadNodesFromJSON()
 	if err != nil {
 		// could not load nodes from json
@@ -218,11 +220,11 @@ func (repo *Repo) tryUpdate() (repoRuntime int64, err error) {
 	c := make(chan updateResponse)
 	select {
 	case repo.updateInProgressChannel <- c:
-		Log.Info("update request added to queue")
+		logger.Log.Info("update request added to queue")
 		ur := <-c
 		return ur.repoRuntime, ur.err
 	default:
-		Log.Info("update request accepted, will be processed after the previous update")
+		logger.Log.Info("update request accepted, will be processed after the previous update")
 		return 0, errUpdateRejected
 	}
 }
@@ -233,7 +235,7 @@ func (repo *Repo) loadJSONBytes() error {
 		data := repo.jsonBuf.Bytes()
 
 		if len(data) > 10 {
-			Log.Debug("could not parse json",
+			logger.Log.Debug("could not parse json",
 				zap.String("jsonStart", string(data[:10])),
 				zap.String("jsonStart", string(data[len(data)-10:])),
 			)
@@ -245,10 +247,10 @@ func (repo *Repo) loadJSONBytes() error {
 	if err == nil {
 		historyErr := repo.history.add(repo.jsonBuf.Bytes())
 		if historyErr != nil {
-			Log.Error("could not add valid json to history", zap.Error(historyErr))
+			logger.Log.Error("could not add valid json to history", zap.Error(historyErr))
 			status.M.HistoryPersistFailedCounter.WithLabelValues(historyErr.Error()).Inc()
 		} else {
-			Log.Info("added valid json to history")
+			logger.Log.Info("added valid json to history")
 		}
 	}
 	return err
@@ -258,10 +260,10 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	newDimensions := []string{}
 	for dimension, newNode := range newNodes {
 		newDimensions = append(newDimensions, dimension)
-		Log.Debug("loading nodes for dimension", zap.String("dimension", dimension))
+		logger.Log.Debug("loading nodes for dimension", zap.String("dimension", dimension))
 		loadErr := repo.updateDimension(dimension, newNode)
 		if loadErr != nil {
-			Log.Debug("failed to load", zap.String("dimension", dimension), zap.Error(loadErr))
+			logger.Log.Debug("failed to load", zap.String("dimension", dimension), zap.Error(loadErr))
 			return loadErr
 		}
 	}
@@ -276,7 +278,7 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	// we need to throw away orphaned dimensions
 	for dimension := range repo.Directory {
 		if !dimensionIsValid(dimension) {
-			Log.Info("removing orphaned dimension", zap.String("dimension", dimension))
+			logger.Log.Info("removing orphaned dimension", zap.String("dimension", dimension))
 			delete(repo.Directory, dimension)
 		}
 	}
