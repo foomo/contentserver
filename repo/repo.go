@@ -137,6 +137,10 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 
 		treeNode, ok := dimensionNode.Directory[nodeRequest.ID]
 		if !ok {
+			logger.Log.Error("Invalid tree node requested",
+				zap.String("nodeName", nodeName),
+				zap.String("nodeID", nodeRequest.ID),
+			)
 			status.M.InvalidNodeTreeRequests.WithLabelValues(nodeRequest.ID).Inc()
 			continue
 		}
