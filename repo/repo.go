@@ -2,9 +2,11 @@ package repo
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -41,6 +43,8 @@ type Repo struct {
 
 	// jsonBytes []byte
 	jsonBuf bytes.Buffer
+
+	httpClient *http.Client
 }
 
 type repoDimension struct {
@@ -62,6 +66,7 @@ func NewRepo(server string, varDir string) *Repo {
 		history:                    newHistory(varDir),
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
+		httpClient:                 getDefaultHTTPClient(2 * time.Minute),
 		updateInProgressChannel:    make(chan chan updateResponse, 0),
 	}
 
@@ -76,7 +81,20 @@ func NewRepo(server string, varDir string) *Repo {
 		repo.recovered = true
 		logger.Log.Info("restored previous repo content")
 	}
+
 	return repo
+}
+
+func getDefaultHTTPClient(timeout time.Duration) *http.Client {
+	client := &http.Client{
+		Transport: &http.Transport{
+			DisableKeepAlives:   true,
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+			TLSHandshakeTimeout: 5 * time.Second,
+		},
+		Timeout: timeout,
+	}
+	return client
 }
 
 func (repo *Repo) Recovered() bool {

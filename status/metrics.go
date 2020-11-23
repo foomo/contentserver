@@ -61,6 +61,7 @@ func newMetrics() *Metrics {
 		UpdatesFailedCounter: newCounterVec(
 			"updates_failed_count",
 			"Number of updates that failed due to an error",
+			metricLabelError,
 		),
 		UpdateDuration: newSummaryVec(
 			"update_duration_seconds",

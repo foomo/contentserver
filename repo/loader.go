@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -28,13 +29,14 @@ func (repo *Repo) updateRoutine() {
 	for {
 		select {
 		case resChan := <-repo.updateInProgressChannel:
-			logger.Log.Info("waiting for update to complete", zap.String("chan", fmt.Sprintf("%p", resChan)))
+			log := logger.Log.With(zap.String("chan", fmt.Sprintf("%p", resChan)))
+			log.Info("Waiting for update to complete")
 			start := time.Now()
 
-			repoRuntime, errUpdate := repo.update()
+			repoRuntime, errUpdate := repo.update(context.Background())
 			if errUpdate != nil {
-				logger.Log.Error("Failed to update contentserver", zap.Error(errUpdate))
-				status.M.UpdatesFailedCounter.WithLabelValues().Inc()
+				log.Error("Failed to update content server from routine", zap.Error(errUpdate))
+				status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
 			} else {
 				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
 			}
@@ -45,7 +47,7 @@ func (repo *Repo) updateRoutine() {
 			}
 
 			duration := time.Since(start)
-			logger.Log.Info("update completed", zap.Duration("duration", duration), zap.String("chan", fmt.Sprintf("%p", resChan)))
+			log.Info("Update completed", zap.Duration("duration", duration))
 			status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
 		}
 	}
@@ -163,7 +165,11 @@ func wireAliases(directory map[string]*content.RepoNode) error {
 func (repo *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err error) {
 	nodes = make(map[string]*content.RepoNode)
 	err = json.Unmarshal(repo.jsonBuf.Bytes(), &nodes)
-	return nodes, err
+	if err != nil {
+		logger.Log.Error("Failed to deserialize nodes", zap.Error(err))
+		return nil, errors.New("failed to deserialize nodes")
+	}
+	return nodes, nil
 }
 
 func (repo *Repo) tryToRestoreCurrent() (err error) {
@@ -174,14 +180,17 @@ func (repo *Repo) tryToRestoreCurrent() (err error) {
 	return repo.loadJSONBytes()
 }
 
-func (repo *Repo) get(URL string) (err error) {
-	response, err := http.Get(URL)
+func (repo *Repo) get(URL string) error {
+	response, err := repo.httpClient.Get(URL)
 	if err != nil {
-		return err
+		logger.Log.Error("Failed to get", zap.Error(err))
+		return errors.New("failed to get repo")
 	}
 	defer response.Body.Close()
+
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad HTTP Response: %q", response.Status)
+		logger.Log.Error(fmt.Sprintf("Bad HTTP Response %q, want %q", response.Status, http.StatusOK))
+		return errors.New("bad response code")
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
@@ -189,10 +198,15 @@ func (repo *Repo) get(URL string) (err error) {
 
 	// Log.Info(ansi.Green + "LOADING DATA INTO BUFFER" + ansi.Reset)
 	_, err = io.Copy(&repo.jsonBuf, response.Body)
-	return err
+	if err != nil {
+		logger.Log.Error("Failed to copy IO stream", zap.Error(err))
+		return errors.New("failed to copy IO stream")
+	}
+
+	return nil
 }
 
-func (repo *Repo) update() (repoRuntime int64, err error) {
+func (repo *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	startTimeRepo := time.Now().UnixNano()
 	err = repo.get(repo.server)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
@@ -263,8 +277,8 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 		logger.Log.Debug("loading nodes for dimension", zap.String("dimension", dimension))
 		loadErr := repo.updateDimension(dimension, newNode)
 		if loadErr != nil {
-			logger.Log.Debug("failed to load", zap.String("dimension", dimension), zap.Error(loadErr))
-			return loadErr
+			logger.Log.Error("Failed to update dimension", zap.String("dimension", dimension), zap.Error(loadErr))
+			return errors.New("failed to update dimension")
 		}
 	}
 	dimensionIsValid := func(dimension string) bool {
