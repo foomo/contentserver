@@ -2,9 +2,11 @@ package repo
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -12,7 +14,7 @@ import (
 	"github.com/foomo/contentserver/status"
 
 	"github.com/foomo/contentserver/content"
-	. "github.com/foomo/contentserver/logger"
+	"github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/responses"
 	"go.uber.org/zap"
@@ -41,6 +43,8 @@ type Repo struct {
 
 	// jsonBytes []byte
 	jsonBuf bytes.Buffer
+
+	httpClient *http.Client
 }
 
 type repoDimension struct {
@@ -51,7 +55,7 @@ type repoDimension struct {
 // NewRepo constructor
 func NewRepo(server string, varDir string) *Repo {
 
-	Log.Info("creating new repo",
+	logger.Log.Info("creating new repo",
 		zap.String("server", server),
 		zap.String("varDir", varDir),
 	)
@@ -62,21 +66,35 @@ func NewRepo(server string, varDir string) *Repo {
 		history:                    newHistory(varDir),
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
+		httpClient:                 getDefaultHTTPClient(2 * time.Minute),
 		updateInProgressChannel:    make(chan chan updateResponse, 0),
 	}
 
 	go repo.updateRoutine()
 	go repo.dimensionUpdateRoutine()
 
-	Log.Info("trying to restore previous state")
+	logger.Log.Info("trying to restore previous state")
 	restoreErr := repo.tryToRestoreCurrent()
 	if restoreErr != nil {
-		Log.Error("	could not restore previous repo content", zap.Error(restoreErr))
+		logger.Log.Error("	could not restore previous repo content", zap.Error(restoreErr))
 	} else {
 		repo.recovered = true
-		Log.Info("restored previous repo content")
+		logger.Log.Info("restored previous repo content")
 	}
+
 	return repo
+}
+
+func getDefaultHTTPClient(timeout time.Duration) *http.Client {
+	client := &http.Client{
+		Transport: &http.Transport{
+			DisableKeepAlives:   true,
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+			TLSHandshakeTimeout: 5 * time.Second,
+		},
+		Timeout: timeout,
+	}
+	return client
 }
 
 func (repo *Repo) Recovered() bool {
@@ -104,12 +122,11 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 		path  = []*content.Item{}
 	)
 	for nodeName, nodeRequest := range nodeRequests {
-
 		if nodeName == "" || nodeRequest.ID == "" {
-			Log.Info("invalid node request", zap.Error(errors.New("nodeName or nodeRequest.ID empty")))
+			logger.Log.Info("invalid node request", zap.Error(errors.New("nodeName or nodeRequest.ID empty")))
 			continue
 		}
-		Log.Debug("adding node", zap.String("name", nodeName), zap.String("requestID", nodeRequest.ID))
+		logger.Log.Debug("adding node", zap.String("name", nodeName), zap.String("requestID", nodeRequest.ID))
 
 		groups := env.Groups
 		if len(nodeRequest.Groups) > 0 {
@@ -120,30 +137,32 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 		nodes[nodeName] = nil
 
 		if !ok && nodeRequest.Dimension == "" {
-			Log.Debug("could not get dimension root node", zap.String("dimension", nodeRequest.Dimension))
+			logger.Log.Debug("Could not get dimension root node", zap.String("dimension", nodeRequest.Dimension))
 			for _, dimension := range env.Dimensions {
 				dimensionNode, ok = repo.Directory[dimension]
 				if ok {
-					Log.Debug("found root node in env.Dimensions", zap.String("dimension", dimension))
+					logger.Log.Debug("Found root node in env.Dimensions", zap.String("dimension", dimension))
 					break
 				}
-				Log.Debug("could NOT find root node in env.Dimensions", zap.String("dimension", dimension))
+				logger.Log.Debug("Could NOT find root node in env.Dimensions", zap.String("dimension", dimension))
 			}
 		}
 
 		if !ok {
-			Log.Error("could not get dimension root node", zap.String("nodeRequest.Dimension", nodeRequest.Dimension))
+			logger.Log.Error("could not get dimension root node", zap.String("nodeRequest.Dimension", nodeRequest.Dimension))
 			continue
 		}
+
 		treeNode, ok := dimensionNode.Directory[nodeRequest.ID]
-		if ok {
-			nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields, nodeRequest.ExposeHiddenNodes)
-		} else {
-			Log.Error("an invalid tree node was requested",
+		if !ok {
+			logger.Log.Error("Invalid tree node requested",
 				zap.String("nodeName", nodeName),
-				zap.String("ID", nodeRequest.ID),
+				zap.String("nodeID", nodeRequest.ID),
 			)
+			status.M.InvalidNodeTreeRequests.WithLabelValues(nodeRequest.ID).Inc()
+			continue
 		}
+		nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields, nodeRequest.ExposeHiddenNodes)
 	}
 	return nodes
 }
@@ -161,18 +180,18 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 	// add more input validation
 	err = repo.validateContentRequest(r)
 	if err != nil {
-		Log.Error("repo.GetContent invalid request", zap.Error(err))
+		logger.Log.Error("repo.GetContent invalid request", zap.Error(err))
 		return
 	}
-	Log.Debug("repo.GetContent", zap.String("URI", r.URI))
+	logger.Log.Debug("repo.GetContent", zap.String("URI", r.URI))
 	c = content.NewSiteContent()
 	resolved, resolvedURI, resolvedDimension, node := repo.resolveContent(r.Env.Dimensions, r.URI)
 	if resolved {
 		if !node.CanBeAccessedByGroups(r.Env.Groups) {
-			Log.Warn("resolvecontent got status 401", zap.String("URI", r.URI))
+			logger.Log.Warn("Resolved content cannot be accessed by specified group", zap.String("URI", r.URI))
 			c.Status = content.StatusForbidden
 		} else {
-			Log.Info("resolvecontent got status 200", zap.String("URI", r.URI))
+			logger.Log.Info("Content resolved", zap.String("URI", r.URI))
 			c.Status = content.StatusOk
 			c.Data = node.Data
 		}
@@ -188,11 +207,11 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		}
 		c.URIs = uris
 	} else {
-		Log.Info("resolvecontent got status 404", zap.String("URI", r.URI))
+		logger.Log.Info("Content not found", zap.String("URI", r.URI))
 		c.Status = content.StatusNotFound
 		c.Dimension = r.Env.Dimensions[0]
 
-		Log.Debug("failed to resolve, falling back to default dimension",
+		logger.Log.Debug("Failed to resolve, falling back to default dimension",
 			zap.String("URI", r.URI),
 			zap.String("defaultDimension", r.Env.Dimensions[0]),
 		)
@@ -226,13 +245,13 @@ func (repo *Repo) WriteRepoBytes(w io.Writer) {
 
 	f, err := os.Open(repo.history.getCurrentFilename())
 	if err != nil {
-		Log.Error("failed to serve Repo JSON", zap.Error(err))
+		logger.Log.Error("Failed to serve Repo JSON", zap.Error(err))
 	}
 
 	w.Write([]byte("{\"reply\":"))
 	_, err = io.Copy(w, f)
 	if err != nil {
-		Log.Error("failed to serve Repo JSON", zap.Error(err))
+		logger.Log.Error("Failed to serve Repo JSON", zap.Error(err))
 	}
 	w.Write([]byte("}"))
 }
@@ -243,7 +262,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		return float64(float64(nanoSeconds) / float64(1000000000.0))
 	}
 
-	Log.Info("Update triggered")
+	logger.Log.Info("Update triggered")
 	// Log.Info(ansi.Yellow + "BUFFER LENGTH BEFORE tryUpdate(): " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
 
 	startTime := time.Now().UnixNano()
@@ -262,13 +281,13 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 
 		if updateErr != errUpdateRejected {
 			updateResponse.ErrorMessage = updateErr.Error()
-			Log.Error("could not update repository:", zap.Error(updateErr))
+			logger.Log.Error("Failed to update repository", zap.Error(updateErr))
 
 			restoreErr := repo.tryToRestoreCurrent()
 			if restoreErr != nil {
-				Log.Error("failed to restore preceding repo version", zap.Error(restoreErr))
+				logger.Log.Error("Failed to restore preceding repository version", zap.Error(restoreErr))
 			} else {
-				Log.Info("restored current repo from local history")
+				logger.Log.Info("Successfully restored current repository from local history")
 			}
 		}
 	} else {
@@ -276,7 +295,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		// persist the currently loaded one
 		historyErr := repo.history.add(repo.jsonBuf.Bytes())
 		if historyErr != nil {
-			Log.Error("could not persist current repo in history", zap.Error(historyErr))
+			logger.Log.Error("Could not persist current repo in history", zap.Error(historyErr))
 			status.M.HistoryPersistFailedCounter.WithLabelValues(historyErr.Error()).Inc()
 		}
 		// add some stats
@@ -292,7 +311,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 // resolveContent find content in a repository
 func (repo *Repo) resolveContent(dimensions []string, URI string) (resolved bool, resolvedURI string, resolvedDimension string, repoNode *content.RepoNode) {
 	parts := strings.Split(URI, content.PathSeparator)
-	Log.Debug("repo.ResolveContent", zap.String("URI", URI))
+	logger.Log.Debug("repo.ResolveContent", zap.String("URI", URI))
 	for i := len(parts); i > 0; i-- {
 		testURI := strings.Join(parts[0:i], content.PathSeparator)
 		if testURI == "" {
@@ -300,13 +319,13 @@ func (repo *Repo) resolveContent(dimensions []string, URI string) (resolved bool
 		}
 		for _, dimension := range dimensions {
 			if d, ok := repo.Directory[dimension]; ok {
-				Log.Debug("checking",
+				logger.Log.Debug("Checking node",
 					zap.String("dimension", dimension),
 					zap.String("URI", testURI),
 				)
 				if repoNode, ok := d.URIDirectory[testURI]; ok {
 					resolved = true
-					Log.Debug("found node", zap.String("URI", testURI), zap.String("destination", repoNode.DestinationID))
+					logger.Log.Debug("Node found", zap.String("URI", testURI), zap.String("destination", repoNode.DestinationID))
 					if len(repoNode.DestinationID) > 0 {
 						if destionationNode, destinationNodeOk := d.Directory[repoNode.DestinationID]; destinationNodeOk {
 							repoNode = destionationNode
@@ -328,7 +347,7 @@ func (repo *Repo) getURIForNode(dimension string, repoNode *content.RepoNode, re
 	linkedNode, ok := repo.Directory[dimension].Directory[repoNode.LinkID]
 	if ok {
 		if recursionLevel > maxGetURIForNodeRecursionLevel {
-			Log.Error("maxGetURIForNodeRecursionLevel reached", zap.String("repoNode.ID", repoNode.ID), zap.String("linkID", repoNode.LinkID), zap.String("dimension", dimension))
+			logger.Log.Error("maxGetURIForNodeRecursionLevel reached", zap.String("repoNode.ID", repoNode.ID), zap.String("linkID", repoNode.LinkID), zap.String("dimension", dimension))
 			return ""
 		}
 		return repo.getURIForNode(dimension, linkedNode, recursionLevel+1)
@@ -356,7 +375,7 @@ func (repo *Repo) getNode(
 ) *content.Node {
 	node := content.NewNode()
 	node.Item = repoNode.ToItem(dataFields)
-	Log.Debug("getNode", zap.String("ID", repoNode.ID))
+	logger.Log.Debug("getNode", zap.String("ID", repoNode.ID))
 	for _, childID := range repoNode.Index {
 		childNode := repoNode.Nodes[childID]
 		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && (!childNode.Hidden || exposeHiddenNodes) && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) {
