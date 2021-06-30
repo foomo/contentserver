@@ -13,11 +13,12 @@ import (
 
 	"github.com/foomo/contentserver/status"
 
+	"go.uber.org/zap"
+
 	"github.com/foomo/contentserver/content"
 	"github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/responses"
-	"go.uber.org/zap"
 )
 
 const maxGetURIForNodeRecursionLevel = 1000
@@ -199,7 +200,7 @@ func (repo *Repo) GetContent(r *requests.Content) (c *content.SiteContent, err e
 		c.Dimension = resolvedDimension
 		c.URI = resolvedURI
 		c.Item = node.ToItem(r.DataFields)
-		c.Path = node.GetPath()
+		c.Path = node.GetPath(r.PathDataFields)
 		// fetch URIs for all dimensions
 		uris := make(map[string]string)
 		for dimensionName := range repo.Directory {
