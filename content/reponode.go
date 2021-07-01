@@ -51,7 +51,7 @@ func (node *RepoNode) InPath(path []*Item) bool {
 }
 
 // GetPath get a path for a repo node
-func (node *RepoNode) GetPath() []*Item {
+func (node *RepoNode) GetPath(dataFields []string) []*Item {
 
 	var (
 		parentNode = node.parent
@@ -67,8 +67,13 @@ func (node *RepoNode) GetPath() []*Item {
 		i    = 0
 		path = make([]*Item, pathLength)
 	)
+
+	if dataFields == nil {
+		dataFields = []string{}
+	}
+
 	for parentNode != nil {
-		path[i] = parentNode.ToItem([]string{})
+		path[i] = parentNode.ToItem(dataFields)
 		parentNode = parentNode.parent
 		i++
 	}
