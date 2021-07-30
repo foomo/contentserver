@@ -14,10 +14,10 @@ type httpTransport struct {
 	endpoint string
 }
 
-func newHTTPTransport(server string) transport {
+func NewHTTPTransport(server string, client *http.Client) transport {
 	return &httpTransport{
 		endpoint: server,
-		client:   http.DefaultClient,
+		client:   client,
 	}
 }
 

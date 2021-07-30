@@ -1,6 +1,7 @@
 package client
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/foomo/contentserver/content"
@@ -19,15 +20,25 @@ func NewClient(
 	connectionPoolSize int,
 	waitTimeout time.Duration,
 ) (c *Client, err error) {
+	return NewClientWithTransport(NewSocketTransport(server, connectionPoolSize, waitTimeout))
+}
+
+func NewClientWithTransport(
+	transport transport,
+) (c *Client, err error) {
 	c = &Client{
-		t: newSocketTransport(server, connectionPoolSize, waitTimeout),
+		t: transport,
 	}
 	return
 }
 
 func NewHTTPClient(server string) (c *Client, err error) {
+	return NewHTTPClientWithTransport(NewHTTPTransport(server, http.DefaultClient))
+}
+
+func NewHTTPClientWithTransport(transport transport) (c *Client, err error) {
 	c = &Client{
-		t: newHTTPTransport(server),
+		t: transport,
 	}
 	return
 }
