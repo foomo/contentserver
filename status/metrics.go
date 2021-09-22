@@ -38,8 +38,7 @@ type Metrics struct {
 func newMetrics() *Metrics {
 	return &Metrics{
 		InvalidNodeTreeRequests: newCounterVec("invalid_node_tree_request_count",
-			"Counts the number of invalid tree nodes for a specific node ID",
-			"nodeID"),
+			"Counts the number of invalid tree nodes for a specific node"),
 		ServiceRequestCounter: newCounterVec(
 			"service_request_count",
 			"Count of requests for each handler",

@@ -3,13 +3,15 @@ package server
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"time"
+
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/repo"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
-	"net"
-	"net/http"
-	"os"
 )
 
 var (
@@ -30,11 +32,14 @@ const (
 	HandlerUpdate = "update"
 	// HandlerGetRepo get the whole repo
 	HandlerGetRepo = "getRepo"
+
+	// DefaultRepositoryTimeout for the HTTP client towards the repo
+	DefaultRepositoryTimeout = 2 * time.Minute
 )
 
 // Run - let it run and enjoy on a socket near you
 func Run(server string, address string, varDir string) error {
-	return RunServerSocketAndWebServer(server, address, "", "", varDir)
+	return RunServerSocketAndWebServer(server, address, "", "", varDir, DefaultRepositoryTimeout)
 }
 
 func RunServerSocketAndWebServer(
@@ -43,13 +48,14 @@ func RunServerSocketAndWebServer(
 	webserverAddress string,
 	webserverPath string,
 	varDir string,
+	repositoryTimeout time.Duration,
 ) error {
 	if address == "" && webserverAddress == "" {
 		return errors.New("one of the addresses needs to be set")
 	}
 	Log.Info("building repo with content", zap.String("server", server))
 
-	r := repo.NewRepo(server, varDir)
+	r := repo.NewRepo(server, varDir, repositoryTimeout)
 
 	// start initial update and handle error
 	go func() {

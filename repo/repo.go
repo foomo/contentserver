@@ -54,7 +54,7 @@ type repoDimension struct {
 }
 
 // NewRepo constructor
-func NewRepo(server string, varDir string) *Repo {
+func NewRepo(server string, varDir string, repositoryTimeout time.Duration) *Repo {
 
 	logger.Log.Info("creating new repo",
 		zap.String("server", server),
@@ -67,7 +67,7 @@ func NewRepo(server string, varDir string) *Repo {
 		history:                    newHistory(varDir),
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
-		httpClient:                 getDefaultHTTPClient(2 * time.Minute),
+		httpClient:                 getDefaultHTTPClient(repositoryTimeout),
 		updateInProgressChannel:    make(chan chan updateResponse, 0),
 	}
 
@@ -160,7 +160,7 @@ func (repo *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests
 				zap.String("nodeName", nodeName),
 				zap.String("nodeID", nodeRequest.ID),
 			)
-			status.M.InvalidNodeTreeRequests.WithLabelValues(nodeRequest.ID).Inc()
+			status.M.InvalidNodeTreeRequests.WithLabelValues().Inc()
 			continue
 		}
 		nodes[nodeName] = repo.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields, nodeRequest.ExposeHiddenNodes)
@@ -249,12 +249,12 @@ func (repo *Repo) WriteRepoBytes(w io.Writer) {
 		logger.Log.Error("Failed to serve Repo JSON", zap.Error(err))
 	}
 
-	w.Write([]byte("{\"reply\":"))
+	_, _ = w.Write([]byte("{\"reply\":"))
 	_, err = io.Copy(w, f)
 	if err != nil {
 		logger.Log.Error("Failed to serve Repo JSON", zap.Error(err))
 	}
-	w.Write([]byte("}"))
+	_, _ = w.Write([]byte("}"))
 }
 
 // Update - reload contents of repository with json from repo.server
