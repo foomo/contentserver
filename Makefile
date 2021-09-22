@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 TAG?=latest
-IMAGE=docker-registry.bestbytes.net/contentserver
+IMAGE=foomo/contentserver
 
 # Utils
 
