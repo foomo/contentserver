@@ -54,7 +54,7 @@ type repoDimension struct {
 }
 
 // NewRepo constructor
-func NewRepo(server string, varDir string) *Repo {
+func NewRepo(server string, varDir string, repositoryTimeout time.Duration) *Repo {
 
 	logger.Log.Info("creating new repo",
 		zap.String("server", server),
@@ -67,7 +67,7 @@ func NewRepo(server string, varDir string) *Repo {
 		history:                    newHistory(varDir),
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
-		httpClient:                 getDefaultHTTPClient(2 * time.Minute),
+		httpClient:                 getDefaultHTTPClient(repositoryTimeout),
 		updateInProgressChannel:    make(chan chan updateResponse, 0),
 	}
 

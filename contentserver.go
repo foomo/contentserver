@@ -29,11 +29,12 @@ const (
 )
 
 var (
-	flagAddress            = flag.String("address", "", "address to bind socket server host:port")
-	flagWebserverAddress   = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
-	flagWebserverPath      = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
-	flagVarDir             = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
-	flagPrometheusListener = flag.String("prometheus-listener", getenv("PROMETHEUS_LISTENER", DefaultPrometheusListener), "address for the prometheus listener")
+	flagAddress                   = flag.String("address", "", "address to bind socket server host:port")
+	flagWebserverAddress          = flag.String("webserver-address", "", "address to bind web server host:port, when empty no webserver will be spawned")
+	flagWebserverPath             = flag.String("webserver-path", "/contentserver", "path to export the webserver on - useful when behind a proxy")
+	flagVarDir                    = flag.String("var-dir", "/var/lib/contentserver", "where to put my data")
+	flagPrometheusListener        = flag.String("prometheus-listener", getenv("PROMETHEUS_LISTENER", DefaultPrometheusListener), "address for the prometheus listener")
+	flagRepositoryTimeoutDuration = flag.Duration("repository-timeout-duration", server.DefaultRepositoryTimeout, "timeout duration for the contentserver")
 
 	// debugging / profiling
 	flagDebug     = flag.Bool("debug", false, "toggle debug mode")
@@ -100,7 +101,7 @@ func main() {
 		go metrics.RunPrometheusHandler(*flagPrometheusListener)
 		go status.RunHealthzHandlerListener(DefaultHealthzHandlerAddress, ServiceName)
 
-		err := server.RunServerSocketAndWebServer(flag.Arg(0), *flagAddress, *flagWebserverAddress, *flagWebserverPath, *flagVarDir)
+		err := server.RunServerSocketAndWebServer(flag.Arg(0), *flagAddress, *flagWebserverAddress, *flagWebserverPath, *flagVarDir, *flagRepositoryTimeoutDuration)
 		if err != nil {
 			fmt.Println("exiting with error", err)
 			os.Exit(1)

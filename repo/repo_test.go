@@ -18,7 +18,7 @@ func init() {
 
 func NewTestRepo(server, varDir string) *Repo {
 
-	r := NewRepo(server, varDir)
+	r := NewRepo(server, varDir, 2*time.Minute)
 
 	// because the travis CI VMs are very slow,
 	// we need to add some delay to allow the server to startup
