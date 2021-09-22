@@ -24,7 +24,7 @@ type socketTransport struct {
 	connPool *connectionPool
 }
 
-func newSocketTransport(server string, connectionPoolSize int, waitTimeout time.Duration) transport {
+func NewSocketTransport(server string, connectionPoolSize int, waitTimeout time.Duration) transport {
 	return &socketTransport{
 		connPool: newConnectionPool(server, connectionPoolSize, waitTimeout),
 	}
