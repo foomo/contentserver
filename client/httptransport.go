@@ -14,6 +14,8 @@ type httpTransport struct {
 	endpoint string
 }
 
+// NewHTTPTransport will create a new http transport for the given server and client.
+// Caution: the provided server url is not validated!
 func NewHTTPTransport(server string, client *http.Client) transport {
 	return &httpTransport{
 		endpoint: server,

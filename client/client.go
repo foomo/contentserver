@@ -1,7 +1,10 @@
 package client
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/foomo/contentserver/content"
@@ -32,7 +35,23 @@ func NewClientWithTransport(
 	return
 }
 
+var (
+	ErrEmptyServerURL = errors.New("empty contentserver url provided")
+	ErrInvalidServerURL = errors.New("invalid contentserver url provided")
+)
+
+// NewHTTPClient constructs a new client to talk to the contentserver.
+// It returns an error if the provided url is empty or invalid.
 func NewHTTPClient(server string) (c *Client, err error) {
+
+	if server == "" {
+		return nil, ErrEmptyServerURL
+	}
+
+	if _, err = url.Parse(server); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidServerURL, err.Error())
+	}
+
 	return NewHTTPClientWithTransport(NewHTTPTransport(server, http.DefaultClient))
 }
 
