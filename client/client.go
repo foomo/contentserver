@@ -2,7 +2,6 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -40,6 +39,16 @@ var (
 	ErrInvalidServerURL = errors.New("invalid contentserver url provided")
 )
 
+func isValidUrl(str string) bool {
+    u, err := url.Parse(str)
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	
+    return err == nil && u.Scheme != "" && u.Host != ""
+}
+
 // NewHTTPClient constructs a new client to talk to the contentserver.
 // It returns an error if the provided url is empty or invalid.
 func NewHTTPClient(server string) (c *Client, err error) {
@@ -48,8 +57,9 @@ func NewHTTPClient(server string) (c *Client, err error) {
 		return nil, ErrEmptyServerURL
 	}
 
-	if _, err = url.Parse(server); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrInvalidServerURL, err.Error())
+	// validate url
+	if !isValidUrl(server) {
+		return nil, ErrInvalidServerURL
 	}
 
 	return NewHTTPClientWithTransport(NewHTTPTransport(server, http.DefaultClient))

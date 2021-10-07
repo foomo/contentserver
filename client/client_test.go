@@ -12,6 +12,7 @@ import (
 	"github.com/foomo/contentserver/repo/mock"
 	"github.com/foomo/contentserver/requests"
 	"github.com/foomo/contentserver/server"
+	"github.com/stretchr/testify/assert"
 )
 
 const pathContentserver = "/contentserver"
@@ -23,6 +24,28 @@ var (
 
 func init() {
 	SetupLogging(true, "contentserver_client_test.log")
+}
+
+func TestInvalidHTTPClientInit(t *testing.T) {
+	c, err := NewHTTPClient("")
+	assert.Nil(t, c)
+	assert.Error(t, err)
+
+	c, err = NewHTTPClient("bogus")
+	assert.Nil(t, c)
+	assert.Error(t, err)
+
+	c, err = NewHTTPClient("htt:/notaurl")
+	assert.Nil(t, c)
+	assert.Error(t, err)
+
+	c, err = NewHTTPClient("htts://notaurl")
+	assert.Nil(t, c)
+	assert.Error(t, err)
+
+	c, err = NewHTTPClient("/path/segment/only")
+	assert.Nil(t, c)
+	assert.Error(t, err)
 }
 
 func dump(t *testing.T, v interface{}) {
