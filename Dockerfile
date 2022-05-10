@@ -1,7 +1,7 @@
 ##############################
 ###### STAGE: BUILD     ######
 ##############################
-FROM golang:1.14-alpine AS build-env
+FROM golang:1.18-alpine AS build-env
 
 WORKDIR /src
 
