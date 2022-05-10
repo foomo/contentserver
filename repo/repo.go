@@ -420,7 +420,3 @@ func (repo *Repo) hasDimension(d string) bool {
 	_, hasDimension := repo.Directory[d]
 	return hasDimension
 }
-
-// func uriKeyForState(state string, uri string) string {
-// 	return state + "-" + uri
-// }
