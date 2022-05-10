@@ -57,11 +57,9 @@ func main() {
 		Log.Info("freeing OS memory every $interval minutes", zap.Int("interval", *flagFreeOSMem))
 		go func() {
 			for {
-				select {
-				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					Log.Info("FreeOSMemory")
-					debug.FreeOSMemory()
-				}
+				time.Sleep(time.Duration(*flagFreeOSMem) * time.Minute)
+				Log.Info("FreeOSMemory")
+				debug.FreeOSMemory()
 			}
 		}()
 	}
@@ -70,18 +68,16 @@ func main() {
 		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
 		go func() {
 			for {
-				select {
-				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					Log.Info("HeapDump")
-					f, err := os.Create("heapdump")
-					if err != nil {
-						panic("failed to create heap dump file")
-					}
-					debug.WriteHeapDump(f.Fd())
-					err = f.Close()
-					if err != nil {
-						panic("failed to create heap dump file")
-					}
+				time.Sleep(time.Duration(*flagFreeOSMem) * time.Minute)
+				Log.Info("HeapDump")
+				f, err := os.Create("heapdump")
+				if err != nil {
+					panic("failed to create heap dump file")
+				}
+				debug.WriteHeapDump(f.Fd())
+				err = f.Close()
+				if err != nil {
+					panic("failed to create heap dump file")
 				}
 			}
 		}()
