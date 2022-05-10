@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -10,8 +9,10 @@ import (
 	"github.com/foomo/contentserver/content"
 	"github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/status"
+	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +30,8 @@ func (repo *Repo) updateRoutine() {
 	for {
 		select {
 		case resChan := <-repo.updateInProgressChannel:
-			log := logger.Log.With(zap.String("chan", fmt.Sprintf("%p", resChan)))
+			log := logger.Log.With(zap.String("updateRunID", uuid.New().String()))
+
 			log.Info("Content update started")
 			start := time.Now()
 
@@ -257,7 +259,7 @@ func (repo *Repo) loadJSONBytes() error {
 	if err == nil {
 		historyErr := repo.history.add(repo.jsonBuf.Bytes())
 		if historyErr != nil {
-			logger.Log.Error("could not add valid json to history", zap.Error(historyErr))
+			logger.Log.Error("Could not add valid json to history", zap.Error(historyErr))
 			status.M.HistoryPersistFailedCounter.WithLabelValues().Inc()
 		} else {
 			logger.Log.Info("added valid json to history")
@@ -267,15 +269,18 @@ func (repo *Repo) loadJSONBytes() error {
 }
 
 func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
-	newDimensions := []string{}
+	var newDimensions []string
+	var err error
 	for dimension, newNode := range newNodes {
 		newDimensions = append(newDimensions, dimension)
-		logger.Log.Debug("loading nodes for dimension", zap.String("dimension", dimension))
-		loadErr := repo.updateDimension(dimension, newNode)
-		if loadErr != nil {
-			logger.Log.Error("Failed to update dimension", zap.String("dimension", dimension), zap.Error(loadErr))
-			return errors.New("failed to update dimension")
+		logger.Log.Debug("Loading nodes for dimension", zap.String("dimension", dimension))
+		errLoad := repo.updateDimension(dimension, newNode)
+		if errLoad != nil {
+			err = multierr.Append(err, errLoad)
 		}
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to update dimension")
 	}
 	dimensionIsValid := func(dimension string) bool {
 		for _, newDimension := range newDimensions {
@@ -288,7 +293,7 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	// we need to throw away orphaned dimensions
 	for dimension := range repo.Directory {
 		if !dimensionIsValid(dimension) {
-			logger.Log.Info("removing orphaned dimension", zap.String("dimension", dimension))
+			logger.Log.Info("Removing orphaned dimension", zap.String("dimension", dimension))
 			delete(repo.Directory, dimension)
 		}
 	}

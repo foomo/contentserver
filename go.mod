@@ -2,8 +2,10 @@ module github.com/foomo/contentserver
 
 require (
 	github.com/davecgh/go-spew v1.1.1
+	github.com/google/uuid v1.3.0
 	github.com/json-iterator/go v1.1.12
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/common v0.34.0 // indirect
 	github.com/stretchr/testify v1.7.0
