@@ -38,6 +38,7 @@ func (repo *Repo) updateRoutine() {
 			log.Error("Content update failed", zap.Error(err))
 			status.M.UpdatesFailedCounter.WithLabelValues().Inc()
 		} else {
+			log.Info("Content update success")
 			status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
 		}
 
@@ -46,7 +47,6 @@ func (repo *Repo) updateRoutine() {
 			err:         err,
 		}
 
-		log.Info("Content update completed")
 		status.M.UpdateDuration.WithLabelValues().Observe(time.Since(start).Seconds())
 	}
 }
