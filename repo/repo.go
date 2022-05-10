@@ -68,7 +68,7 @@ func NewRepo(server string, varDir string, repositoryTimeout time.Duration) *Rep
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
 		httpClient:                 getDefaultHTTPClient(repositoryTimeout),
-		updateInProgressChannel:    make(chan chan updateResponse, 0),
+		updateInProgressChannel:    make(chan chan updateResponse),
 	}
 
 	go repo.updateRoutine()

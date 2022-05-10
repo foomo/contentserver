@@ -16,12 +16,6 @@ import (
 )
 
 const (
-	logLevelDebug   = "debug"
-	logLevelNotice  = "notice"
-	logLevelWarning = "warning"
-	logLevelRecord  = "record"
-	logLevelError   = "error"
-
 	ServiceName                  = "Content Server"
 	DefaultHealthzHandlerAddress = ":8080"
 	DefaultPrometheusListener    = ":9200"

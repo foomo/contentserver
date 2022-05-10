@@ -32,7 +32,7 @@ func TestHistoryCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(b.Bytes(), test) {
-		t.Fatal(fmt.Sprintf("expected %q, got %q", string(test), string(b.Bytes())))
+		t.Fatalf("expected %q, got %q", string(test), b.String())
 	}
 }
 

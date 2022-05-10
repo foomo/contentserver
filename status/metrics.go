@@ -14,7 +14,6 @@ const (
 	metricLabelStatus  = "status"
 	metricLabelSource  = "source"
 	metricLabelRemote  = "remote"
-	metricLabelError   = "error"
 )
 
 // Metrics is the structure that holds all prometheus metrics

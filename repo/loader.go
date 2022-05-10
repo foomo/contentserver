@@ -27,30 +27,27 @@ type updateResponse struct {
 }
 
 func (repo *Repo) updateRoutine() {
-	for {
-		select {
-		case resChan := <-repo.updateInProgressChannel:
-			log := logger.Log.With(zap.String("updateRunID", uuid.New().String()))
+	for resChan := range repo.updateInProgressChannel {
+		log := logger.Log.With(zap.String("updateRunID", uuid.New().String()))
 
-			log.Info("Content update started")
-			start := time.Now()
+		log.Info("Content update started")
+		start := time.Now()
 
-			repoRuntime, err := repo.update(context.Background())
-			if err != nil {
-				log.Error("Content update failed", zap.Error(err))
-				status.M.UpdatesFailedCounter.WithLabelValues().Inc()
-			} else {
-				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
-			}
-
-			resChan <- updateResponse{
-				repoRuntime: repoRuntime,
-				err:         err,
-			}
-
-			log.Info("Content update completed")
-			status.M.UpdateDuration.WithLabelValues().Observe(time.Since(start).Seconds())
+		repoRuntime, err := repo.update(context.Background())
+		if err != nil {
+			log.Error("Content update failed", zap.Error(err))
+			status.M.UpdatesFailedCounter.WithLabelValues().Inc()
+		} else {
+			status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
 		}
+
+		resChan <- updateResponse{
+			repoRuntime: repoRuntime,
+			err:         err,
+		}
+
+		log.Info("Content update completed")
+		status.M.UpdateDuration.WithLabelValues().Observe(time.Since(start).Seconds())
 	}
 }
 
