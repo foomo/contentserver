@@ -33,9 +33,9 @@ func (repo *Repo) updateRoutine() {
 			log.Info("Waiting for update to complete")
 			start := time.Now()
 
-			repoRuntime, errUpdate := repo.update(context.Background())
-			if errUpdate != nil {
-				log.Error("Failed to update content server from routine", zap.Error(errUpdate))
+			repoRuntime, err := repo.update(context.Background())
+			if err != nil {
+				log.Error("Update failed", zap.Error(err))
 				status.M.UpdatesFailedCounter.WithLabelValues().Inc()
 			} else {
 				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
@@ -43,12 +43,11 @@ func (repo *Repo) updateRoutine() {
 
 			resChan <- updateResponse{
 				repoRuntime: repoRuntime,
-				err:         errUpdate,
+				err:         err,
 			}
 
-			duration := time.Since(start)
-			log.Info("Update completed", zap.Duration("duration", duration))
-			status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
+			log.Info("Update completed")
+			status.M.UpdateDuration.WithLabelValues().Observe(time.Since(start).Seconds())
 		}
 	}
 }
