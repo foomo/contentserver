@@ -183,14 +183,12 @@ func (repo *Repo) tryToRestoreCurrent() (err error) {
 func (repo *Repo) get(URL string) error {
 	response, err := repo.httpClient.Get(URL)
 	if err != nil {
-		logger.Log.Error("Failed to get", zap.Error(err))
 		return errors.Wrap(err, "failed to get repo")
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		logger.Log.Error(fmt.Sprintf("Bad HTTP Response %q, want %q", response.Status, http.StatusOK))
-		return errors.New("bad response code")
+		return errors.Errorf("bad response code from repository %q want %q", response.Status, http.StatusOK)
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
@@ -199,8 +197,7 @@ func (repo *Repo) get(URL string) error {
 	// Log.Info(ansi.Green + "LOADING DATA INTO BUFFER" + ansi.Reset)
 	_, err = io.Copy(&repo.jsonBuf, response.Body)
 	if err != nil {
-		logger.Log.Error("Failed to copy IO stream", zap.Error(err))
-		return errors.New("failed to copy IO stream")
+		return errors.Wrap(err, "failed to copy IO stream")
 	}
 
 	return nil
