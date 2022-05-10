@@ -15,6 +15,7 @@ clean:
 
 build: clean
 	go build -o bin/contentserver
+
 build-arch: clean
 	GOOS=linux GOARCH=amd64 go build -o bin/contentserver-linux-amd64
 	GOOS=darwin GOARCH=amd64 go build -o bin/contentserver-darwin-amd64
