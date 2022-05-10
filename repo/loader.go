@@ -30,12 +30,12 @@ func (repo *Repo) updateRoutine() {
 		select {
 		case resChan := <-repo.updateInProgressChannel:
 			log := logger.Log.With(zap.String("chan", fmt.Sprintf("%p", resChan)))
-			log.Info("Waiting for update to complete")
+			log.Info("Content update started")
 			start := time.Now()
 
 			repoRuntime, err := repo.update(context.Background())
 			if err != nil {
-				log.Error("Update failed", zap.Error(err))
+				log.Error("Content update failed", zap.Error(err))
 				status.M.UpdatesFailedCounter.WithLabelValues().Inc()
 			} else {
 				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
@@ -46,7 +46,7 @@ func (repo *Repo) updateRoutine() {
 				err:         err,
 			}
 
-			log.Info("Update completed")
+			log.Info("Content update completed")
 			status.M.UpdateDuration.WithLabelValues().Observe(time.Since(start).Seconds())
 		}
 	}
