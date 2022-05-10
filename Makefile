@@ -37,7 +37,7 @@ package: build
 # Docker
 
 docker-build:
-	docker build -t $(IMAGE):$(TAG) .
+	DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) --platform linux/amd64 --progress=plain .
 
 docker-push:
 	docker push $(IMAGE):$(TAG)
