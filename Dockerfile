@@ -13,7 +13,7 @@ RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0  go build -trimpath -o /contentserver
 ##############################
 ###### STAGE: PACKAGE   ######
 ##############################
-FROM alpine:3.11
+FROM alpine
 
 ENV CONTENT_SERVER_ADDR=0.0.0.0:80
 ENV CONTENT_SERVER_VAR_DIR=/var/lib/contentserver
