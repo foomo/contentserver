@@ -8,8 +8,6 @@ IMAGE=foomo/contentserver
 all: build test
 tag:
 	echo $(TAG)
-dep:
-	env GO111MODULE=on go mod download && env GO111MODULE=on go mod vendor && go install -i ./vendor/...
 clean:
 	rm -fv bin/contentserve*
 
