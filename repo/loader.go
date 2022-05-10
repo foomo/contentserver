@@ -257,12 +257,12 @@ func (repo *Repo) loadJSONBytes() error {
 
 	err = repo.loadNodes(nodes)
 	if err == nil {
-		historyErr := repo.history.add(repo.jsonBuf.Bytes())
-		if historyErr != nil {
-			logger.Log.Error("Could not add valid json to history", zap.Error(historyErr))
+		errHistory := repo.history.add(repo.jsonBuf.Bytes())
+		if errHistory != nil {
+			logger.Log.Error("Could not add valid JSON to history", zap.Error(errHistory))
 			status.M.HistoryPersistFailedCounter.WithLabelValues().Inc()
 		} else {
-			logger.Log.Info("added valid json to history")
+			logger.Log.Info("Added valid JSON to history")
 		}
 	}
 	return err
