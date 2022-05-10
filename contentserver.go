@@ -8,7 +8,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/apex/log"
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/metrics"
 	"github.com/foomo/contentserver/server"
@@ -66,7 +65,7 @@ func main() {
 			for {
 				select {
 				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					log.Info("FreeOSMemory")
+					Log.Info("FreeOSMemory")
 					debug.FreeOSMemory()
 				}
 			}
@@ -79,7 +78,7 @@ func main() {
 			for {
 				select {
 				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					log.Info("HeapDump")
+					Log.Info("HeapDump")
 					f, err := os.Create("heapdump")
 					if err != nil {
 						panic("failed to create heap dump file")

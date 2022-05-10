@@ -1,17 +1,17 @@
 module github.com/foomo/contentserver
 
 require (
-	github.com/apex/log v1.1.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/json-iterator/go v1.1.6
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
-	github.com/prometheus/client_golang v0.9.2
-	github.com/stretchr/testify v1.5.1
-	go.uber.org/atomic v1.4.0 // indirect
-	go.uber.org/multierr v1.1.0 // indirect
-	go.uber.org/zap v1.10.0
+	github.com/json-iterator/go v1.1.12
+	github.com/kr/pretty v0.2.0 // indirect
+	github.com/prometheus/client_golang v1.12.1
+	github.com/prometheus/common v0.34.0 // indirect
+	github.com/stretchr/testify v1.7.0
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
+	go.uber.org/zap v1.21.0
+	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 )
 
 go 1.14
