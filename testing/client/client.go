@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/foomo/contentserver/client"
 )
 
@@ -33,7 +32,6 @@ func main() {
 				log.Println("start update")
 				resp, errUpdate := c.Update()
 				if errUpdate != nil {
-					spew.Dump(resp)
 					log.Fatal(errUpdate)
 				}
 				log.Println(num, "update done", resp)

@@ -19,8 +19,7 @@ import (
 const sourceSocketServer = "socketserver"
 
 type socketServer struct {
-	repo    *repo.Repo
-	metrics *status.Metrics
+	repo *repo.Repo
 }
 
 // newSocketServer returns a shiny new socket server

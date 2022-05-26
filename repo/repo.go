@@ -68,7 +68,7 @@ func NewRepo(server string, varDir string, repositoryTimeout time.Duration) *Rep
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
 		httpClient:                 getDefaultHTTPClient(repositoryTimeout),
-		updateInProgressChannel:    make(chan chan updateResponse, 0),
+		updateInProgressChannel:    make(chan chan updateResponse),
 	}
 
 	go repo.updateRoutine()
@@ -297,7 +297,7 @@ func (repo *Repo) Update() (updateResponse *responses.Update) {
 		historyErr := repo.history.add(repo.jsonBuf.Bytes())
 		if historyErr != nil {
 			logger.Log.Error("Could not persist current repo in history", zap.Error(historyErr))
-			status.M.HistoryPersistFailedCounter.WithLabelValues(historyErr.Error()).Inc()
+			status.M.HistoryPersistFailedCounter.WithLabelValues().Inc()
 		}
 		// add some stats
 		for dimension := range repo.Directory {
@@ -420,7 +420,3 @@ func (repo *Repo) hasDimension(d string) bool {
 	_, hasDimension := repo.Directory[d]
 	return hasDimension
 }
-
-// func uriKeyForState(state string, uri string) string {
-// 	return state + "-" + uri
-// }
