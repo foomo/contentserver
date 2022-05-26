@@ -36,6 +36,8 @@ var (
 	flagPrometheusListener        = flag.String("prometheus-listener", getenv("PROMETHEUS_LISTENER", DefaultPrometheusListener), "address for the prometheus listener")
 	flagRepositoryTimeoutDuration = flag.Duration("repository-timeout-duration", server.DefaultRepositoryTimeout, "timeout duration for the contentserver")
 
+	flagPoll = flag.Bool("poll", false, "if true, the address arg will be used to periodically poll the content url")
+
 	// debugging / profiling
 	flagDebug     = flag.Bool("debug", false, "toggle debug mode")
 	flagFreeOSMem = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
@@ -63,12 +65,10 @@ func main() {
 	if *flagFreeOSMem > 0 {
 		Log.Info("freeing OS memory every $interval minutes", zap.Int("interval", *flagFreeOSMem))
 		go func() {
-			for {
-				select {
-				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					log.Info("FreeOSMemory")
-					debug.FreeOSMemory()
-				}
+			ticker := time.NewTicker(time.Duration(*flagFreeOSMem) * time.Minute)
+			for range ticker.C {
+				log.Info("FreeOSMemory")
+				debug.FreeOSMemory()
 			}
 		}()
 	}
@@ -76,19 +76,17 @@ func main() {
 	if *flagHeapDump > 0 {
 		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
 		go func() {
-			for {
-				select {
-				case <-time.After(time.Duration(*flagFreeOSMem) * time.Minute):
-					log.Info("HeapDump")
-					f, err := os.Create("heapdump")
-					if err != nil {
-						panic("failed to create heap dump file")
-					}
-					debug.WriteHeapDump(f.Fd())
-					err = f.Close()
-					if err != nil {
-						panic("failed to create heap dump file")
-					}
+			ticker := time.NewTicker(time.Duration(*flagFreeOSMem) * time.Minute)
+			for range ticker.C {
+				log.Info("HeapDump")
+				f, err := os.Create("heapdump")
+				if err != nil {
+					panic("failed to create heap dump file")
+				}
+				debug.WriteHeapDump(f.Fd())
+				err = f.Close()
+				if err != nil {
+					panic("failed to create heap dump file")
 				}
 			}
 		}()
@@ -101,7 +99,15 @@ func main() {
 		go metrics.RunPrometheusHandler(*flagPrometheusListener)
 		go status.RunHealthzHandlerListener(DefaultHealthzHandlerAddress, ServiceName)
 
-		err := server.RunServerSocketAndWebServer(flag.Arg(0), *flagAddress, *flagWebserverAddress, *flagWebserverPath, *flagVarDir, *flagRepositoryTimeoutDuration)
+		err := server.RunServerSocketAndWebServer(
+			flag.Arg(0),
+			*flagAddress,
+			*flagWebserverAddress,
+			*flagWebserverPath,
+			*flagVarDir,
+			*flagRepositoryTimeoutDuration,
+			*flagPoll,
+		)
 		if err != nil {
 			fmt.Println("exiting with error", err)
 			os.Exit(1)

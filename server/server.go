@@ -38,8 +38,8 @@ const (
 )
 
 // Run - let it run and enjoy on a socket near you
-func Run(server string, address string, varDir string) error {
-	return RunServerSocketAndWebServer(server, address, "", "", varDir, DefaultRepositoryTimeout)
+func Run(server string, address string, varDir string, pollUpdates bool) error {
+	return RunServerSocketAndWebServer(server, address, "", "", varDir, DefaultRepositoryTimeout, pollUpdates)
 }
 
 func RunServerSocketAndWebServer(
@@ -49,33 +49,36 @@ func RunServerSocketAndWebServer(
 	webserverPath string,
 	varDir string,
 	repositoryTimeout time.Duration,
+	pollForUpdates bool,
 ) error {
 	if address == "" && webserverAddress == "" {
 		return errors.New("one of the addresses needs to be set")
 	}
 	Log.Info("building repo with content", zap.String("server", server))
 
-	r := repo.NewRepo(server, varDir, repositoryTimeout)
+	r := repo.NewRepo(server, varDir, repositoryTimeout, pollForUpdates)
 
 	// start initial update and handle error
-	go func() {
-		resp := r.Update()
-		if !resp.Success {
-			Log.Error("failed to update",
-				zap.String("error", resp.ErrorMessage),
-				zap.Int("NumberOfNodes", resp.Stats.NumberOfNodes),
-				zap.Int("NumberOfURIs", resp.Stats.NumberOfURIs),
-				zap.Float64("OwnRuntime", resp.Stats.OwnRuntime),
-				zap.Float64("RepoRuntime", resp.Stats.RepoRuntime),
-			)
+	if !pollForUpdates {
+		go func() {
+			resp := r.Update()
+			if !resp.Success {
+				Log.Error("failed to update",
+					zap.String("error", resp.ErrorMessage),
+					zap.Int("NumberOfNodes", resp.Stats.NumberOfNodes),
+					zap.Int("NumberOfURIs", resp.Stats.NumberOfURIs),
+					zap.Float64("OwnRuntime", resp.Stats.OwnRuntime),
+					zap.Float64("RepoRuntime", resp.Stats.RepoRuntime),
+				)
 
-			//Exit only if it hasn't recovered
-			if !r.Recovered() {
-				os.Exit(1)
+				//Exit only if it hasn't recovered
+				if !r.Recovered() {
+					os.Exit(1)
+				}
 			}
-		}
 
-	}()
+		}()
+	}
 
 	// update can run in bg
 	chanErr := make(chan error)

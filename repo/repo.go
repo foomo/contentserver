@@ -32,9 +32,11 @@ type Dimension struct {
 
 // Repo content repositiory
 type Repo struct {
-	server    string
-	recovered bool
-	Directory map[string]*Dimension
+	pollForUpdates bool
+	pollVersion    string
+	server         string
+	recovered      bool
+	Directory      map[string]*Dimension
 	// updateLock        sync.Mutex
 	dimensionUpdateChannel     chan *repoDimension
 	dimensionUpdateDoneChannel chan error
@@ -54,13 +56,14 @@ type repoDimension struct {
 }
 
 // NewRepo constructor
-func NewRepo(server string, varDir string, repositoryTimeout time.Duration) *Repo {
+func NewRepo(server string, varDir string, repositoryTimeout time.Duration, pollForUpdates bool) *Repo {
 
 	logger.Log.Info("creating new repo",
 		zap.String("server", server),
 		zap.String("varDir", varDir),
 	)
 	repo := &Repo{
+		pollForUpdates:             pollForUpdates,
 		recovered:                  false,
 		server:                     server,
 		Directory:                  map[string]*Dimension{},
@@ -68,11 +71,26 @@ func NewRepo(server string, varDir string, repositoryTimeout time.Duration) *Rep
 		dimensionUpdateChannel:     make(chan *repoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
 		httpClient:                 getDefaultHTTPClient(repositoryTimeout),
-		updateInProgressChannel:    make(chan chan updateResponse, 0),
+		updateInProgressChannel:    make(chan chan updateResponse),
 	}
 
 	go repo.updateRoutine()
 	go repo.dimensionUpdateRoutine()
+	if pollForUpdates {
+		go func() {
+			ticker := time.NewTicker(10 * time.Second)
+			for range ticker.C {
+				chanReponse := make(chan updateResponse)
+				repo.updateInProgressChannel <- chanReponse
+				response := <-chanReponse
+				if response.err == nil {
+					logger.Log.Info("poll update success", zap.String("revision", repo.pollVersion))
+				} else {
+					logger.Log.Info("poll error", zap.Error(response.err))
+				}
+			}
+		}()
+	}
 
 	logger.Log.Info("trying to restore previous state")
 	restoreErr := repo.tryToRestoreCurrent()

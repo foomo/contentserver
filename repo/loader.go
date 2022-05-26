@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -26,30 +27,27 @@ type updateResponse struct {
 }
 
 func (repo *Repo) updateRoutine() {
-	for {
-		select {
-		case resChan := <-repo.updateInProgressChannel:
-			log := logger.Log.With(zap.String("chan", fmt.Sprintf("%p", resChan)))
-			log.Info("Waiting for update to complete")
-			start := time.Now()
+	for resChan := range repo.updateInProgressChannel {
+		log := logger.Log.With(zap.String("chan", fmt.Sprintf("%p", resChan)))
+		log.Info("Waiting for update to complete")
+		start := time.Now()
 
-			repoRuntime, errUpdate := repo.update(context.Background())
-			if errUpdate != nil {
-				log.Error("Failed to update content server from routine", zap.Error(errUpdate))
-				status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
-			} else {
-				status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
-			}
-
-			resChan <- updateResponse{
-				repoRuntime: repoRuntime,
-				err:         errUpdate,
-			}
-
-			duration := time.Since(start)
-			log.Info("Update completed", zap.Duration("duration", duration))
-			status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
+		repoRuntime, errUpdate := repo.update(context.Background())
+		if errUpdate != nil {
+			log.Error("Failed to update content server from routine", zap.Error(errUpdate))
+			status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
+		} else {
+			status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
 		}
+
+		resChan <- updateResponse{
+			repoRuntime: repoRuntime,
+			err:         errUpdate,
+		}
+
+		duration := time.Since(start)
+		log.Info("Update completed", zap.Duration("duration", duration))
+		status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
 	}
 }
 
@@ -208,14 +206,45 @@ func (repo *Repo) get(URL string) error {
 
 func (repo *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	startTimeRepo := time.Now().UnixNano()
-	err = repo.get(repo.server)
+
+	repoURL := repo.server
+	if repo.pollForUpdates {
+		resp, err := repo.httpClient.Get(repo.server)
+		if err != nil {
+			return repoRuntime, err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return repoRuntime, errors.New("could not poll latest repo download url - non 200 response")
+		}
+		responseBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return repoRuntime, errors.New("could not poll latest repo download url, could not read body")
+		}
+		repoURL = string(responseBytes)
+		if repoURL == repo.pollVersion {
+			logger.Log.Info(
+				"repo is up to date",
+				zap.String("pollVersion", repo.pollVersion),
+			)
+			// already up to date
+			return repoRuntime, nil
+		} else {
+			logger.Log.Info(
+				"new repo poll version",
+				zap.String("pollVersion", repo.pollVersion),
+			)
+		}
+	}
+
+	err = repo.get(repoURL)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
 	if err != nil {
 		// we have no json to load - the repo server did not reply
 		logger.Log.Debug("Failed to load json", zap.Error(err))
 		return repoRuntime, err
 	}
-	logger.Log.Debug("loading json", zap.String("server", repo.server), zap.Int("length", len(repo.jsonBuf.Bytes())))
+	logger.Log.Debug("loading json", zap.String("server", repoURL), zap.Int("length", len(repo.jsonBuf.Bytes())))
 	nodes, err := repo.loadNodesFromJSON()
 	if err != nil {
 		// could not load nodes from json
@@ -225,6 +254,9 @@ func (repo *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	if err != nil {
 		// repo failed to load nodes
 		return repoRuntime, err
+	}
+	if repo.pollForUpdates {
+		repo.pollVersion = repoURL
 	}
 	return repoRuntime, nil
 }

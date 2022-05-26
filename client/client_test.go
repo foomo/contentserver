@@ -87,6 +87,7 @@ func initTestServer(t testing.TB) (socketAddr, webserverAddr string) {
 			pathContentserver,
 			varDir,
 			server.DefaultRepositoryTimeout,
+			false,
 		)
 		if err != nil {
 			t.Fatal("test server crashed: ", err)
