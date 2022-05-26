@@ -14,7 +14,6 @@ const (
 	metricLabelStatus  = "status"
 	metricLabelSource  = "source"
 	metricLabelRemote  = "remote"
-	metricLabelError   = "error"
 )
 
 // Metrics is the structure that holds all prometheus metrics
@@ -60,7 +59,6 @@ func newMetrics() *Metrics {
 		UpdatesFailedCounter: newCounterVec(
 			"updates_failed_count",
 			"Number of updates that failed due to an error",
-			metricLabelError,
 		),
 		UpdateDuration: newSummaryVec(
 			"update_duration_seconds",
@@ -79,7 +77,6 @@ func newMetrics() *Metrics {
 		HistoryPersistFailedCounter: newCounterVec(
 			"history_persist_failed_count",
 			"Number of failures to store the content history on the filesystem",
-			metricLabelError,
 		),
 	}
 }

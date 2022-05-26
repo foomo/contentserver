@@ -12,8 +12,6 @@ import (
 	"github.com/foomo/contentserver/repo"
 )
 
-const sourceWebserver = "webserver"
-
 type webServer struct {
 	path string
 	r    *repo.Repo

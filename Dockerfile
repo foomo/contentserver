@@ -1,19 +1,24 @@
 ##############################
 ###### STAGE: BUILD     ######
 ##############################
-FROM golang:1.14-alpine AS build-env
+FROM golang:1.18 AS build-env
 
 WORKDIR /src
 
+COPY ./go.mod ./go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+     go mod download -x
+
 COPY ./ ./
 
-RUN go mod download && go mod vendor
 RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0  go build -trimpath -o /contentserver
 
 ##############################
 ###### STAGE: PACKAGE   ######
 ##############################
-FROM alpine:3.11
+FROM alpine
 
 ENV CONTENT_SERVER_ADDR=0.0.0.0:80
 ENV CONTENT_SERVER_VAR_DIR=/var/lib/contentserver

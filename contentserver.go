@@ -8,7 +8,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/apex/log"
 	. "github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/metrics"
 	"github.com/foomo/contentserver/server"
@@ -17,12 +16,6 @@ import (
 )
 
 const (
-	logLevelDebug   = "debug"
-	logLevelNotice  = "notice"
-	logLevelWarning = "warning"
-	logLevelRecord  = "record"
-	logLevelError   = "error"
-
 	ServiceName                  = "Content Server"
 	DefaultHealthzHandlerAddress = ":8080"
 	DefaultPrometheusListener    = ":9200"
@@ -65,9 +58,9 @@ func main() {
 	if *flagFreeOSMem > 0 {
 		Log.Info("freeing OS memory every $interval minutes", zap.Int("interval", *flagFreeOSMem))
 		go func() {
-			ticker := time.NewTicker(time.Duration(*flagFreeOSMem) * time.Minute)
-			for range ticker.C {
-				log.Info("FreeOSMemory")
+			for {
+				time.Sleep(time.Duration(*flagFreeOSMem) * time.Minute)
+				Log.Info("FreeOSMemory")
 				debug.FreeOSMemory()
 			}
 		}()
@@ -76,9 +69,9 @@ func main() {
 	if *flagHeapDump > 0 {
 		Log.Info("dumping heap every $interval minutes", zap.Int("interval", *flagHeapDump))
 		go func() {
-			ticker := time.NewTicker(time.Duration(*flagFreeOSMem) * time.Minute)
-			for range ticker.C {
-				log.Info("HeapDump")
+			for {
+				time.Sleep(time.Duration(*flagFreeOSMem) * time.Minute)
+				Log.Info("HeapDump")
 				f, err := os.Create("heapdump")
 				if err != nil {
 					panic("failed to create heap dump file")

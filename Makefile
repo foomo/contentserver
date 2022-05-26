@@ -8,8 +8,6 @@ IMAGE=foomo/contentserver
 all: build test
 tag:
 	echo $(TAG)
-dep:
-	env GO111MODULE=on go mod download && env GO111MODULE=on go mod vendor && go install -i ./vendor/...
 clean:
 	rm -fv bin/contentserve*
 
@@ -17,6 +15,7 @@ clean:
 
 build: clean
 	go build -o bin/contentserver
+
 build-arch: clean
 	GOOS=linux GOARCH=amd64 go build -o bin/contentserver-linux-amd64
 	GOOS=darwin GOARCH=amd64 go build -o bin/contentserver-darwin-amd64
@@ -39,7 +38,7 @@ package: build
 # Docker
 
 docker-build:
-	docker build -t $(IMAGE):$(TAG) .
+	DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) --platform linux/amd64 --progress=plain .
 
 docker-push:
 	docker push $(IMAGE):$(TAG)

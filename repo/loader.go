@@ -2,8 +2,6 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,7 +10,10 @@ import (
 	"github.com/foomo/contentserver/content"
 	"github.com/foomo/contentserver/logger"
 	"github.com/foomo/contentserver/status"
+	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
@@ -28,26 +29,26 @@ type updateResponse struct {
 
 func (repo *Repo) updateRoutine() {
 	for resChan := range repo.updateInProgressChannel {
-		log := logger.Log.With(zap.String("chan", fmt.Sprintf("%p", resChan)))
-		log.Info("Waiting for update to complete")
+		log := logger.Log.With(zap.String("updateRunID", uuid.New().String()))
+
+		log.Info("Content update started")
 		start := time.Now()
 
-		repoRuntime, errUpdate := repo.update(context.Background())
-		if errUpdate != nil {
-			log.Error("Failed to update content server from routine", zap.Error(errUpdate))
-			status.M.UpdatesFailedCounter.WithLabelValues(errUpdate.Error()).Inc()
+		repoRuntime, err := repo.update(context.Background())
+		if err != nil {
+			log.Error("Content update failed", zap.Error(err))
+			status.M.UpdatesFailedCounter.WithLabelValues().Inc()
 		} else {
+			log.Info("Content update success")
 			status.M.UpdatesCompletedCounter.WithLabelValues().Inc()
 		}
 
 		resChan <- updateResponse{
 			repoRuntime: repoRuntime,
-			err:         errUpdate,
+			err:         err,
 		}
 
-		duration := time.Since(start)
-		log.Info("Update completed", zap.Duration("duration", duration))
-		status.M.UpdateDuration.WithLabelValues().Observe(duration.Seconds())
+		status.M.UpdateDuration.WithLabelValues().Observe(time.Since(start).Seconds())
 	}
 }
 
@@ -181,14 +182,12 @@ func (repo *Repo) tryToRestoreCurrent() (err error) {
 func (repo *Repo) get(URL string) error {
 	response, err := repo.httpClient.Get(URL)
 	if err != nil {
-		logger.Log.Error("Failed to get", zap.Error(err))
-		return errors.New("failed to get repo")
+		return errors.Wrap(err, "failed to get repo")
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		logger.Log.Error(fmt.Sprintf("Bad HTTP Response %q, want %q", response.Status, http.StatusOK))
-		return errors.New("bad response code")
+		return errors.Errorf("bad response code from repository %q want %q", response.Status, http.StatusOK)
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
@@ -197,8 +196,7 @@ func (repo *Repo) get(URL string) error {
 	// Log.Info(ansi.Green + "LOADING DATA INTO BUFFER" + ansi.Reset)
 	_, err = io.Copy(&repo.jsonBuf, response.Body)
 	if err != nil {
-		logger.Log.Error("Failed to copy IO stream", zap.Error(err))
-		return errors.New("failed to copy IO stream")
+		return errors.Wrap(err, "failed to copy IO stream")
 	}
 
 	return nil
@@ -291,27 +289,30 @@ func (repo *Repo) loadJSONBytes() error {
 
 	err = repo.loadNodes(nodes)
 	if err == nil {
-		historyErr := repo.history.add(repo.jsonBuf.Bytes())
-		if historyErr != nil {
-			logger.Log.Error("could not add valid json to history", zap.Error(historyErr))
-			status.M.HistoryPersistFailedCounter.WithLabelValues(historyErr.Error()).Inc()
+		errHistory := repo.history.add(repo.jsonBuf.Bytes())
+		if errHistory != nil {
+			logger.Log.Error("Could not add valid JSON to history", zap.Error(errHistory))
+			status.M.HistoryPersistFailedCounter.WithLabelValues().Inc()
 		} else {
-			logger.Log.Info("added valid json to history")
+			logger.Log.Info("Added valid JSON to history")
 		}
 	}
 	return err
 }
 
 func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
-	newDimensions := []string{}
+	var newDimensions []string
+	var err error
 	for dimension, newNode := range newNodes {
 		newDimensions = append(newDimensions, dimension)
-		logger.Log.Debug("loading nodes for dimension", zap.String("dimension", dimension))
-		loadErr := repo.updateDimension(dimension, newNode)
-		if loadErr != nil {
-			logger.Log.Error("Failed to update dimension", zap.String("dimension", dimension), zap.Error(loadErr))
-			return errors.New("failed to update dimension")
+		logger.Log.Debug("Loading nodes for dimension", zap.String("dimension", dimension))
+		errLoad := repo.updateDimension(dimension, newNode)
+		if errLoad != nil {
+			err = multierr.Append(err, errLoad)
 		}
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to update dimension")
 	}
 	dimensionIsValid := func(dimension string) bool {
 		for _, newDimension := range newDimensions {
@@ -324,7 +325,7 @@ func (repo *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	// we need to throw away orphaned dimensions
 	for dimension := range repo.Directory {
 		if !dimensionIsValid(dimension) {
-			logger.Log.Info("removing orphaned dimension", zap.String("dimension", dimension))
+			logger.Log.Info("Removing orphaned dimension", zap.String("dimension", dimension))
 			delete(repo.Directory, dimension)
 		}
 	}
