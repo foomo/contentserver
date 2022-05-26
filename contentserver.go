@@ -29,6 +29,8 @@ var (
 	flagPrometheusListener        = flag.String("prometheus-listener", getenv("PROMETHEUS_LISTENER", DefaultPrometheusListener), "address for the prometheus listener")
 	flagRepositoryTimeoutDuration = flag.Duration("repository-timeout-duration", server.DefaultRepositoryTimeout, "timeout duration for the contentserver")
 
+	flagPoll = flag.Bool("poll", false, "if true, the address arg will be used to periodically poll the content url")
+
 	// debugging / profiling
 	flagDebug     = flag.Bool("debug", false, "toggle debug mode")
 	flagFreeOSMem = flag.Int("free-os-mem", 0, "free OS mem every X minutes")
@@ -90,7 +92,15 @@ func main() {
 		go metrics.RunPrometheusHandler(*flagPrometheusListener)
 		go status.RunHealthzHandlerListener(DefaultHealthzHandlerAddress, ServiceName)
 
-		err := server.RunServerSocketAndWebServer(flag.Arg(0), *flagAddress, *flagWebserverAddress, *flagWebserverPath, *flagVarDir, *flagRepositoryTimeoutDuration)
+		err := server.RunServerSocketAndWebServer(
+			flag.Arg(0),
+			*flagAddress,
+			*flagWebserverAddress,
+			*flagWebserverPath,
+			*flagVarDir,
+			*flagRepositoryTimeoutDuration,
+			*flagPoll,
+		)
 		if err != nil {
 			fmt.Println("exiting with error", err)
 			os.Exit(1)
