@@ -8,6 +8,7 @@ type Item struct {
 	MimeType string                 `json:"mimeType"`
 	Hidden   bool                   `json:"hidden,omitempty"`
 	Data     map[string]interface{} `json:"data"`
+	Groups   []string               `json:"groups"`
 }
 
 // NewItem item contructor
