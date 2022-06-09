@@ -80,7 +80,7 @@ func (node *RepoNode) GetPath(dataFields []string) []*Item {
 	return path
 }
 
-// ToItem convert a re po node to a simple repo item
+// ToItem convert a repo node to a simple repo item
 func (node *RepoNode) ToItem(dataFields []string) *Item {
 	item := NewItem()
 	item.ID = node.ID
@@ -88,6 +88,7 @@ func (node *RepoNode) ToItem(dataFields []string) *Item {
 	item.MimeType = node.MimeType
 	item.Hidden = node.Hidden
 	item.URI = node.URI
+	item.Groups = node.Groups
 	if dataFields == nil {
 		item.Data = node.Data
 	} else {
