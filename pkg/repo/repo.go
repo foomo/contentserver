@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -33,13 +34,14 @@ type (
 		loaded      *atomic.Bool
 		history     *History
 		httpClient  *http.Client
-		Directory   map[string]*Dimension
 		// updateLock        sync.Mutex
 		dimensionUpdateChannel     chan *RepoDimension
 		dimensionUpdateDoneChannel chan error
 		updateInProgressChannel    chan chan updateResponse
-		// jsonBytes []byte
-		jsonBuf bytes.Buffer
+		directory                  map[string]*Dimension
+		directoryLock              sync.RWMutex
+		jsonBuffer                 *bytes.Buffer
+		jsonBufferLock             sync.RWMutex
 	}
 	Option func(*Repo)
 )
@@ -56,7 +58,7 @@ func New(l *zap.Logger, url string, history *History, opts ...Option) *Repo {
 		loaded:                     &atomic.Bool{},
 		history:                    history,
 		httpClient:                 http.DefaultClient,
-		Directory:                  map[string]*Dimension{},
+		directory:                  map[string]*Dimension{},
 		dimensionUpdateChannel:     make(chan *RepoDimension),
 		dimensionUpdateDoneChannel: make(chan error),
 		updateInProgressChannel:    make(chan chan updateResponse),
@@ -93,13 +95,37 @@ func (r *Repo) Loaded() bool {
 	return r.loaded.Load()
 }
 
-func (r *Repo) OnStart(fn func()) {
-	r.onStart = fn
+func (r *Repo) Directory() map[string]*Dimension {
+	r.directoryLock.RLock()
+	defer r.directoryLock.RUnlock()
+	return r.directory
+}
+
+func (r *Repo) SetDirectory(v map[string]*Dimension) {
+	r.directoryLock.Lock()
+	defer r.directoryLock.Unlock()
+	r.directory = v
+}
+
+func (r *Repo) JSONBufferBytes() []byte {
+	r.jsonBufferLock.RLock()
+	defer r.jsonBufferLock.RUnlock()
+	return r.jsonBuffer.Bytes()
+}
+
+func (r *Repo) SetJSONBuffer(v *bytes.Buffer) {
+	r.jsonBufferLock.Lock()
+	defer r.jsonBufferLock.Unlock()
+	r.jsonBuffer = v
 }
 
 // ------------------------------------------------------------------------------------------------
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
+
+func (r *Repo) OnStart(fn func()) {
+	r.onStart = fn
+}
 
 // GetURIs get many uris at once
 func (r *Repo) GetURIs(dimension string, ids []string) map[string]string {
@@ -149,7 +175,7 @@ func (r *Repo) GetContent(req *requests.Content) (*content.SiteContent, error) {
 		c.Path = node.GetPath(req.PathDataFields)
 		// fetch URIs for all dimensions
 		uris := make(map[string]string)
-		for dimensionName := range r.Directory {
+		for dimensionName := range r.Directory() {
 			uris[dimensionName] = r.getURI(dimensionName, node.ID)
 		}
 		c.URIs = uris
@@ -179,7 +205,7 @@ func (r *Repo) GetContent(req *requests.Content) (*content.SiteContent, error) {
 // GetRepo get the whole repo in all dimensions
 func (r *Repo) GetRepo() map[string]*content.RepoNode {
 	response := make(map[string]*content.RepoNode)
-	for dimensionName, dimension := range r.Directory {
+	for dimensionName, dimension := range r.Directory() {
 		response[dimensionName] = dimension.Node
 	}
 	return response
@@ -238,15 +264,15 @@ func (r *Repo) Update() (updateResponse *responses.Update) {
 	} else {
 		updateResponse.Success = true
 		// persist the currently loaded one
-		historyErr := r.history.Add(r.jsonBuf.Bytes())
+		historyErr := r.history.Add(r.JSONBufferBytes())
 		if historyErr != nil {
 			r.l.Error("Could not persist current repo in history", zap.Error(historyErr))
 			metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()
 		}
 		// add some stats
-		for dimension := range r.Directory {
-			updateResponse.Stats.NumberOfNodes += len(r.Directory[dimension].Directory)
-			updateResponse.Stats.NumberOfURIs += len(r.Directory[dimension].URIDirectory)
+		for _, dimension := range r.Directory() {
+			updateResponse.Stats.NumberOfNodes += len(dimension.Directory)
+			updateResponse.Stats.NumberOfURIs += len(dimension.URIDirectory)
 		}
 		r.loaded.Store(true)
 	}
@@ -294,7 +320,7 @@ func (r *Repo) Start(ctx context.Context) error {
 	} else if !r.Loaded() {
 		l.Debug("trying to update initial state")
 		if resp := r.Update(); !resp.Success {
-			l.Fatal("failed to update",
+			l.Error("failed to update initial state",
 				zap.String("error", resp.ErrorMessage),
 				zap.Int("num_modes", resp.Stats.NumberOfNodes),
 				zap.Int("num_uris", resp.Stats.NumberOfURIs),
@@ -332,13 +358,13 @@ func (r *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.En
 			groups = nodeRequest.Groups
 		}
 
-		dimensionNode, ok := r.Directory[nodeRequest.Dimension]
+		dimensionNode, ok := r.Directory()[nodeRequest.Dimension]
 		nodes[nodeName] = nil
 
 		if !ok && nodeRequest.Dimension == "" {
 			r.l.Debug("Could not get dimension root node", zap.String("dimension", nodeRequest.Dimension))
 			for _, dimension := range env.Dimensions {
-				dimensionNode, ok = r.Directory[dimension]
+				dimensionNode, ok = r.Directory()[dimension]
 				if ok {
 					r.l.Debug("Found root node in env.Dimensions", zap.String("dimension", dimension))
 					break
@@ -376,7 +402,7 @@ func (r *Repo) resolveContent(dimensions []string, uri string) (resolved bool, r
 			testURI = content.PathSeparator
 		}
 		for _, dimension := range dimensions {
-			if d, ok := r.Directory[dimension]; ok {
+			if d, ok := r.Directory()[dimension]; ok {
 				r.l.Debug("Checking node",
 					zap.String("dimension", dimension),
 					zap.String("URI", testURI),
@@ -402,7 +428,7 @@ func (r *Repo) getURIForNode(dimension string, repoNode *content.RepoNode, recur
 		uri = repoNode.URI
 		return
 	}
-	linkedNode, ok := r.Directory[dimension].Directory[repoNode.LinkID]
+	linkedNode, ok := r.Directory()[dimension].Directory[repoNode.LinkID]
 	if ok {
 		if recursionLevel > maxGetURIForNodeRecursionLevel {
 			r.l.Error("maxGetURIForNodeRecursionLevel reached", zap.String("repoNode.ID", repoNode.ID), zap.String("linkID", repoNode.LinkID), zap.String("dimension", dimension))
@@ -414,7 +440,7 @@ func (r *Repo) getURIForNode(dimension string, repoNode *content.RepoNode, recur
 }
 
 func (r *Repo) getURI(dimension string, id string) string {
-	directory, ok := r.Directory[dimension]
+	directory, ok := r.Directory()[dimension]
 	if !ok {
 		return ""
 	}
@@ -463,14 +489,14 @@ func (r *Repo) validateContentRequest(req *requests.Content) (err error) {
 	}
 	for _, envDimension := range req.Env.Dimensions {
 		if !r.hasDimension(envDimension) {
-			availableDimensions := make([]string, 0, len(r.Directory))
-			for availableDimension := range r.Directory {
+			availableDimensions := make([]string, 0, len(r.Directory()))
+			for availableDimension := range r.Directory() {
 				availableDimensions = append(availableDimensions, availableDimension)
 			}
 			return errors.New(fmt.Sprint(
 				"unknown dimension ", envDimension,
 				" in r.Env must be one of ", availableDimensions,
-				" repo has ", len(r.Directory), " dimensions",
+				" repo has ", len(availableDimensions), " dimensions",
 			))
 		}
 	}
@@ -478,6 +504,6 @@ func (r *Repo) validateContentRequest(req *requests.Content) (err error) {
 }
 
 func (r *Repo) hasDimension(d string) bool {
-	_, hasDimension := r.Directory[d]
+	_, hasDimension := r.Directory()[d]
 	return hasDimension
 }

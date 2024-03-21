@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -130,7 +131,7 @@ func (r *Repo) _updateDimension(dimension string, newNode *content.RepoNode) err
 	// copy old datastructure to prevent concurrent map access
 	// collect other dimension in the Directory
 	newRepoDirectory := map[string]*Dimension{}
-	for d, D := range r.Directory {
+	for d, D := range r.Directory() {
 		if d != dimension {
 			newRepoDirectory[d] = D
 		}
@@ -142,7 +143,7 @@ func (r *Repo) _updateDimension(dimension string, newNode *content.RepoNode) err
 		Directory:    newDirectory,
 		URIDirectory: newURIDirectory,
 	}
-	r.Directory = newRepoDirectory
+	r.SetDirectory(newRepoDirectory)
 
 	// ---------------------------------------------
 
@@ -193,7 +194,7 @@ func wireAliases(directory map[string]*content.RepoNode) error {
 
 func (r *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err error) {
 	nodes = make(map[string]*content.RepoNode)
-	err = json.Unmarshal(r.jsonBuf.Bytes(), &nodes)
+	err = json.Unmarshal(r.JSONBufferBytes(), &nodes)
 	if err != nil {
 		r.l.Error("Failed to deserialize nodes", zap.Error(err))
 		return nil, errors.New("failed to deserialize nodes")
@@ -202,10 +203,12 @@ func (r *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err erro
 }
 
 func (r *Repo) tryToRestoreCurrent() error {
-	err := r.history.GetCurrent(&r.jsonBuf)
+	buffer := &bytes.Buffer{}
+	err := r.history.GetCurrent(buffer)
 	if err != nil {
 		return err
 	}
+	r.SetJSONBuffer(buffer)
 	return r.loadJSONBytes()
 }
 
@@ -225,13 +228,14 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
-	r.jsonBuf.Reset()
+	buffer := &bytes.Buffer{}
 
 	// Log.Info(ansi.Green + "LOADING DATA INTO BUFFER" + ansi.Reset)
-	_, err = io.Copy(&r.jsonBuf, response.Body)
+	_, err = io.Copy(buffer, response.Body)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy IO stream")
 	}
+	r.SetJSONBuffer(buffer)
 
 	return nil
 }
@@ -280,7 +284,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		r.l.Debug("failed to load json", zap.Error(err))
 		return repoRuntime, err
 	}
-	r.l.Debug("loading json", zap.String("server", repoURL), zap.Int("length", len(r.jsonBuf.Bytes())))
+	r.l.Debug("loading json", zap.String("server", repoURL), zap.Int("length", len(r.JSONBufferBytes())))
 	nodes, err := r.loadNodesFromJSON()
 	if err != nil {
 		// could not load nodes from json
@@ -314,7 +318,7 @@ func (r *Repo) tryUpdate() (repoRuntime int64, err error) {
 func (r *Repo) loadJSONBytes() error {
 	nodes, err := r.loadNodesFromJSON()
 	if err != nil {
-		data := r.jsonBuf.Bytes()
+		data := r.JSONBufferBytes()
 
 		if len(data) > 10 {
 			r.l.Debug("could not parse json",
@@ -327,7 +331,7 @@ func (r *Repo) loadJSONBytes() error {
 
 	err = r.loadNodes(nodes)
 	if err == nil {
-		errHistory := r.history.Add(r.jsonBuf.Bytes())
+		errHistory := r.history.Add(r.JSONBufferBytes())
 		if errHistory != nil {
 			r.l.Error("Could not add valid JSON to history", zap.Error(errHistory))
 			metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()
@@ -361,11 +365,14 @@ func (r *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 		return false
 	}
 	// we need to throw away orphaned dimensions
-	for dimension := range r.Directory {
+	directory := map[string]*Dimension{}
+	for dimension, value := range r.Directory() {
 		if !dimensionIsValid(dimension) {
 			r.l.Info("removing orphaned dimension", zap.String("dimension", dimension))
-			delete(r.Directory, dimension)
+			continue
 		}
+		directory[dimension] = value
 	}
+	r.SetDirectory(directory)
 	return nil
 }

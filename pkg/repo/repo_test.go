@@ -14,9 +14,9 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func NewTestRepo(l *zap.Logger, server, varDir string) *Repo {
+func NewTestRepo(l *zap.Logger, url, varDir string) *Repo {
 	h := NewHistory(l, HistoryWithMax(2), HistoryWithVarDir(varDir))
-	r := New(l, server, h)
+	r := New(l, url, h)
 	go r.Start(context.Background()) //nolint:errcheck
 	time.Sleep(100 * time.Millisecond)
 	return r
@@ -25,23 +25,22 @@ func NewTestRepo(l *zap.Logger, server, varDir string) *Repo {
 func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 	t.Helper()
 	if empty {
-		if len(r.Directory) > 0 {
+		if len(r.Directory()) > 0 {
 			t.Fatal("directory should have been empty, but is not")
 		}
 	} else {
-		if len(r.Directory) == 0 {
+		if len(r.Directory()) == 0 {
 			t.Fatal("directory is empty, but should have been not")
 		}
 	}
 }
 
 func TestLoad404(t *testing.T) {
-	l := zaptest.NewLogger(t)
-
 	var (
+		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
-		server             = mockServer.URL + "/repo-no-have"
-		r                  = NewTestRepo(l, server, varDir)
+		url                = mockServer.URL + "/repo-no-have"
+		r                  = NewTestRepo(l, url, varDir)
 	)
 
 	response := r.Update()
@@ -51,9 +50,8 @@ func TestLoad404(t *testing.T) {
 }
 
 func TestLoadBrokenRepo(t *testing.T) {
-	l := zaptest.NewLogger(t)
-
 	var (
+		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-broken-json.json"
 		r                  = NewTestRepo(l, server, varDir)
@@ -66,14 +64,13 @@ func TestLoadBrokenRepo(t *testing.T) {
 }
 
 func TestLoadRepo(t *testing.T) {
-	l := zaptest.NewLogger(t)
-
 	var (
+		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-ok.json"
 		r                  = NewTestRepo(l, server, varDir)
 	)
-	assertRepoIsEmpty(t, r, true)
+	assertRepoIsEmpty(t, r, false)
 
 	response := r.Update()
 	assertRepoIsEmpty(t, r, false)
@@ -94,23 +91,19 @@ func TestLoadRepo(t *testing.T) {
 }
 
 func BenchmarkLoadRepo(b *testing.B) {
-	l := zaptest.NewLogger(b)
-
 	var (
+		l                  = zaptest.NewLogger(b)
 		t                  = &testing.T{}
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-ok.json"
 		r                  = NewTestRepo(l, server, varDir)
 	)
-	if len(r.Directory) > 0 {
-		b.Fatal("directory should have been empty, but is not")
-	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		response := r.Update()
-		if len(r.Directory) == 0 {
+		if len(r.Directory()) == 0 {
 			b.Fatal("directory is empty, but should have been not")
 		}
 
@@ -121,11 +114,12 @@ func BenchmarkLoadRepo(b *testing.B) {
 }
 
 func TestLoadRepoDuplicateUris(t *testing.T) {
-	l := zaptest.NewLogger(t)
-
-	mockServer, varDir := mock.GetMockData(t)
-	server := mockServer.URL + "/repo-duplicate-uris.json"
-	r := NewTestRepo(l, server, varDir)
+	var (
+		l                  = zaptest.NewLogger(t)
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-duplicate-uris.json"
+		r                  = NewTestRepo(l, server, varDir)
+	)
 
 	response := r.Update()
 	require.False(t, response.Success, "there are duplicates, this repo update should have failed")
@@ -147,7 +141,7 @@ func TestDimensionHygiene(t *testing.T) {
 	response = r.Update()
 	require.True(t, response.Success, "it is called repo ok")
 
-	assert.Lenf(t, r.Directory, 1, "directory hygiene failed")
+	assert.Lenf(t, r.Directory(), 1, "directory hygiene failed")
 }
 
 func getTestRepo(t *testing.T, path string) *Repo {
