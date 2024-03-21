@@ -6,16 +6,16 @@ import (
 )
 
 type connectionPool struct {
-	server string
+	url string
 	// conn           net.Conn
 	chanConnGet    chan chan net.Conn
 	chanConnReturn chan connReturn
 	chanDrainPool  chan int
 }
 
-func newConnectionPool(server string, connectionPoolSize int, waitTimeout time.Duration) *connectionPool {
+func newConnectionPool(url string, connectionPoolSize int, waitTimeout time.Duration) *connectionPool {
 	connPool := &connectionPool{
-		server:         server,
+		url:            url,
 		chanConnGet:    make(chan chan net.Conn),
 		chanConnReturn: make(chan connReturn),
 		chanDrainPool:  make(chan int),
@@ -92,7 +92,7 @@ RunLoop:
 		// refill connection pool
 		for _, poolEntry := range connectionPool {
 			if poolEntry.conn == nil {
-				newConn, errDial := net.Dial("tcp", c.server)
+				newConn, errDial := net.Dial("tcp", c.url)
 				poolEntry.err = errDial
 				poolEntry.conn = newConn
 			}
@@ -131,5 +131,5 @@ RunLoop:
 	c.chanDrainPool = nil
 	c.chanConnReturn = nil
 	c.chanConnGet = nil
-	//fmt.Println("runloop is done", waitPool)
+	// fmt.Println("runloop is done", waitPool)
 }

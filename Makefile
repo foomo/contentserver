@@ -1,92 +1,86 @@
-SHELL := /bin/bash
+-include .makerc
+.DEFAULT_GOAL:=help
 
-TAG?=latest
-IMAGE=foomo/contentserver
+# --- Targets -----------------------------------------------------------------
 
-# Utils
+## === Tasks ===
 
-all: build test
-tag:
-	echo $(TAG)
-clean:
-	rm -fv bin/contentserve*
+.PHONY: doc
+## Open go docs
+doc:
+	@open "http://localhost:6060/pkg/github.com/foomo/contentserver/"
+	@godoc -http=localhost:6060 -play
 
-# Build
-
-build: clean
-	go build -o bin/contentserver
-
-build-arch: clean
-	GOOS=linux GOARCH=amd64 go build -o bin/contentserver-linux-amd64
-	GOOS=darwin GOARCH=amd64 go build -o bin/contentserver-darwin-amd64
-build-docker: clean build-arch
-	curl https://curl.haxx.se/ca/cacert.pem > .cacert.pem
-	docker build -q . > .image_id
-	docker tag `cat .image_id` $(IMAGE):$(TAG)
-	echo "# tagged container `cat .image_id` as $(IMAGE):$(TAG)"
-	rm -vf .image_id .cacert.pem
-
-build-testclient:
-	go build -o bin/testclient -i github.com/foomo/contentserver/testing/client
-
-build-testserver:
-	go build -o bin/testserver -i github.com/foomo/contentserver/testing/server
-
-package: build
-	pkg/build.sh
-
-# Docker
-
-docker-build:
-	DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) --platform linux/amd64 --progress=plain .
-
-docker-push:
-	docker push $(IMAGE):$(TAG)
-
-# Testing / benchmarks
-
+.PHONY: test
+## Run tests
 test:
-	go test -v ./...
+	@go test -coverprofile=coverage.out -race -json ./... | gotestfmt
 
-bench:
-	go test -run=none -bench=. ./...
+.PHONY: test.update
+## Run tests and update snapshots
+test.update:
+	@go test -update -coverprofile=coverage.out -race -json ./... | gotestfmt
 
-run-testserver:
-	bin/testserver -json-file var/cse-globus-stage-b-with-main-section.json
+.PHONY: lint
+## Run linter
+lint:
+	@golangci-lint run
 
-run-contentserver:
-	contentserver -var-dir var -webserver-address :9191 -address :9999 http://127.0.0.1:1234
+.PHONY: lint.fix
+## Fix lint violations
+lint.fix:
+	@golangci-lint run --fix
 
-run-contentserver-freeosmem:
-	contentserver -var-dir var -webserver-address :9191 -address :9999 -free-os-mem 1 http://127.0.0.1:1234
+.PHONY: tidy
+## Run go mod tidy
+tidy:
+	@go mod tidy
 
-run-prometheus:
-	prometheus --config.file=prometheus/prometheus.yml
+.PHONY: outdated
+## Show outdated direct dependencies
+outdated:
+	@go list -u -m -json all | go-mod-outdated -update -direct
 
-clean-var:
-	rm var/contentserver-repo-2019*
+## Install binary
+install:
+	@go build -o ${GOPATH}/bin/contentserver main.go
 
-# Profiling
+## Build binary
+build:
+	@mkdir -p bin
+	@go build -o bin/sesamy main.go
 
-test-cpu-profile:
-	go test -cpuprofile=cprof-client github.com/foomo/contentserver/client
-	go tool pprof --text client.test cprof-client
+## === Utils ===
 
-	go test -cpuprofile=cprof-repo github.com/foomo/contentserver/repo
-	go tool pprof --text repo.test cprof-repo
-
-test-gctrace:
-	GODEBUG=gctrace=1 go test ./...
-
-test-malloctrace:
-	GODEBUG=allocfreetrace=1 go test ./...
-
-trace:
-	curl http://localhost:6060/debug/pprof/trace?seconds=60 > cs-trace
-	go tool trace cs-trace
-
-pprof-heap-web:
-	go tool pprof -http=":8081" http://localhost:6060/debug/pprof/heap
-
-pprof-cpu-web:
-	go tool pprof -http=":8081" http://localhost:6060/debug/pprof/profile
+.PHONY: help
+## Show help text
+help:
+	@awk '{ \
+		if ($$0 ~ /^.PHONY: [a-zA-Z\-\_0-9]+$$/) { \
+			helpCommand = substr($$0, index($$0, ":") + 2); \
+			if (helpMessage) { \
+				printf "\033[36m%-23s\033[0m %s\n", \
+					helpCommand, helpMessage; \
+				helpMessage = ""; \
+			} \
+		} else if ($$0 ~ /^[a-zA-Z\-\_0-9.]+:/) { \
+			helpCommand = substr($$0, 0, index($$0, ":")); \
+			if (helpMessage) { \
+				printf "\033[36m%-23s\033[0m %s\n", \
+					helpCommand, helpMessage"\n"; \
+				helpMessage = ""; \
+			} \
+		} else if ($$0 ~ /^##/) { \
+			if (helpMessage) { \
+				helpMessage = helpMessage"\n                        "substr($$0, 3); \
+			} else { \
+				helpMessage = substr($$0, 3); \
+			} \
+		} else { \
+			if (helpMessage) { \
+				print "\n                        "helpMessage"\n" \
+			} \
+			helpMessage = ""; \
+		} \
+	}' \
+	$(MAKEFILE_LIST)

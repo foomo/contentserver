@@ -1,8 +1,12 @@
 package client
 
-import "github.com/foomo/contentserver/server"
+import (
+	"context"
 
-type transport interface {
-	call(handler server.Handler, request interface{}, response interface{}) error
-	shutdown()
+	"github.com/foomo/contentserver/pkg/handler"
+)
+
+type Transport interface {
+	Call(ctx context.Context, route handler.Route, request interface{}, response interface{}) error
+	Close()
 }
