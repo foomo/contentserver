@@ -126,7 +126,6 @@ RunLoop:
 		for _, i := range waitPoolLoosers {
 			delete(waitPool, i)
 		}
-
 	}
 	c.chanDrainPool = nil
 	c.chanConnReturn = nil

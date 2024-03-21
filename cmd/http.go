@@ -93,12 +93,10 @@ func NewHTTPCommand() *cobra.Command {
 	addOtelEnabledFlag(cmd, v)
 	addHealthzEnabledFlag(cmd, v)
 	addPrometheusEnabledFlag(cmd, v)
-	// cmd.Flags().SetNormalizeFunc(normalizeFlag)
 
 	return cmd
 }
 
 func init() {
 	rootCmd.AddCommand(NewHTTPCommand())
-
 }

@@ -43,7 +43,6 @@ func NewSocket(l *zap.Logger, repo *repo.Repo) *Socket {
 // ------------------------------------------------------------------------------------------------
 
 func (h *Socket) Serve(conn net.Conn) {
-
 	defer func() {
 		if r := recover(); r != nil {
 			h.l.Error("panic in handle connection", zap.String("error", fmt.Sprint(r)))
@@ -87,7 +86,6 @@ func (h *Socket) Serve(conn net.Conn) {
 			}
 			h.l.Debug("found json", zap.Int("length", jsonLength))
 			if jsonLength > 0 {
-
 				var (
 					// let us try to read some json
 					jsonBytes         = make([]byte, jsonLength)
@@ -200,7 +198,6 @@ func (h *Socket) handleRequest(r *repo.Repo, route Route, jsonBytes []byte, sour
 }
 
 func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
-
 	var (
 		reply             interface{}
 		apiErr            error
@@ -249,7 +246,7 @@ func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sou
 		h.l.Error("could not read incoming json", zap.Error(jsonErr))
 		reply = responses.NewError(2, "could not read incoming json "+jsonErr.Error())
 	} else if apiErr != nil {
-		h.l.Error("an API error occured", zap.Error(apiErr))
+		h.l.Error("an API error occurred", zap.Error(apiErr))
 		reply = responses.NewError(3, "internal error "+apiErr.Error())
 	}
 

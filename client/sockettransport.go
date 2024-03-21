@@ -83,7 +83,7 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 		n, err := conn.Read(buf)
 		if err != nil && err != io.EOF {
 			returnConn(err)
-			return fmt.Errorf("an error occured while reading the response: %q", err)
+			return fmt.Errorf("an error occurred while reading the response: %q", err)
 		}
 		if n == 0 {
 			break
