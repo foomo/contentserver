@@ -43,8 +43,6 @@ func NewHTTPCommand() *cobra.Command {
 
 			l := svr.Logger()
 
-			l.Error("test")
-
 			r := repo.New(l,
 				args[0],
 				repo.NewHistory(l,
@@ -69,15 +67,15 @@ func NewHTTPCommand() *cobra.Command {
 			}))
 
 			svr.AddServices(
+				service.NewGoRoutine(l, "repo", func(ctx context.Context, l *zap.Logger) error {
+					return r.Start(ctx)
+				}),
 				service.NewHTTP(l, "http", addressFlag(v),
 					handler.NewHTTP(l, r, handler.WithBasePath(basePathFlag(v))),
 					middleware.Telemetry(),
 					middleware.Logger(),
 					middleware.Recover(),
 				),
-				service.NewGoRoutine(l, "repo", func(ctx context.Context, l *zap.Logger) error {
-					return r.Start(ctx)
-				}),
 			)
 
 			svr.Run()

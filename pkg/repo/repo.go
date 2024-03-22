@@ -282,7 +282,6 @@ func (r *Repo) Update() (updateResponse *responses.Update) {
 			updateResponse.Stats.NumberOfNodes += len(dimension.Directory)
 			updateResponse.Stats.NumberOfURIs += len(dimension.URIDirectory)
 		}
-		r.loaded.Store(true)
 	}
 	updateResponse.Stats.OwnRuntime = floatSeconds(time.Since(start).Nanoseconds()) - updateResponse.Stats.RepoRuntime
 	return updateResponse
@@ -325,7 +324,9 @@ func (r *Repo) Start(ctx context.Context) error {
 			l.Debug("starting poll routine")
 			return r.PollRoutine(gCtx)
 		})
-	} else if !r.Loaded() {
+	}
+
+	if !r.Loaded() {
 		l.Debug("trying to update initial state")
 		if resp := r.Update(); !resp.Success {
 			l.Error("failed to update initial state",
@@ -335,6 +336,8 @@ func (r *Repo) Start(ctx context.Context) error {
 				zap.Float64("own_runtime", resp.Stats.OwnRuntime),
 				zap.Float64("repo_runtime", resp.Stats.RepoRuntime),
 			)
+		} else {
+			r.loaded.Store(true)
 		}
 	}
 

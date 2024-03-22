@@ -18,8 +18,8 @@ import (
 type (
 	HTTP struct {
 		l        *zap.Logger
-		basePath string
 		repo     *repo.Repo
+		basePath string
 	}
 	HTTPOption func(*HTTP)
 )
@@ -92,22 +92,22 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // ~ Private methods
 // ------------------------------------------------------------------------------------------------
 
-func (h *HTTP) handleRequest(r *repo.Repo, handler Route, jsonBytes []byte, source string) ([]byte, error) {
+func (h *HTTP) handleRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) ([]byte, error) {
 	start := time.Now()
 
-	reply, err := h.executeRequest(r, handler, jsonBytes, source)
+	reply, err := h.executeRequest(r, route, jsonBytes, source)
 	result := "success"
 	if err != nil {
 		result = "error"
 	}
 
-	metrics.ServiceRequestCounter.WithLabelValues(string(handler), result, source).Inc()
-	metrics.ServiceRequestDuration.WithLabelValues(string(handler), result, source).Observe(time.Since(start).Seconds())
+	metrics.ServiceRequestCounter.WithLabelValues(string(route), result, source).Inc()
+	metrics.ServiceRequestDuration.WithLabelValues(string(route), result, source).Observe(time.Since(start).Seconds())
 
 	return reply, err
 }
 
-func (h *HTTP) executeRequest(r *repo.Repo, handler Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
+func (h *HTTP) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 	var (
 		reply             interface{}
 		apiErr            error
@@ -123,7 +123,7 @@ func (h *HTTP) executeRequest(r *repo.Repo, handler Route, jsonBytes []byte, sou
 	metrics.ContentRequestCounter.WithLabelValues(source).Inc()
 
 	// handle and process
-	switch handler {
+	switch route {
 	// case HandlerGetRepo: // This case is handled prior to handleRequest being called.
 	// since the resulting bytes are written directly in to the http.ResponseWriter / net.Connection
 	case RouteGetURIs:
@@ -147,7 +147,7 @@ func (h *HTTP) executeRequest(r *repo.Repo, handler Route, jsonBytes []byte, sou
 			reply = r.Update()
 		})
 	default:
-		reply = responses.NewError(1, "unknown handler: "+string(handler))
+		reply = responses.NewError(1, "unknown route: "+string(route))
 	}
 
 	// error handling
