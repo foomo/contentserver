@@ -31,7 +31,7 @@ type (
 		poll                       bool
 		pollInterval               time.Duration
 		pollVersion                string
-		onStart                    func()
+		onLoaded                   func()
 		loaded                     *atomic.Bool
 		history                    *History
 		httpClient                 *http.Client
@@ -130,8 +130,8 @@ func (r *Repo) SetJSONBuffer(v *bytes.Buffer) {
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (r *Repo) OnStart(fn func()) {
-	r.onStart = fn
+func (r *Repo) OnLoaded(fn func()) {
+	r.onLoaded = fn
 }
 
 // GetURIs get many uris at once

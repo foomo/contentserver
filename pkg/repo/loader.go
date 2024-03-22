@@ -68,8 +68,8 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 				if !r.Loaded() {
 					r.loaded.Store(true)
 					l.Info("initial update success")
-					if r.onStart != nil {
-						r.onStart()
+					if r.onLoaded != nil {
+						r.onLoaded()
 					}
 				} else {
 					l.Info("update success")

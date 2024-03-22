@@ -57,7 +57,7 @@ func NewSocketCommand() *cobra.Command {
 
 			// start repo
 			up := make(chan bool, 1)
-			r.OnStart(func() {
+			r.OnLoaded(func() {
 				up <- true
 			})
 			go r.Start(context.Background()) //nolint:errcheck

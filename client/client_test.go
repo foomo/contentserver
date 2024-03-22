@@ -130,7 +130,7 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 		),
 	)
 	up := make(chan bool, 1)
-	r.OnStart(func() {
+	r.OnLoaded(func() {
 		up <- true
 	})
 	go r.Start(context.TODO()) //nolint:errcheck
