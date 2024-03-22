@@ -30,7 +30,7 @@ jobs:
           private_key: ${{ secrets.TOKEN_APP_PRIVATE_KEY }}
 
       - name: Login do docker.io
-        run: docker login -u {{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+        run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: goreleaser/goreleaser-action@v5
         with:
