@@ -65,7 +65,15 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 				l.Error("update failed", zap.Error(err))
 				metrics.UpdatesFailedCounter.WithLabelValues().Inc()
 			} else {
-				l.Info("update success")
+				if !r.Loaded() {
+					r.loaded.Store(true)
+					l.Info("initial update success")
+					if r.onStart != nil {
+						r.onStart()
+					}
+				} else {
+					l.Info("update success")
+				}
 				metrics.UpdatesCompletedCounter.WithLabelValues().Inc()
 			}
 

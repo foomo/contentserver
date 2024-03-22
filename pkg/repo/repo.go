@@ -26,16 +26,15 @@ const maxGetURIForNodeRecursionLevel = 1000
 // Repo content repository
 type (
 	Repo struct {
-		l            *zap.Logger
-		url          string
-		poll         bool
-		pollInterval time.Duration
-		pollVersion  string
-		onStart      func()
-		loaded       *atomic.Bool
-		history      *History
-		httpClient   *http.Client
-		// updateLock        sync.Mutex
+		l                          *zap.Logger
+		url                        string
+		poll                       bool
+		pollInterval               time.Duration
+		pollVersion                string
+		onStart                    func()
+		loaded                     *atomic.Bool
+		history                    *History
+		httpClient                 *http.Client
 		dimensionUpdateChannel     chan *RepoDimension
 		dimensionUpdateDoneChannel chan error
 		updateInProgressChannel    chan chan updateResponse
@@ -316,7 +315,6 @@ func (r *Repo) Start(ctx context.Context) error {
 		l.Warn("could not restore previous repo content", zap.Error(err))
 	} else {
 		l.Info("restored previous repo")
-		r.loaded.Store(true)
 	}
 
 	if r.poll {
@@ -336,13 +334,7 @@ func (r *Repo) Start(ctx context.Context) error {
 				zap.Float64("own_runtime", resp.Stats.OwnRuntime),
 				zap.Float64("repo_runtime", resp.Stats.RepoRuntime),
 			)
-		} else {
-			r.loaded.Store(true)
 		}
-	}
-
-	if r.onStart != nil {
-		r.onStart()
 	}
 
 	return g.Wait()
