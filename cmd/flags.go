@@ -87,24 +87,24 @@ func addHistoryLimitFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	_ = v.BindEnv("history.limit", "CONTENT_SERVER_HISTORY_LIMIT")
 }
 
-func gracefulTimeoutFlag(v *viper.Viper) time.Duration {
-	return v.GetDuration("graceful_timeout")
-}
-
-func addGracefulTimeoutFlag(flags *pflag.FlagSet, v *viper.Viper) {
-	flags.Duration("graceful-timeout", 0, "Timeout duration for graceful shutdown")
-	_ = v.BindPFlag("graceful_timeout", flags.Lookup("graceful-timeout"))
-	_ = v.BindEnv("graceful_timeout", "CONTENT_SERVER_GRACEFUL_TIMEOUT")
-}
-
-func shutdownTimeoutFlag(v *viper.Viper) time.Duration {
-	return v.GetDuration("shutdown_timeout")
+func gracefulPeriodFlag(v *viper.Viper) time.Duration {
+	return v.GetDuration("graceful.period")
 }
 
 func addShutdownTimeoutFlag(flags *pflag.FlagSet, v *viper.Viper) {
-	flags.Duration("shutdown-timeout", 0, "Timeout duration for shutdown")
-	_ = v.BindPFlag("shutdown_timeout", flags.Lookup("shutdown-timeout"))
-	_ = v.BindEnv("shutdown_timeout", "CONTENT_SERVER_SHUTDOWN_TIMEOUT")
+	flags.Duration("graceful-period", 0, "Graceful shutdown period")
+	_ = v.BindPFlag("graceful.period", flags.Lookup("graceful-period"))
+	_ = v.BindEnv("graceful.period", "CONTENT_SERVER_GRACEFULE_PERIOD")
+}
+
+func gracefulTimeoutFlag(v *viper.Viper) time.Duration {
+	return v.GetDuration("graceful.timeout")
+}
+
+func addGracefulTimeoutFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.Duration("graceful-timeout", 0, "Graceful shutdown timeout to wait")
+	_ = v.BindPFlag("graceful.timeout", flags.Lookup("graceful-timeout"))
+	_ = v.BindEnv("graceful.timeout", "CONTENT_SERVER_GRACEFUL_TIMEOUT")
 }
 
 func serviceHealthzEnabledFlag(v *viper.Viper) bool {

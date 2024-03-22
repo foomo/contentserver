@@ -3,7 +3,7 @@ module github.com/foomo/contentserver
 go 1.21
 
 require (
-	github.com/foomo/keel v0.17.4-0.20240322093729-5c5d32717bb4 // #190 (5c5d327) update otel
+	github.com/foomo/keel v0.17.4-0.20240322201811-f791248997cb // #190 (f791248) update-otel
 	github.com/google/uuid v1.6.0
 	github.com/json-iterator/go v1.1.12
 	github.com/pkg/errors v0.9.1

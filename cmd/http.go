@@ -38,7 +38,7 @@ func NewHTTPCommand() *cobra.Command {
 				keel.WithPrometheusMeter(servicePrometheusEnabledFlag(v)),
 				keel.WithOTLPGRPCTracer(otelEnabledFlag(v)),
 				keel.WithGracefulTimeout(gracefulTimeoutFlag(v)),
-				keel.WithShutdownTimeout(shutdownTimeoutFlag(v)),
+				keel.WithGracefulPeriod(gracefulPeriodFlag(v)),
 			)
 
 			l := svr.Logger()
