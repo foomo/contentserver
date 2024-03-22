@@ -43,7 +43,7 @@ func basePathFlag(v *viper.Viper) string {
 
 func addBasePathFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	flags.String("base-path", "/contentserver", "Base path to export the webserver on")
-	_ = v.BindPFlag("base_path", flags.Lookup("base_path"))
+	_ = v.BindPFlag("base_path", flags.Lookup("base-path"))
 	_ = v.BindEnv("base_path", "CONTENT_SERVER_BASE_PATH")
 }
 

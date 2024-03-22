@@ -2,7 +2,6 @@ package repo
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -67,27 +67,25 @@ func NewHistory(l *zap.Logger, opts ...HistoryOption) *History {
 // ------------------------------------------------------------------------------------------------
 
 func (h *History) Add(jsonBytes []byte) error {
-	var (
-		// historiy file name
-		filename = path.Join(h.historyDir, HistoryRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+HistoryRepoJSONSuffix)
-		err      = os.WriteFile(filename, jsonBytes, 0600)
-	)
-	if err != nil {
-		return err
+	var filename = path.Join(h.historyDir, HistoryRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+HistoryRepoJSONSuffix)
+
+	if err := os.MkdirAll(path.Dir(filename), 0700); err != nil {
+		return errors.Wrap(err, "failed to create history dir")
+	}
+
+	if err := os.WriteFile(filename, jsonBytes, 0600); err != nil {
+		return errors.Wrap(err, "failed to write history")
 	}
 
 	h.l.Debug("adding content backup", zap.String("file", filename))
 
 	// current filename
-	err = os.WriteFile(h.GetCurrentFilename(), jsonBytes, 0600)
-	if err != nil {
-		return err
+	if err := os.WriteFile(h.GetCurrentFilename(), jsonBytes, 0600); err != nil {
+		return errors.Wrap(err, "failed to write current history")
 	}
 
-	err = h.cleanup()
-	if err != nil {
-		h.l.Error("an error occurred while cleaning up my history", zap.Error(err))
-		return err
+	if err := h.cleanup(); err != nil {
+		return errors.Wrap(err, "failed to clean up history")
 	}
 
 	return nil
@@ -97,7 +95,7 @@ func (h *History) GetCurrentFilename() string {
 	return path.Join(h.historyDir, HistoryRepoJSONPrefix+"current"+HistoryRepoJSONSuffix)
 }
 
-func (h *History) GetCurrent(buf *bytes.Buffer) (err error) {
+func (h *History) GetCurrent(buf *bytes.Buffer) error {
 	f, err := os.Open(h.GetCurrentFilename())
 	if err != nil {
 		return err
