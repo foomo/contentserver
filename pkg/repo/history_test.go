@@ -47,7 +47,7 @@ func TestHistoryCleanup(t *testing.T) {
 
 func TestHistoryOrder(t *testing.T) {
 	h := testHistory(t)
-	h.varDir = "testdata/order"
+	h.historyDir = "testdata/order"
 
 	files, err := h.getHistory()
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestHistoryOrder(t *testing.T) {
 
 func TestGetFilesForCleanup(t *testing.T) {
 	h := testHistory(t)
-	h.varDir = "testdata/order"
+	h.historyDir = "testdata/order"
 
 	files, err := h.getFilesForCleanup(2)
 	require.NoError(t, err)
@@ -71,5 +71,5 @@ func testHistory(t *testing.T) *History {
 	l := zaptest.NewLogger(t)
 	tempDir, err := os.MkdirTemp(os.TempDir(), "contentserver-history-test")
 	require.NoError(t, err)
-	return NewHistory(l, HistoryWithMax(2), HistoryWithVarDir(tempDir))
+	return NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(tempDir))
 }

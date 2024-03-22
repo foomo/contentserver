@@ -33,12 +33,12 @@ func NewHTTPCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			svr := keel.NewServer(
 				keel.WithHTTPReadmeService(true),
-				keel.WithHTTPPrometheusService(v.GetBool("service.prometheus.enabled")),
-				keel.WithHTTPHealthzService(v.GetBool("service.healthz.enabled")),
-				keel.WithPrometheusMeter(v.GetBool("service.prometheus.enabled")),
-				keel.WithOTLPGRPCTracer(v.GetBool("otel.enabled")),
-				keel.WithGracefulTimeout(v.GetDuration("graceful.timeout")),
-				keel.WithShutdownTimeout(v.GetDuration("shutdown.timeout")),
+				keel.WithHTTPPrometheusService(servicePrometheusEnabledFlag(v)),
+				keel.WithHTTPHealthzService(serviceHealthzEnabledFlag(v)),
+				keel.WithPrometheusMeter(servicePrometheusEnabledFlag(v)),
+				keel.WithOTLPGRPCTracer(otelEnabledFlag(v)),
+				keel.WithGracefulTimeout(gracefulTimeoutFlag(v)),
+				keel.WithShutdownTimeout(shutdownTimeoutFlag(v)),
 			)
 
 			l := svr.Logger()
@@ -48,15 +48,16 @@ func NewHTTPCommand() *cobra.Command {
 			r := repo.New(l,
 				args[0],
 				repo.NewHistory(l,
-					repo.HistoryWithVarDir(v.GetString("history.dir")),
-					repo.HistoryWithMax(v.GetInt("history.limit")),
+					repo.HistoryWithHistoryDir(historyDirFlag(v)),
+					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
 				),
 				repo.WithHTTPClient(
 					keelhttp.NewHTTPClient(
 						keelhttp.HTTPClientWithTelemetry(),
 					),
 				),
-				repo.WithPollForUpdates(v.GetBool("poll")),
+				repo.WithPollInterval(pollIntevalFlag(v)),
+				repo.WithPoll(pollFlag(v)),
 			)
 
 			// start initial update and handle error
@@ -68,8 +69,8 @@ func NewHTTPCommand() *cobra.Command {
 			}))
 
 			svr.AddServices(
-				service.NewHTTP(l, "http", v.GetString("address"),
-					handler.NewHTTP(l, r, handler.WithPath(v.GetString("path"))),
+				service.NewHTTP(l, "http", addressFlag(v),
+					handler.NewHTTP(l, r, handler.WithBasePath(basePathFlag(v))),
 					middleware.Telemetry(),
 					middleware.Logger(),
 					middleware.Recover(),
@@ -84,16 +85,18 @@ func NewHTTPCommand() *cobra.Command {
 		},
 	}
 
-	addAddressFlag(cmd, v)
-	addBasePathFlag(cmd, v)
-	addPollFlag(cmd, v)
-	addHistoryDirFlag(cmd, v)
-	addHistoryLimitFlag(cmd, v)
-	addGracefulTimeoutFlag(cmd, v)
-	addShutdownTimeoutFlag(cmd, v)
-	addOtelEnabledFlag(cmd, v)
-	addServiceHealthzEnabledFlag(cmd, v)
-	addServicePrometheusEnabledFlag(cmd, v)
+	flags := cmd.Flags()
+	addAddressFlag(flags, v)
+	addBasePathFlag(flags, v)
+	addPollFlag(flags, v)
+	addPollIntervalFlag(flags, v)
+	addHistoryDirFlag(flags, v)
+	addHistoryLimitFlag(flags, v)
+	addGracefulTimeoutFlag(flags, v)
+	addShutdownTimeoutFlag(flags, v)
+	addOtelEnabledFlag(flags, v)
+	addServiceHealthzEnabledFlag(flags, v)
+	addServicePrometheusEnabledFlag(flags, v)
 
 	return cmd
 }

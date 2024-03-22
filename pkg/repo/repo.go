@@ -26,14 +26,15 @@ const maxGetURIForNodeRecursionLevel = 1000
 // Repo content repository
 type (
 	Repo struct {
-		l           *zap.Logger
-		url         string
-		poll        bool
-		pollVersion string
-		onStart     func()
-		loaded      *atomic.Bool
-		history     *History
-		httpClient  *http.Client
+		l            *zap.Logger
+		url          string
+		poll         bool
+		pollInterval time.Duration
+		pollVersion  string
+		onStart      func()
+		loaded       *atomic.Bool
+		history      *History
+		httpClient   *http.Client
 		// updateLock        sync.Mutex
 		dimensionUpdateChannel     chan *RepoDimension
 		dimensionUpdateDoneChannel chan error
@@ -56,6 +57,7 @@ func New(l *zap.Logger, url string, history *History, opts ...Option) *Repo {
 		url:                        url,
 		poll:                       false,
 		loaded:                     &atomic.Bool{},
+		pollInterval:               time.Minute,
 		history:                    history,
 		httpClient:                 http.DefaultClient,
 		directory:                  map[string]*Dimension{},
@@ -81,9 +83,15 @@ func WithHTTPClient(v *http.Client) Option {
 	}
 }
 
-func WithPollForUpdates(v bool) Option {
+func WithPoll(v bool) Option {
 	return func(o *Repo) {
 		o.poll = v
+	}
+}
+
+func WithPollInterval(v time.Duration) Option {
+	return func(o *Repo) {
+		o.pollInterval = v
 	}
 }
 

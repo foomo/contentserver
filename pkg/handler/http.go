@@ -17,9 +17,9 @@ import (
 
 type (
 	HTTP struct {
-		l    *zap.Logger
-		path string
-		repo *repo.Repo
+		l        *zap.Logger
+		basePath string
+		repo     *repo.Repo
 	}
 	HTTPOption func(*HTTP)
 )
@@ -31,9 +31,9 @@ type (
 // NewHTTP returns a shiny new web server
 func NewHTTP(l *zap.Logger, repo *repo.Repo, opts ...HTTPOption) http.Handler {
 	inst := &HTTP{
-		l:    l.Named("http"),
-		path: "/contentserver",
-		repo: repo,
+		l:        l.Named("http"),
+		basePath: "/contentserver",
+		repo:     repo,
 	}
 
 	for _, opt := range opts {
@@ -47,9 +47,9 @@ func NewHTTP(l *zap.Logger, repo *repo.Repo, opts ...HTTPOption) http.Handler {
 // ~ Options
 // ------------------------------------------------------------------------------------------------
 
-func WithPath(v string) HTTPOption {
+func WithBasePath(v string) HTTPOption {
 	return func(o *HTTP) {
-		o.path = v
+		o.basePath = v
 	}
 }
 
@@ -73,7 +73,7 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	route := Route(strings.TrimPrefix(r.URL.Path, h.path+"/"))
+	route := Route(strings.TrimPrefix(r.URL.Path, h.basePath+"/"))
 	if route == RouteGetRepo {
 		h.repo.WriteRepoBytes(w)
 		w.Header().Set("Content-Type", "application/json")

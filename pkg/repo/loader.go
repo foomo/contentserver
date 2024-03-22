@@ -28,7 +28,7 @@ type updateResponse struct {
 
 func (r *Repo) PollRoutine(ctx context.Context) error {
 	l := r.l.Named("routine.poll")
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(r.pollInterval)
 	for {
 		select {
 		case <-ctx.Done():

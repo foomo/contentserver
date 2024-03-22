@@ -126,7 +126,7 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	r := repo.New(l,
 		testRepoServer.URL+"/repo-two-dimensions.json",
 		repo.NewHistory(l,
-			repo.HistoryWithVarDir(varDir),
+			repo.HistoryWithHistoryDir(varDir),
 		),
 	)
 	up := make(chan bool, 1)

@@ -34,22 +34,23 @@ func NewSocketCommand() *cobra.Command {
 			r := repo.New(l,
 				args[0],
 				repo.NewHistory(l,
-					repo.HistoryWithVarDir(v.GetString("history.dir")),
-					repo.HistoryWithMax(v.GetInt("history.limit")),
+					repo.HistoryWithHistoryDir(historyDirFlag(v)),
+					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
 				),
 				repo.WithHTTPClient(
 					keelhttp.NewHTTPClient(
 						keelhttp.HTTPClientWithTelemetry(),
 					),
 				),
-				repo.WithPollForUpdates(v.GetBool("poll")),
+				repo.WithPoll(pollFlag(v)),
+				repo.WithPollInterval(pollIntevalFlag(v)),
 			)
 
 			// create socket server
 			handle := handler.NewSocket(l, r)
 
 			// listen on socket
-			ln, err := net.Listen("tcp", v.GetString("address"))
+			ln, err := net.Listen("tcp", addressFlag(v))
 			if err != nil {
 				return err
 			}
@@ -62,7 +63,7 @@ func NewSocketCommand() *cobra.Command {
 			go r.Start(context.Background()) //nolint:errcheck
 			<-up
 
-			l.Info("started listening", zap.String("address", v.GetString("address")))
+			l.Info("started listening", zap.String("address", addressFlag(v)))
 
 			for {
 				// this blocks until connection or error
@@ -84,10 +85,12 @@ func NewSocketCommand() *cobra.Command {
 		},
 	}
 
-	addAddressFlag(cmd, v)
-	addPollFlag(cmd, v)
-	addHistoryDirFlag(cmd, v)
-	addHistoryLimitFlag(cmd, v)
+	flags := cmd.Flags()
+	addAddressFlag(flags, v)
+	addPollFlag(flags, v)
+	addPollIntervalFlag(flags, v)
+	addHistoryDirFlag(flags, v)
+	addHistoryLimitFlag(flags, v)
 
 	return cmd
 }

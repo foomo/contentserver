@@ -21,9 +21,9 @@ const (
 
 type (
 	History struct {
-		l      *zap.Logger
-		max    int
-		varDir string
+		l            *zap.Logger
+		historyDir   string
+		historyLimit int
 	}
 	HistoryOption func(*History)
 )
@@ -32,15 +32,15 @@ type (
 // ~ Options
 // ------------------------------------------------------------------------------------------------
 
-func HistoryWithMax(v int) HistoryOption {
+func HistoryWithHistoryLimit(v int) HistoryOption {
 	return func(o *History) {
-		o.max = v
+		o.historyLimit = v
 	}
 }
 
-func HistoryWithVarDir(v string) HistoryOption {
+func HistoryWithHistoryDir(v string) HistoryOption {
 	return func(o *History) {
-		o.varDir = v
+		o.historyDir = v
 	}
 }
 
@@ -50,9 +50,9 @@ func HistoryWithVarDir(v string) HistoryOption {
 
 func NewHistory(l *zap.Logger, opts ...HistoryOption) *History {
 	inst := &History{
-		l:      l,
-		max:    2,
-		varDir: "/var/lib/contentserver",
+		l:            l,
+		historyDir:   "/var/lib/contentserver",
+		historyLimit: 2,
 	}
 
 	for _, opt := range opts {
@@ -69,7 +69,7 @@ func NewHistory(l *zap.Logger, opts ...HistoryOption) *History {
 func (h *History) Add(jsonBytes []byte) error {
 	var (
 		// historiy file name
-		filename = path.Join(h.varDir, HistoryRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+HistoryRepoJSONSuffix)
+		filename = path.Join(h.historyDir, HistoryRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+HistoryRepoJSONSuffix)
 		err      = os.WriteFile(filename, jsonBytes, 0600)
 	)
 	if err != nil {
@@ -94,7 +94,7 @@ func (h *History) Add(jsonBytes []byte) error {
 }
 
 func (h *History) GetCurrentFilename() string {
-	return path.Join(h.varDir, HistoryRepoJSONPrefix+"current"+HistoryRepoJSONSuffix)
+	return path.Join(h.historyDir, HistoryRepoJSONPrefix+"current"+HistoryRepoJSONSuffix)
 }
 
 func (h *History) GetCurrent(buf *bytes.Buffer) (err error) {
@@ -112,7 +112,7 @@ func (h *History) GetCurrent(buf *bytes.Buffer) (err error) {
 // ------------------------------------------------------------------------------------------------
 
 func (h *History) getHistory() (files []string, err error) {
-	fileInfos, err := os.ReadDir(h.varDir)
+	fileInfos, err := os.ReadDir(h.historyDir)
 	if err != nil {
 		return
 	}
@@ -121,7 +121,7 @@ func (h *History) getHistory() (files []string, err error) {
 		if !f.IsDir() {
 			filename := f.Name()
 			if filename != currentName && (strings.HasPrefix(filename, HistoryRepoJSONPrefix) && strings.HasSuffix(filename, HistoryRepoJSONSuffix)) {
-				files = append(files, path.Join(h.varDir, filename))
+				files = append(files, path.Join(h.historyDir, filename))
 			}
 		}
 	}
@@ -130,7 +130,7 @@ func (h *History) getHistory() (files []string, err error) {
 }
 
 func (h *History) cleanup() error {
-	files, err := h.getFilesForCleanup(h.max)
+	files, err := h.getFilesForCleanup(h.historyLimit)
 	if err != nil {
 		return err
 	}

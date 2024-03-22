@@ -15,7 +15,7 @@ import (
 )
 
 func NewTestRepo(l *zap.Logger, url, varDir string) *Repo {
-	h := NewHistory(l, HistoryWithMax(2), HistoryWithVarDir(varDir))
+	h := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(varDir))
 	r := New(l, url, h)
 	go r.Start(context.Background()) //nolint:errcheck
 	time.Sleep(100 * time.Millisecond)
