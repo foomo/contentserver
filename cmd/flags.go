@@ -63,8 +63,8 @@ func pollIntevalFlag(v *viper.Viper) time.Duration {
 
 func addPollIntervalFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	flags.Duration("poll-interval", time.Minute, "Specifies the poll interval")
-	_ = v.BindPFlag("poll", flags.Lookup("poll-interval"))
-	_ = v.BindEnv("poll", "CONTENT_SERVER_POLL_INTERVAL")
+	_ = v.BindPFlag("poll.interval", flags.Lookup("poll-interval"))
+	_ = v.BindEnv("poll.interval", "CONTENT_SERVER_POLL_INTERVAL")
 }
 
 func historyDirFlag(v *viper.Viper) string {
