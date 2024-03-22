@@ -47,47 +47,16 @@ brews:
     test: |
       system "#{bin}/contentserver --version"
 
-docker_manifests:
-  # basic
-  - name_template: 'foomo/contentserver:latest'
-    image_templates:
-      - 'foomo/contentserver:{{ .Tag }}-amd64'
-      - 'foomo/contentserver:{{ .Tag }}-arm64'
-
-  - name_template: 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}'
-    image_templates:
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-amd64'
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-arm64'
-
-  - name_template: 'foomo/contentserver:{{ .Tag }}'
-    image_templates:
-      - 'foomo/contentserver:{{ .Tag }}-amd64'
-      - 'foomo/contentserver:{{ .Tag }}-arm64'
-
-  # alpine
-  - name_template: 'foomo/contentserver:latest-alpine'
-    image_templates:
-      - 'foomo/contentserver:{{ .Tag }}-alpine-amd64'
-      - 'foomo/contentserver:{{ .Tag }}-alpine-arm64'
-
-  - name_template: 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-alpine'
-    image_templates:
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-alpine-amd64'
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-alpine-arm64'
-
-  - name_template: 'foomo/contentserver:{{ .Tag }}-alpine'
-    image_templates:
-      - 'foomo/contentserver:{{ .Tag }}-alpine-amd64'
-      - 'foomo/contentserver:{{ .Tag }}-alpine-arm64'
 dockers:
   - use: buildx
     goos: linux
     goarch: amd64
     dockerfile: build/buildx.Dockerfile
     image_templates:
-      - 'foomo/contentserver:latest-amd64'
-      - 'foomo/contentserver:{{ .Tag }}-amd64'
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-amd64'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:latest-amd64{{ end }}'
+      - 'foomo/contentserver:{{ .Version }}-amd64'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}-amd64{{ end }}'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}.{{ .Minor }}-amd64{{ end }}'
     build_flag_templates:
       - '--pull'
       # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
@@ -106,60 +75,44 @@ dockers:
     goarch: arm64
     dockerfile: build/buildx.Dockerfile
     image_templates:
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:latest-arm64{{ end }}'
+      - 'foomo/contentserver:{{ .Version }}-arm64'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}-arm64{{ end }}'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}.{{ .Minor }}-arm64{{ end }}'
+    build_flag_templates:
+      - '--pull'
+      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+      - '--label=org.opencontainers.image.title={{.ProjectName}}'
+      - '--label=org.opencontainers.image.description=Serves content tree structures very quickly'
+      - '--label=org.opencontainers.image.source={{.GitURL}}'
+      - '--label=org.opencontainers.image.url={{.GitURL}}'
+      - '--label=org.opencontainers.image.documentation={{.GitURL}}'
+      - '--label=org.opencontainers.image.created={{.Date}}'
+      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
+      - '--label=org.opencontainers.image.version={{.Version}}'
+      - '--platform=linux/arm64'
+
+docker_manifests:
+  # basic
+  - name_template: 'foomo/contentserver:latest'
+    image_templates:
+      - 'foomo/contentserver:latest-amd64'
       - 'foomo/contentserver:latest-arm64'
-      - 'foomo/contentserver:{{ .Tag }}-arm64'
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-arm64'
-    build_flag_templates:
-      - '--pull'
-      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
-      - '--label=org.opencontainers.image.title={{.ProjectName}}'
-      - '--label=org.opencontainers.image.description=Serves content tree structures very quickly'
-      - '--label=org.opencontainers.image.source={{.GitURL}}'
-      - '--label=org.opencontainers.image.url={{.GitURL}}'
-      - '--label=org.opencontainers.image.documentation={{.GitURL}}'
-      - '--label=org.opencontainers.image.created={{.Date}}'
-      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
-      - '--label=org.opencontainers.image.version={{.Version}}'
-      - '--platform=linux/arm64'
+    skip_push: auto
 
-  - use: buildx
-    goos: linux
-    goarch: amd64
-    dockerfile: build/buildx-alpine.Dockerfile
+  - name_template: 'foomo/contentserver:{{ .Version }}'
     image_templates:
-      - 'foomo/contentserver:latest-alpine-amd64'
-      - 'foomo/contentserver:{{ .Tag }}-alpine-amd64'
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-alpine-amd64'
-    build_flag_templates:
-      - '--pull'
-      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
-      - '--label=org.opencontainers.image.title={{.ProjectName}}'
-      - '--label=org.opencontainers.image.description=Serves content tree structures very quickly'
-      - '--label=org.opencontainers.image.source={{.GitURL}}'
-      - '--label=org.opencontainers.image.url={{.GitURL}}'
-      - '--label=org.opencontainers.image.documentation={{.GitURL}}'
-      - '--label=org.opencontainers.image.created={{.Date}}'
-      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
-      - '--label=org.opencontainers.image.version={{.Version}}'
-      - '--platform=linux/amd64'
+      - 'foomo/contentserver:{{ .Version }}-amd64'
+      - 'foomo/contentserver:{{ .Version }}-arm64'
 
-  - use: buildx
-    goos: linux
-    goarch: arm64
-    dockerfile: build/buildx-alpine.Dockerfile
+  - name_template: 'foomo/contentserver:{{ .Major }}'
     image_templates:
-      - 'foomo/contentserver:latest-alpine-arm64'
-      - 'foomo/contentserver:{{ .Tag }}-alpine-arm64'
-      - 'foomo/contentserver:v{{ .Major }}.{{ .Minor }}-alpine-arm64'
-    build_flag_templates:
-      - '--pull'
-      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
-      - '--label=org.opencontainers.image.title={{.ProjectName}}'
-      - '--label=org.opencontainers.image.description=Serves content tree structures very quickly'
-      - '--label=org.opencontainers.image.source={{.GitURL}}'
-      - '--label=org.opencontainers.image.url={{.GitURL}}'
-      - '--label=org.opencontainers.image.documentation={{.GitURL}}'
-      - '--label=org.opencontainers.image.created={{.Date}}'
-      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
-      - '--label=org.opencontainers.image.version={{.Version}}'
-      - '--platform=linux/arm64'
+      - 'foomo/contentserver:{{ .Major }}-amd64'
+      - 'foomo/contentserver:{{ .Major }}-arm64'
+    skip_push: auto
+
+  - name_template: 'foomo/contentserver:{{ .Major }}.{{ .Minor }}'
+    image_templates:
+      - 'foomo/contentserver:{{ .Major }}.{{ .Minor }}-amd64'
+      - 'foomo/contentserver:{{ .Major }}.{{ .Minor }}-arm64'
+    skip_push: auto
