@@ -59,7 +59,7 @@ func NewHTTPCommand() *cobra.Command {
 			)
 
 			// start initial update and handle error
-			svr.AddReadinessHealthzers(healthz.NewHealthzerFn(func(ctx context.Context) error {
+			svr.AddStartupHealthzers(healthz.NewHealthzerFn(func(ctx context.Context) error {
 				if !r.Loaded() {
 					return errors.New("repo not ready yet")
 				}
