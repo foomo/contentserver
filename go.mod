@@ -3,7 +3,7 @@ module github.com/foomo/contentserver
 go 1.21
 
 require (
-	github.com/foomo/keel v0.17.4-0.20240315155218-1be83011f59e // #190 (1be8301) update otel
+	github.com/foomo/keel v0.17.4-0.20240322093729-5c5d32717bb4 // #190 (5c5d327) update otel
 	github.com/google/uuid v1.6.0
 	github.com/json-iterator/go v1.1.12
 	github.com/pkg/errors v0.9.1
@@ -16,7 +16,10 @@ require (
 	golang.org/x/sync v0.6.0
 )
 
-require golang.org/x/net v0.21.0
+require (
+	github.com/spf13/pflag v1.0.5
+	golang.org/x/net v0.21.0
+)
 
 require (
 	cloud.google.com/go v0.111.0 // indirect
@@ -84,7 +87,6 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tinylib/msgp v1.1.9 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect

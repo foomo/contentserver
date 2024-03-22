@@ -16,7 +16,7 @@ import (
 )
 
 func NewHTTPCommand() *cobra.Command {
-	v := NewViper()
+	v := newViper()
 	cmd := &cobra.Command{
 		Use:   "http <url>",
 		Short: "Start http server",
@@ -32,17 +32,18 @@ func NewHTTPCommand() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			svr := keel.NewServer(
-				keel.WithLogger(logger),
 				keel.WithHTTPReadmeService(true),
-				keel.WithHTTPPrometheusService(v.GetBool("prometheus.enabled")),
-				keel.WithHTTPHealthzService(v.GetBool("healthz.enabled")),
-				keel.WithPrometheusMeter(v.GetBool("prometheus.enabled")),
+				keel.WithHTTPPrometheusService(v.GetBool("service.prometheus.enabled")),
+				keel.WithHTTPHealthzService(v.GetBool("service.healthz.enabled")),
+				keel.WithPrometheusMeter(v.GetBool("service.prometheus.enabled")),
 				keel.WithOTLPGRPCTracer(v.GetBool("otel.enabled")),
 				keel.WithGracefulTimeout(v.GetDuration("graceful.timeout")),
 				keel.WithShutdownTimeout(v.GetDuration("shutdown.timeout")),
 			)
 
 			l := svr.Logger()
+
+			l.Error("test")
 
 			r := repo.New(l,
 				args[0],
@@ -91,12 +92,8 @@ func NewHTTPCommand() *cobra.Command {
 	addGracefulTimeoutFlag(cmd, v)
 	addShutdownTimeoutFlag(cmd, v)
 	addOtelEnabledFlag(cmd, v)
-	addHealthzEnabledFlag(cmd, v)
-	addPrometheusEnabledFlag(cmd, v)
+	addServiceHealthzEnabledFlag(cmd, v)
+	addServicePrometheusEnabledFlag(cmd, v)
 
 	return cmd
-}
-
-func init() {
-	rootCmd.AddCommand(NewHTTPCommand())
 }

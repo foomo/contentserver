@@ -6,6 +6,7 @@ import (
 
 	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/foomo/contentserver/pkg/repo"
+	"github.com/foomo/keel/log"
 	keelhttp "github.com/foomo/keel/net/http"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,7 +29,7 @@ func NewSocketCommand() *cobra.Command {
 			return comps, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			l := logger
+			l := log.Logger()
 
 			r := repo.New(l,
 				args[0],
@@ -89,8 +90,4 @@ func NewSocketCommand() *cobra.Command {
 	addHistoryLimitFlag(cmd, v)
 
 	return cmd
-}
-
-func init() {
-	rootCmd.AddCommand(NewSocketCommand())
 }

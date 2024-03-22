@@ -15,11 +15,6 @@ RUN git config --global --add safe.directory '*'
 COPY contentserver /usr/bin/
 ENTRYPOINT ["/usr/bin/contentserver"]
 
-ENV CONTENT_SERVER_ADDRESS=0.0.0.0:8080
-ENV CONTENT_SERVER_VAR_DIR=/var/lib/contentserver
-ENV LOG_JSON=1
-
 EXPOSE 8080
 EXPOSE 9200
-
-CMD ["-address=$CONTENT_SERVER_ADDRESS", "-var-dir=$CONTENT_SERVER_VAR_DIR"]
+EXPOSE 9400
