@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestUpdate(t *testing.T) {
@@ -118,6 +119,22 @@ func benchmarkClientAndServerGetContent(tb testing.TB, numGroups, numCalls int, 
 	}
 	// Wait for all HTTP fetches to complete.
 	wg.Wait()
+}
+
+func testWithClients(t *testing.T, testFunc func(c *client.Client)) {
+	t.Helper()
+	l := zaptest.NewLogger(t)
+	httpRepoServer := initHTTPRepoServer(t, l)
+	socketRepoServer := initSocketRepoServer(t, l)
+	httpClient := newHTTPClient(t, httpRepoServer)
+	socketClient := newSocketClient(t, socketRepoServer.Addr().String())
+	defer func() {
+		httpClient.Close()
+		socketClient.Close()
+		socketRepoServer.Close()
+	}()
+	testFunc(httpClient)
+	testFunc(socketClient)
 }
 
 func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {

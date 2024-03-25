@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -45,7 +46,13 @@ func NewSocket(l *zap.Logger, repo *repo.Repo) *Socket {
 func (h *Socket) Serve(conn net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
-			h.l.Error("panic in handle connection", zap.String("error", fmt.Sprint(r)))
+			if err, ok := r.(error); ok {
+				if !errors.Is(err, io.EOF) {
+					h.l.Error("panic in handle connection", zap.Error(err))
+				}
+			} else {
+				h.l.Error("panic in handle connection", zap.String("error", fmt.Sprint(r)))
+			}
 		}
 	}()
 

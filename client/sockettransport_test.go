@@ -1,11 +1,13 @@
 package client_test
 
 import (
+	"net"
 	"testing"
 	"time"
 
 	"github.com/foomo/contentserver/client"
 	"github.com/foomo/contentserver/pkg/handler"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -14,8 +16,10 @@ import (
 
 func BenchmarkSocketClientAndServerGetContent(b *testing.B) {
 	l := zaptest.NewLogger(b)
-	server := initSocketRepoServer(b, l)
-	socketClient := newSocketClient(b, server)
+	socketServer := initSocketRepoServer(b, l)
+	socketClient := newSocketClient(b, socketServer.Addr().String())
+	defer socketClient.Close()
+	defer socketServer.Close()
 	benchmarkServerAndClientGetContent(b, 30, 100, socketClient)
 }
 
@@ -24,7 +28,7 @@ func newSocketClient(tb testing.TB, address string) *client.Client {
 	return client.New(client.NewSocketTransport(address, 25, 100*time.Millisecond))
 }
 
-func initSocketRepoServer(tb testing.TB, l *zap.Logger) string {
+func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 	tb.Helper()
 	r := initRepo(tb, l)
 	h := handler.NewSocket(l, r)
@@ -38,7 +42,9 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) string {
 		for {
 			// this blocks until connection or error
 			conn, err := ln.Accept()
-			if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			} else if err != nil {
 				tb.Error("runSocketServer: could not accept connection", err.Error())
 				continue
 			}
@@ -52,5 +58,5 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) string {
 		}
 	}()
 
-	return ln.Addr().String()
+	return ln
 }

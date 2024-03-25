@@ -57,19 +57,6 @@ func newHTTPClient(tb testing.TB, server *httptest.Server) *client.Client {
 	return c
 }
 
-func testWithClients(t *testing.T, testFunc func(c *client.Client)) {
-	t.Helper()
-	l := zaptest.NewLogger(t)
-	httpRepoServer := initHTTPRepoServer(t, l)
-	socketRepoServer := initSocketRepoServer(t, l)
-	httpClient := newHTTPClient(t, httpRepoServer)
-	socketClient := newSocketClient(t, socketRepoServer)
-	defer httpClient.Close()
-	defer socketClient.Close()
-	testFunc(httpClient)
-	testFunc(socketClient)
-}
-
 func initHTTPRepoServer(tb testing.TB, l *zap.Logger) *httptest.Server {
 	tb.Helper()
 	r := initRepo(tb, l)
