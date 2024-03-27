@@ -58,13 +58,15 @@ func NewHTTPCommand() *cobra.Command {
 				repo.WithPoll(pollFlag(v)),
 			)
 
-			// start initial update and handle error
-			svr.AddStartupHealthzers(healthz.NewHealthzerFn(func(ctx context.Context) error {
+			isLoadedHealtherFn := healthz.NewHealthzerFn(func(ctx context.Context) error {
 				if !r.Loaded() {
-					return errors.New("repo not ready yet")
+					return errors.New("repo not loaded yet")
 				}
 				return nil
-			}))
+			})
+			// start initial update and handle error
+			svr.AddStartupHealthzers(isLoadedHealtherFn)
+			svr.AddReadinessHealthzers(isLoadedHealtherFn)
 
 			svr.AddServices(
 				service.NewGoRoutine(l, "repo", func(ctx context.Context, l *zap.Logger) error {

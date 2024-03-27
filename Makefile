@@ -1,5 +1,5 @@
--include .makerc
 .DEFAULT_GOAL:=help
+-include .makerc
 
 # --- Targets -----------------------------------------------------------------
 
