@@ -1,9 +1,0 @@
-language: go
-go: "1.18"
-os:
-  - linux
-dist: trusty
-sudo: false
-install: true
-script:
-  - make test
