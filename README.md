@@ -79,6 +79,12 @@ Usage of contentserver:
     	path to export the webserver on - useful when behind a proxy (default "/contentserver")
 ```
 
+## How to Contribute
+
+Make a pull request...
+
 ## License
 
-Copyright (c) foomo under the LGPL 3.0 license.
+Distributed under LGPL 3.0 License, please see license file within the code for more details.
+
+_Made with ♥ [foomo](https://www.foomo.org) by [bestbytes](https://www.bestbytes.com)_
