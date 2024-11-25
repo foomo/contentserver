@@ -18,7 +18,7 @@ import (
 )
 
 func TestUpdate(t *testing.T) {
-	testWithClients(t, func(c *client.Client) {
+	testWithClients(t, func(t *testing.T, c *client.Client) {
 		response, err := c.Update(context.TODO())
 		require.NoError(t, err)
 		require.True(t, response.Success, "update has to return .Sucesss true")
@@ -28,7 +28,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestGetURIs(t *testing.T) {
-	testWithClients(t, func(c *client.Client) {
+	testWithClients(t, func(t *testing.T, c *client.Client) {
 		request := mock.MakeValidURIsRequest()
 		uriMap, err := c.GetURIs(context.TODO(), request.Dimension, request.IDs)
 		time.Sleep(100 * time.Millisecond)
@@ -38,7 +38,7 @@ func TestGetURIs(t *testing.T) {
 }
 
 func TestGetRepo(t *testing.T) {
-	testWithClients(t, func(c *client.Client) {
+	testWithClients(t, func(t *testing.T, c *client.Client) {
 		r, err := c.GetRepo(context.TODO())
 		require.NoError(t, err)
 		if assert.NotEmpty(t, r, "received empty JSON from GetRepo") {
@@ -48,7 +48,7 @@ func TestGetRepo(t *testing.T) {
 }
 
 func TestGetNodes(t *testing.T) {
-	testWithClients(t, func(c *client.Client) {
+	testWithClients(t, func(t *testing.T, c *client.Client) {
 		nodesRequest := mock.MakeNodesRequest()
 		nodes, err := c.GetNodes(context.TODO(), nodesRequest.Env, nodesRequest.Nodes)
 		require.NoError(t, err)
@@ -67,20 +67,12 @@ func TestGetNodes(t *testing.T) {
 }
 
 func TestGetContent(t *testing.T) {
-	testWithClients(t, func(c *client.Client) {
+	testWithClients(t, func(t *testing.T, c *client.Client) {
 		request := mock.MakeValidContentRequest()
 		response, err := c.GetContent(context.TODO(), request)
-		if err != nil {
-			t.Fatal("unexpected err", err)
-		}
-		if request.URI != response.URI {
-			dump(t, request)
-			dump(t, response)
-			t.Fatal("uri mismatch")
-		}
-		if response.Status != content.StatusOk {
-			t.Fatal("unexpected status")
-		}
+		require.NoError(t, err)
+		assert.Equal(t, request.URI, response.URI)
+		assert.Equal(t, response.Status, content.StatusOk)
 	})
 }
 
@@ -121,7 +113,7 @@ func benchmarkClientAndServerGetContent(tb testing.TB, numGroups, numCalls int, 
 	wg.Wait()
 }
 
-func testWithClients(t *testing.T, testFunc func(c *client.Client)) {
+func testWithClients(t *testing.T, testFunc func(t *testing.T, c *client.Client)) {
 	t.Helper()
 	l := zaptest.NewLogger(t)
 	httpRepoServer := initHTTPRepoServer(t, l)
@@ -129,12 +121,13 @@ func testWithClients(t *testing.T, testFunc func(c *client.Client)) {
 	httpClient := newHTTPClient(t, httpRepoServer)
 	socketClient := newSocketClient(t, socketRepoServer.Addr().String())
 	defer func() {
+		httpRepoServer.Close()
+		socketRepoServer.Close()
 		httpClient.Close()
 		socketClient.Close()
-		socketRepoServer.Close()
 	}()
-	testFunc(httpClient)
-	testFunc(socketClient)
+	testFunc(t, httpClient)
+	testFunc(t, socketClient)
 }
 
 func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {

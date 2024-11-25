@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -124,7 +123,7 @@ func TestLoadRepoDuplicateUris(t *testing.T) {
 	response := r.Update()
 	require.False(t, response.Success, "there are duplicates, this repo update should have failed")
 
-	assert.True(t, strings.Contains(response.ErrorMessage, "update dimension"), "error message not as expected: "+response.ErrorMessage)
+	assert.Contains(t, response.ErrorMessage, "update dimension")
 }
 
 func TestDimensionHygiene(t *testing.T) {
