@@ -2,7 +2,6 @@ package client_test
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -19,6 +18,7 @@ import (
 
 func TestUpdate(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		response, err := c.Update(context.TODO())
 		require.NoError(t, err)
 		require.True(t, response.Success, "update has to return .Sucesss true")
@@ -29,6 +29,7 @@ func TestUpdate(t *testing.T) {
 
 func TestGetURIs(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		request := mock.MakeValidURIsRequest()
 		uriMap, err := c.GetURIs(context.TODO(), request.Dimension, request.IDs)
 		time.Sleep(100 * time.Millisecond)
@@ -39,16 +40,18 @@ func TestGetURIs(t *testing.T) {
 
 func TestGetRepo(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		r, err := c.GetRepo(context.TODO())
 		require.NoError(t, err)
 		if assert.NotEmpty(t, r, "received empty JSON from GetRepo") {
-			assert.Equal(t, 1.0, r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64), "failed to drill deep for data") //nolint:forcetypeassert
+			assert.Equal(t, 1.0, r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64), "failed to drill deep for data") //nolint:all
 		}
 	})
 }
 
 func TestGetNodes(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		nodesRequest := mock.MakeNodesRequest()
 		nodes, err := c.GetNodes(context.TODO(), nodesRequest.Env, nodesRequest.Nodes)
 		require.NoError(t, err)
@@ -68,11 +71,12 @@ func TestGetNodes(t *testing.T) {
 
 func TestGetContent(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		request := mock.MakeValidContentRequest()
 		response, err := c.GetContent(context.TODO(), request)
 		require.NoError(t, err)
 		assert.Equal(t, request.URI, response.URI)
-		assert.Equal(t, response.Status, content.StatusOk)
+		assert.Equal(t, content.StatusOk, response.Status)
 	})
 }
 
@@ -148,12 +152,12 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	return r
 }
 
-func dump(t *testing.T, v interface{}) {
-	t.Helper()
-	jsonBytes, err := json.MarshalIndent(v, "", "	")
-	if err != nil {
-		t.Fatal("could not dump v", v, "err", err)
-		return
-	}
-	t.Log(string(jsonBytes))
-}
+// func dump(t *testing.T, v interface{}) {
+// 	t.Helper()
+// 	jsonBytes, err := json.MarshalIndent(v, "", "	")
+// 	if err != nil {
+// 		t.Fatal("could not dump v", v, "err", err)
+// 		return
+// 	}
+// 	t.Log(string(jsonBytes))
+// }

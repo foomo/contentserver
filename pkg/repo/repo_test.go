@@ -183,7 +183,7 @@ func TestGetNodesExposeHidden(t *testing.T) {
 	_, ok = testNode.Item.Data["foo"]
 	require.True(t, ok, "failed to fetch test data")
 
-	require.Equal(t, 2, len(testNode.Nodes))
+	require.Len(t, testNode.Nodes, 2)
 }
 
 func TestResolveContent(t *testing.T) {

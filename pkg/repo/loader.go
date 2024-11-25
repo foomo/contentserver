@@ -60,7 +60,7 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 
 			l.Info("update started")
 
-			repoRuntime, err := r.update(context.Background())
+			repoRuntime, err := r.update(context.WithoutCancel(ctx))
 			if err != nil {
 				l.Error("update failed", zap.Error(err))
 				metrics.UpdatesFailedCounter.WithLabelValues().Inc()
@@ -277,12 +277,11 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 			)
 			// already up to date
 			return repoRuntime, nil
-		} else {
-			r.l.Info(
-				"new repo poll version",
-				zap.String("pollVersion", r.pollVersion),
-			)
 		}
+		r.l.Info(
+			"new repo poll version",
+			zap.String("pollVersion", r.pollVersion),
+		)
 	}
 
 	err = r.get(ctx, repoURL)

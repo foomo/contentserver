@@ -46,7 +46,7 @@ func NewHTTPClient(url string) (c *Client, err error) {
 	}
 
 	// validate url
-	if !utils.IsValidUrl(url) {
+	if !utils.IsValidURL(url) {
 		return nil, ErrInvalidServerURL
 	}
 

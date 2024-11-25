@@ -4,7 +4,7 @@ import (
 	"net/url"
 )
 
-func IsValidUrl(str string) bool {
+func IsValidURL(str string) bool {
 	u, err := url.Parse(str)
 
 	if u.Scheme != "http" && u.Scheme != "https" {
