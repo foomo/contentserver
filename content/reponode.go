@@ -25,23 +25,23 @@ type RepoNode struct {
 // // NewRepoNode constructor
 // func NewRepoNode() *RepoNode {
 // 	return &RepoNode{
-// 		Data:  make(map[string]interface{}, 0), // set initial size to zero explicitely?
+// 		Data:  make(map[string]interface{}, 0), // set initial size to zero explicitly?
 // 		Nodes: make(map[string]*RepoNode, 0),
 // 	}
 // }
 
 // WireParents helper method to reference from child to parent in a tree
 // recursively
-func (node *RepoNode) WireParents() {
-	for _, childNode := range node.Nodes {
-		childNode.parent = node
+func (n *RepoNode) WireParents() {
+	for _, childNode := range n.Nodes {
+		childNode.parent = n
 		childNode.WireParents()
 	}
 }
 
 // InPath is the given node in a path
-func (node *RepoNode) InPath(path []*Item) bool {
-	myParentID := node.parent.ID
+func (n *RepoNode) InPath(path []*Item) bool {
+	myParentID := n.parent.ID
 	for _, pathItem := range path {
 		if pathItem.ID == myParentID {
 			return true
@@ -51,17 +51,16 @@ func (node *RepoNode) InPath(path []*Item) bool {
 }
 
 // GetPath get a path for a repo node
-func (node *RepoNode) GetPath(dataFields []string) []*Item {
-
+func (n *RepoNode) GetPath(dataFields []string) []*Item {
 	var (
-		parentNode = node.parent
+		parentNode = n.parent
 		pathLength = 0
 	)
 	for parentNode != nil {
 		parentNode = parentNode.parent
 		pathLength++
 	}
-	parentNode = node.parent
+	parentNode = n.parent
 
 	var (
 		i    = 0
@@ -81,19 +80,19 @@ func (node *RepoNode) GetPath(dataFields []string) []*Item {
 }
 
 // ToItem convert a repo node to a simple repo item
-func (node *RepoNode) ToItem(dataFields []string) *Item {
+func (n *RepoNode) ToItem(dataFields []string) *Item {
 	item := NewItem()
-	item.ID = node.ID
-	item.Name = node.Name
-	item.MimeType = node.MimeType
-	item.Hidden = node.Hidden
-	item.URI = node.URI
-	item.Groups = node.Groups
+	item.ID = n.ID
+	item.Name = n.Name
+	item.MimeType = n.MimeType
+	item.Hidden = n.Hidden
+	item.URI = n.URI
+	item.Groups = n.Groups
 	if dataFields == nil {
-		item.Data = node.Data
+		item.Data = n.Data
 	} else {
 		for _, dataField := range dataFields {
-			if data, ok := node.Data[dataField]; ok {
+			if data, ok := n.Data[dataField]; ok {
 				item.Data[dataField] = data
 			}
 		}
@@ -102,23 +101,23 @@ func (node *RepoNode) ToItem(dataFields []string) *Item {
 }
 
 // GetParent get the parent node of a node
-func (node *RepoNode) GetParent() *RepoNode {
-	return node.parent
+func (n *RepoNode) GetParent() *RepoNode {
+	return n.parent
 }
 
 // AddNode adds a named child node
-func (node *RepoNode) AddNode(name string, childNode *RepoNode) *RepoNode {
-	node.Nodes[name] = childNode
-	return node
+func (n *RepoNode) AddNode(name string, childNode *RepoNode) *RepoNode {
+	n.Nodes[name] = childNode
+	return n
 }
 
 // IsOneOfTheseMimeTypes is the node one of the given mime types
-func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
+func (n *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 	if len(mimeTypes) == 0 {
 		return true
 	}
 	for _, mimeType := range mimeTypes {
-		if mimeType == node.MimeType {
+		if mimeType == n.MimeType {
 			return true
 		}
 	}
@@ -127,14 +126,14 @@ func (node *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 
 // CanBeAccessedByGroups can this node be accessed by at least one the given
 // groups
-func (node *RepoNode) CanBeAccessedByGroups(groups []string) bool {
+func (n *RepoNode) CanBeAccessedByGroups(groups []string) bool {
 	// no groups set on node => anybody can access it
-	if len(node.Groups) == 0 {
+	if len(n.Groups) == 0 {
 		return true
 	}
 
 	for _, group := range groups {
-		for _, myGroup := range node.Groups {
+		for _, myGroup := range n.Groups {
 			if group == myGroup {
 				return true
 			}
@@ -144,10 +143,10 @@ func (node *RepoNode) CanBeAccessedByGroups(groups []string) bool {
 }
 
 // PrintNode essentially a recursive dump
-func (node *RepoNode) PrintNode(id string, level int) {
+func (n *RepoNode) PrintNode(id string, level int) {
 	prefix := strings.Repeat(Indent, level)
-	fmt.Printf("%s %s %s:\n", prefix, id, node.Name)
-	for key, childNode := range node.Nodes {
+	fmt.Printf("%s %s %s:\n", prefix, id, n.Name)
+	for key, childNode := range n.Nodes {
 		childNode.PrintNode(key, level+1)
 	}
 }

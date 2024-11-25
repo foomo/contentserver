@@ -1,0 +1,118 @@
+project_name: contentserver
+
+release:
+  github:
+    owner: foomo
+    name: contentserver
+  prerelease: auto
+
+builds:
+  - binary: contentserver
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - '7'
+    env:
+      - CGO_ENABLED=0
+    main: ./main.go
+    flags:
+      - -trimpath
+    ldflags: -s -w -X github.com/foomo/contentserver/cmd.version={{.Version}}
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+
+changelog:
+  use: github-native
+
+brews:
+  # Repository to push the tap to.
+  - repository:
+      owner: foomo
+      name: homebrew-tap
+    caveats: "sesamy --help"
+    homepage: "https://github.com/foomo/contentserver"
+    description: "Serves content tree structures very quickly"
+    test: |
+      system "#{bin}/contentserver --version"
+
+dockers:
+  - use: buildx
+    goos: linux
+    goarch: amd64
+    dockerfile: build/buildx.Dockerfile
+    image_templates:
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:latest-amd64{{ end }}'
+      - 'foomo/contentserver:{{ .Version }}-amd64'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}-amd64{{ end }}'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}.{{ .Minor }}-amd64{{ end }}'
+    build_flag_templates:
+      - '--pull'
+      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+      - '--label=org.opencontainers.image.title={{.ProjectName}}'
+      - '--label=org.opencontainers.image.description=Serves content tree structures very quickly'
+      - '--label=org.opencontainers.image.source={{.GitURL}}'
+      - '--label=org.opencontainers.image.url={{.GitURL}}'
+      - '--label=org.opencontainers.image.documentation={{.GitURL}}'
+      - '--label=org.opencontainers.image.created={{.Date}}'
+      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
+      - '--label=org.opencontainers.image.version={{.Version}}'
+      - '--platform=linux/amd64'
+
+  - use: buildx
+    goos: linux
+    goarch: arm64
+    dockerfile: build/buildx.Dockerfile
+    image_templates:
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:latest-arm64{{ end }}'
+      - 'foomo/contentserver:{{ .Version }}-arm64'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}-arm64{{ end }}'
+      - '{{ if eq .Prerelease "" }}foomo/contentserver:{{ .Major }}.{{ .Minor }}-arm64{{ end }}'
+    build_flag_templates:
+      - '--pull'
+      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+      - '--label=org.opencontainers.image.title={{.ProjectName}}'
+      - '--label=org.opencontainers.image.description=Serves content tree structures very quickly'
+      - '--label=org.opencontainers.image.source={{.GitURL}}'
+      - '--label=org.opencontainers.image.url={{.GitURL}}'
+      - '--label=org.opencontainers.image.documentation={{.GitURL}}'
+      - '--label=org.opencontainers.image.created={{.Date}}'
+      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
+      - '--label=org.opencontainers.image.version={{.Version}}'
+      - '--platform=linux/arm64'
+
+docker_manifests:
+  # basic
+  - name_template: 'foomo/contentserver:latest'
+    image_templates:
+      - 'foomo/contentserver:latest-amd64'
+      - 'foomo/contentserver:latest-arm64'
+    skip_push: auto
+
+  - name_template: 'foomo/contentserver:{{ .Version }}'
+    image_templates:
+      - 'foomo/contentserver:{{ .Version }}-amd64'
+      - 'foomo/contentserver:{{ .Version }}-arm64'
+
+  - name_template: 'foomo/contentserver:{{ .Major }}'
+    image_templates:
+      - 'foomo/contentserver:{{ .Major }}-amd64'
+      - 'foomo/contentserver:{{ .Major }}-arm64'
+    skip_push: auto
+
+  - name_template: 'foomo/contentserver:{{ .Major }}.{{ .Minor }}'
+    image_templates:
+      - 'foomo/contentserver:{{ .Major }}.{{ .Minor }}-amd64'
+      - 'foomo/contentserver:{{ .Major }}.{{ .Minor }}-arm64'
+    skip_push: auto

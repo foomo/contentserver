@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -8,36 +9,35 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/foomo/contentserver/responses"
-	"github.com/foomo/contentserver/server"
-	jsoniter "github.com/json-iterator/go"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type connReturn struct {
 	conn net.Conn
 	err  error
 }
 
-type socketTransport struct {
+type SocketTransport struct {
 	connPool *connectionPool
 }
 
-func NewSocketTransport(server string, connectionPoolSize int, waitTimeout time.Duration) transport {
-	return &socketTransport{
-		connPool: newConnectionPool(server, connectionPoolSize, waitTimeout),
+// ------------------------------------------------------------------------------------------------
+// ~ Constructor
+// ------------------------------------------------------------------------------------------------
+
+func NewSocketTransport(url string, connectionPoolSize int, waitTimeout time.Duration) *SocketTransport {
+	return &SocketTransport{
+		connPool: newConnectionPool(url, connectionPoolSize, waitTimeout),
 	}
 }
 
-func (st *socketTransport) shutdown() {
-	if st.connPool.chanDrainPool != nil {
-		st.connPool.chanDrainPool <- 1
-	}
-}
+// ------------------------------------------------------------------------------------------------
+// ~ Public methods
+// ------------------------------------------------------------------------------------------------
 
-func (c *socketTransport) call(handler server.Handler, request interface{}, response interface{}) error {
-	if c.connPool.chanDrainPool == nil {
+func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request interface{}, response interface{}) error {
+	if t.connPool.chanDrainPool == nil {
 		return errors.New("connection pool has been drained, client is dead")
 	}
 	jsonBytes, err := json.Marshal(request)
@@ -45,19 +45,19 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 		return fmt.Errorf("could not marshal request : %q", err)
 	}
 	netChan := make(chan net.Conn)
-	c.connPool.chanConnGet <- netChan
+	t.connPool.chanConnGet <- netChan
 	conn := <-netChan
 	if conn == nil {
 		return errors.New("could not get a connection")
 	}
 	returnConn := func(err error) {
-		c.connPool.chanConnReturn <- connReturn{
+		t.connPool.chanConnReturn <- connReturn{
 			conn: conn,
 			err:  err,
 		}
 	}
 	// write header result will be like handler:2{}
-	jsonBytes = append([]byte(fmt.Sprintf("%s:%d", handler, len(jsonBytes))), jsonBytes...)
+	jsonBytes = append([]byte(fmt.Sprintf("%s:%d", route, len(jsonBytes))), jsonBytes...)
 
 	// send request
 	var (
@@ -83,7 +83,7 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 		n, err := conn.Read(buf)
 		if err != nil && err != io.EOF {
 			returnConn(err)
-			return fmt.Errorf("an error occured while reading the response: %q", err)
+			return fmt.Errorf("an error occurred while reading the response: %q", err)
 		}
 		if n == 0 {
 			break
@@ -124,4 +124,10 @@ func (c *socketTransport) call(handler server.Handler, request interface{}, resp
 	}
 	returnConn(nil)
 	return nil
+}
+
+func (t *SocketTransport) Close() {
+	if t.connPool.chanDrainPool != nil {
+		t.connPool.chanDrainPool <- 1
+	}
 }
