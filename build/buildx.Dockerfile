@@ -1,8 +1,9 @@
 FROM alpine:3.20.3
 
 RUN apk --no-cache add ca-certificates
-RUN addgroup -S contentserver && \
-    adduser -S -g contentserver contentserver
+
+RUN addgroup --system --gid 1001 contentserver
+RUN adduser --system --uid 1001 contentserver
 
 COPY contentserver /usr/bin/
 
@@ -11,4 +12,5 @@ RUN mkdir "/var/lib/contentserver" && \
     chown contentserver:contentserver "/var/lib/contentserver"
 
 USER contentserver
+
 ENTRYPOINT ["contentserver"]
