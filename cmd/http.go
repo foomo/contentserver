@@ -32,20 +32,18 @@ func NewHTTPCommand() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			svr := keel.NewServer(
-				keel.WithHTTPReadmeService(true),
 				keel.WithHTTPPrometheusService(servicePrometheusEnabledFlag(v)),
 				keel.WithHTTPHealthzService(serviceHealthzEnabledFlag(v)),
 				keel.WithPrometheusMeter(servicePrometheusEnabledFlag(v)),
-				keel.WithOTLPGRPCTracer(otelEnabledFlag(v)),
-				keel.WithGracefulPeriod(gracefulTimeoutFlag(v)),
 				keel.WithGracefulPeriod(gracefulPeriodFlag(v)),
+				keel.WithOTLPGRPCTracer(otelEnabledFlag(v)),
 			)
 
 			l := svr.Logger()
 
-			r := repo.New(l,
+			r := repo.New(l.Named("inst.repo"),
 				args[0],
-				repo.NewHistory(l,
+				repo.NewHistory(l.Named("inst.history"),
 					repo.HistoryWithHistoryDir(historyDirFlag(v)),
 					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
 				),
@@ -69,11 +67,11 @@ func NewHTTPCommand() *cobra.Command {
 			svr.AddReadinessHealthzers(isLoadedHealtherFn)
 
 			svr.AddServices(
-				service.NewGoRoutine(l, "repo", func(ctx context.Context, l *zap.Logger) error {
+				service.NewGoRoutine(l.Named("go.repo"), "repo", func(ctx context.Context, l *zap.Logger) error {
 					return r.Start(ctx)
 				}),
-				service.NewHTTP(l, "http", addressFlag(v),
-					handler.NewHTTP(l, r, handler.WithBasePath(basePathFlag(v))),
+				service.NewHTTP(l.Named("svc.http"), "http", addressFlag(v),
+					handler.NewHTTP(l.Named("inst.handler"), r, handler.WithBasePath(basePathFlag(v))),
 					middleware.Telemetry(),
 					middleware.Logger(),
 					middleware.Recover(),
@@ -92,7 +90,6 @@ func NewHTTPCommand() *cobra.Command {
 	addPollIntervalFlag(flags, v)
 	addHistoryDirFlag(flags, v)
 	addHistoryLimitFlag(flags, v)
-	addGracefulTimeoutFlag(flags, v)
 	addShutdownTimeoutFlag(flags, v)
 	addOtelEnabledFlag(flags, v)
 	addServiceHealthzEnabledFlag(flags, v)
