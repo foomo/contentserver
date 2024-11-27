@@ -1,4 +1,4 @@
-[![Build Status](https://github.com/foomo/contentserver/actions/workflows/test.yml/badge.svg?branch=main&event=push)](https://github.com/foomo/contentserver/actions/workflows/test.yml)
+[![Build Status](https://github.com/foomo/contentserver/actions/workflows/pr.yml/badge.svg?branch=main&event=push)](https://github.com/foomo/contentserver/actions/workflows/pr.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/foomo/contentserver)](https://goreportcard.com/report/github.com/foomo/contentserver)
 [![Coverage Status](https://coveralls.io/repos/github/foomo/contentserver/badge.svg?branch=main&)](https://coveralls.io/github/foomo/contentserver?branch=main)
 [![GoDoc](https://godoc.org/github.com/foomo/contentserver?status.svg)](https://godoc.org/github.com/foomo/contentserver)
