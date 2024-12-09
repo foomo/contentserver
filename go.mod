@@ -3,7 +3,7 @@ module github.com/foomo/contentserver
 go 1.23.0
 
 require (
-	github.com/foomo/keel v0.19.0
+	github.com/foomo/keel v0.19.1
 	github.com/google/uuid v1.6.0
 	github.com/json-iterator/go v1.1.12
 	github.com/pkg/errors v0.9.1
