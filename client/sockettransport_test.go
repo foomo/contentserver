@@ -8,7 +8,6 @@ import (
 	"github.com/foomo/contentserver/client"
 	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -36,8 +35,12 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 
 	// listen on socket
 	ln, err := nettest.NewLocalListener("tcp")
-
 	require.NoError(tb, err)
+
+	go func() {
+		<-tb.Context().Done()
+		_ = ln.Close()
+	}()
 
 	go func() {
 		for {
@@ -54,7 +57,6 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 			go func() {
 				l.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
 				h.Serve(conn)
-				assert.NoError(tb, conn.Close())
 			}()
 		}
 	}()
