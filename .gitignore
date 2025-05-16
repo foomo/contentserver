@@ -1,14 +1,28 @@
 .*
+*.zip
+*.tar
+*.out
 *.log
-!.github/
-!.husky/
-!.editorconfig
+/bin/
+/tmp/
+
+## Git
+!.gitkeep
 !.gitignore
+
+## GitHub
+!.github/
+
+## Editorconfig
+!.editorconfig
+
+## Husky
+!.husky/
+!.husky.yaml
+
+## Ownbrew
+!.ownbrew.yaml
+
+## Golang
 !.golangci.yml
 !.goreleaser.yml
-!.husky.yaml
-!.yamllint.yaml
-/bin/
-/coverage.out
-/coverage.html
-/tmp/
