@@ -62,11 +62,8 @@ func (h *Socket) Serve(conn net.Conn) {
 	var (
 		headerBuffer [1]byte
 		header       = ""
-		i            = 0
 	)
 	for {
-		i++
-		// fmt.Println("---->", i)
 		// let us read with 1 byte steps on conn until we find "{"
 		_, readErr := conn.Read(headerBuffer[0:])
 		if readErr != nil {
