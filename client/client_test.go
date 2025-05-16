@@ -1,7 +1,6 @@
 package client_test
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -19,7 +18,7 @@ import (
 func TestUpdate(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
-		response, err := c.Update(context.TODO())
+		response, err := c.Update(t.Context())
 		require.NoError(t, err)
 		require.True(t, response.Success, "update has to return .Sucesss true")
 		assert.Greater(t, response.Stats.OwnRuntime, 0.0)
@@ -31,7 +30,7 @@ func TestGetURIs(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		request := mock.MakeValidURIsRequest()
-		uriMap, err := c.GetURIs(context.TODO(), request.Dimension, request.IDs)
+		uriMap, err := c.GetURIs(t.Context(), request.Dimension, request.IDs)
 		time.Sleep(100 * time.Millisecond)
 		require.NoError(t, err)
 		assert.Equal(t, "/a", uriMap[request.IDs[0]])
@@ -41,7 +40,7 @@ func TestGetURIs(t *testing.T) {
 func TestGetRepo(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
-		r, err := c.GetRepo(context.TODO())
+		r, err := c.GetRepo(t.Context())
 		require.NoError(t, err)
 		if assert.NotEmpty(t, r, "received empty JSON from GetRepo") {
 			assert.InDelta(t, 1.0, r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64), 0, "failed to drill deep for data") //nolint:forcetypeassert
@@ -53,7 +52,7 @@ func TestGetNodes(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		nodesRequest := mock.MakeNodesRequest()
-		nodes, err := c.GetNodes(context.TODO(), nodesRequest.Env, nodesRequest.Nodes)
+		nodes, err := c.GetNodes(t.Context(), nodesRequest.Env, nodesRequest.Nodes)
 		require.NoError(t, err)
 		testNode, ok := nodes["test"]
 		if !ok {
@@ -73,7 +72,7 @@ func TestGetContent(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		request := mock.MakeValidContentRequest()
-		response, err := c.GetContent(context.TODO(), request)
+		response, err := c.GetContent(t.Context(), request)
 		require.NoError(t, err)
 		assert.Equal(t, request.URI, response.URI)
 		assert.Equal(t, content.StatusOk, response.Status)
@@ -101,7 +100,7 @@ func benchmarkClientAndServerGetContent(tb testing.TB, numGroups, numCalls int, 
 			defer wg.Done()
 			request := mock.MakeValidContentRequest()
 			for i := 0; i < numCalls; i++ {
-				response, err := client.GetContent(context.TODO(), request)
+				response, err := client.GetContent(tb.Context(), request)
 				if err == nil {
 					if request.URI != response.URI {
 						tb.Fatal("uri mismatch")
@@ -147,7 +146,7 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	r.OnLoaded(func() {
 		up <- true
 	})
-	go r.Start(context.TODO()) //nolint:errcheck
+	go r.Start(tb.Context()) //nolint:errcheck
 	<-up
 	return r
 }
