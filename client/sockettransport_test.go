@@ -38,11 +38,6 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 	require.NoError(tb, err)
 
 	go func() {
-		<-tb.Context().Done()
-		_ = ln.Close()
-	}()
-
-	go func() {
 		for {
 			// this blocks until connection or error
 			conn, err := ln.Accept()

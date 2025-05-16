@@ -27,13 +27,13 @@ doc:
 .PHONY: test
 ## Run tests
 test:
-	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race ./...
+	@GO_TEST_TAGS=-skip go test -v -tags=safe -coverprofile=coverage.out -race ./...
 	#@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: test.update
 ## Run tests and update snapshots
 test.update:
-	@GO_TEST_TAGS=-skip go test -update -tags=safe -coverprofile=coverage.out -race ./...
+	@GO_TEST_TAGS=-skip go test -update -v -tags=safe -coverprofile=coverage.out -race ./...
 	#@GO_TEST_TAGS=-skip go test -update -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: lint
