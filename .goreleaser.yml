@@ -1,3 +1,5 @@
+version: 2
+
 project_name: contentserver
 
 release:
@@ -8,6 +10,9 @@ release:
 
 builds:
   - binary: contentserver
+    main: ./main.go
+    env:
+      - CGO_ENABLED=0
     goos:
       - windows
       - darwin
@@ -17,35 +22,30 @@ builds:
       - arm64
     goarm:
       - '7'
-    env:
-      - CGO_ENABLED=0
-    main: ./main.go
     flags:
       - -trimpath
-    ldflags: -s -w -X github.com/foomo/contentserver/cmd.version={{.Version}}
+      - -tags=safe
+    ldflags:
+      - -s -w -X github.com/foomo/contentserver/cmd.version={{.Version}}
 
 archives:
   - format: tar.gz
     format_overrides:
       - goos: windows
         format: zip
-    files:
-      - LICENSE
-      - README.md
 
 changelog:
   use: github-native
 
 brews:
-  # Repository to push the tap to.
   - repository:
       owner: foomo
       name: homebrew-tap
-    caveats: "sesamy --help"
+    caveats: "contentserver --help"
     homepage: "https://github.com/foomo/contentserver"
     description: "Serves content tree structures very quickly"
     test: |
-      system "#{bin}/contentserver --version"
+      system "#{bin}/contentserver version"
 
 dockers:
   - use: buildx
