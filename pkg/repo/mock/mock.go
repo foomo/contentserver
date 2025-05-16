@@ -23,6 +23,11 @@ func GetMockData(tb testing.TB) (*httptest.Server, string) {
 		http.ServeFile(w, req, mockFilename)
 	}))
 
+	go func() {
+		<-tb.Context().Done()
+		server.Close()
+	}()
+
 	return server, tb.TempDir()
 }
 
