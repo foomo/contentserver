@@ -54,10 +54,12 @@ tidy:
 outdated:
 	@go list -u -m -json all | go-mod-outdated -update -direct
 
+.PHONY: install
 ## Install binary
 install:
 	@go build -o ${GOPATH}/bin/contentserver main.go
 
+.PHONY: build
 ## Build binary
 build:
 	@mkdir -p bin

@@ -3,14 +3,12 @@ package mock
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/foomo/contentserver/requests"
-	"github.com/stretchr/testify/require"
 )
 
 // GetMockData mock data to run a repo
@@ -25,10 +23,7 @@ func GetMockData(tb testing.TB) (*httptest.Server, string) {
 		http.ServeFile(w, req, mockFilename)
 	}))
 
-	varDir, err := os.MkdirTemp("", "content-server-test")
-	require.NoError(tb, err)
-
-	return server, varDir
+	return server, tb.TempDir()
 }
 
 // MakeNodesRequest a request to get some nodes

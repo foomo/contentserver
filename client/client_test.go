@@ -44,7 +44,7 @@ func TestGetRepo(t *testing.T) {
 		r, err := c.GetRepo(context.TODO())
 		require.NoError(t, err)
 		if assert.NotEmpty(t, r, "received empty JSON from GetRepo") {
-			assert.Equal(t, 1.0, r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64), "failed to drill deep for data") //nolint:all
+			assert.InDelta(t, 1.0, r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64), 0, "failed to drill deep for data") //nolint:forcetypeassert
 		}
 	})
 }
