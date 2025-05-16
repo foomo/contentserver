@@ -64,28 +64,29 @@ every other framework and language, too.
 
 ```bash
 $ contentserver -h
-Usage of contentserver:
-  -address string
-    	address to bind socket server host:port
-  -debug
-    	toggle debug mode
-  -free-os-mem int
-    	free OS mem every X minutes
-  -heap-dump int
-    	dump heap every X minutes
-  -var-dir string
-    	where to put my data (default "/var/lib/contentserver")
-  -version
-    	version info
-  -webserver-address string
-    	address to bind web server host:port, when empty no webserver will be spawned
-  -webserver-path string
-    	path to export the webserver on - useful when behind a proxy (default "/contentserver")
+Serves content tree structures very quickly
+
+Usage:
+  contentserver [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  http        Start http server
+  socket      Start socket server
+  version     Print version information
+
+Flags:
+  -h, --help                help for contentserver
+      --log-format string   log format (default "json")
+      --log-level string    log level (default "info")
+
+Use "contentserver [command] --help" for more information about a command.
 ```
 
 ## How to Contribute
 
-Make a pull request...
+Please refer to the [CONTRIBUTING](.github/CONTRIBUTING.md) details and follow the [CODE_OF_CONDUCT](.github/CODE_OF_CONDUCT.md) and [SECURITY](.github/SECURITY.md) guidelines.
 
 ## License
 
