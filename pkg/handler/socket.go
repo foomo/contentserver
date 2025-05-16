@@ -67,7 +67,7 @@ func (h *Socket) Serve(conn net.Conn) {
 		// let us read with 1 byte steps on conn until we find "{"
 		_, readErr := conn.Read(headerBuffer[0:])
 		if readErr != nil {
-			h.l.Debug("looks like the client closed the connection", zap.Error(readErr))
+			// h.l.Debug("looks like the client closed the connection", zap.Error(readErr))
 			metrics.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Dec()
 			return
 		}

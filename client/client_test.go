@@ -17,6 +17,7 @@ import (
 
 func TestUpdate(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		response, err := c.Update(t.Context())
 		require.NoError(t, err)
 		require.True(t, response.Success, "update has to return .Sucesss true")
@@ -27,6 +28,7 @@ func TestUpdate(t *testing.T) {
 
 func TestGetURIs(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		request := mock.MakeValidURIsRequest()
 		uriMap, err := c.GetURIs(t.Context(), request.Dimension, request.IDs)
 		time.Sleep(100 * time.Millisecond)
@@ -37,6 +39,7 @@ func TestGetURIs(t *testing.T) {
 
 func TestGetRepo(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		r, err := c.GetRepo(t.Context())
 		require.NoError(t, err)
 		if assert.NotEmpty(t, r, "received empty JSON from GetRepo") {
@@ -47,6 +50,7 @@ func TestGetRepo(t *testing.T) {
 
 func TestGetNodes(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		nodesRequest := mock.MakeNodesRequest()
 		nodes, err := c.GetNodes(t.Context(), nodesRequest.Env, nodesRequest.Nodes)
 		require.NoError(t, err)
@@ -66,6 +70,7 @@ func TestGetNodes(t *testing.T) {
 
 func TestGetContent(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
+		t.Helper()
 		request := mock.MakeValidContentRequest()
 		response, err := c.GetContent(t.Context(), request)
 		require.NoError(t, err)
@@ -119,10 +124,10 @@ func testWithClients(t *testing.T, testFunc func(t *testing.T, c *client.Client)
 	httpClient := newHTTPClient(t, httpRepoServer)
 	socketClient := newSocketClient(t, socketRepoServer.Addr().String())
 	defer func() {
-		httpRepoServer.Close()
-		socketRepoServer.Close()
 		httpClient.Close()
 		socketClient.Close()
+		httpRepoServer.Close()
+		socketRepoServer.Close()
 	}()
 	testFunc(t, httpClient)
 	testFunc(t, socketClient)
