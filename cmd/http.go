@@ -74,6 +74,7 @@ func NewHTTPCommand() *cobra.Command {
 					handler.NewHTTP(l.Named("inst.handler"), r, handler.WithBasePath(basePathFlag(v))),
 					middleware.Telemetry(),
 					middleware.Logger(),
+					middleware.GZip(),
 					middleware.Recover(),
 				),
 			)
