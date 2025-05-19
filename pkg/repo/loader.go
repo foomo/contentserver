@@ -32,7 +32,7 @@ func (r *Repo) PollRoutine(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			l.Debug("routine canceled", zap.Error(ctx.Err()))
+			l.Debug("routine canceled")
 			return nil
 		case <-ticker.C:
 			chanReponse := make(chan updateResponse)
@@ -52,7 +52,7 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			l.Debug("routine canceled", zap.Error(ctx.Err()))
+			l.Debug("routine canceled")
 			return nil
 		case resChan := <-r.updateInProgressChannel:
 			start := time.Now()
@@ -92,7 +92,7 @@ func (r *Repo) DimensionUpdateRoutine(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			l.Debug("routine canceled", zap.Error(ctx.Err()))
+			l.Debug("routine canceled")
 			return nil
 		case newDimension := <-r.dimensionUpdateChannel:
 			l.Debug("received a new dimension", zap.String("dimension", newDimension.Dimension))

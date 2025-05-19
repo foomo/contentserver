@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"github.com/foomo/contentserver/client"
 	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -36,14 +36,13 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 
 	// listen on socket
 	ln, err := nettest.NewLocalListener("tcp")
-
 	require.NoError(tb, err)
 
 	go func() {
 		for {
 			// this blocks until connection or error
 			conn, err := ln.Accept()
-			if errors.Is(err, net.ErrClosed) {
+			if errors.Is(err, net.ErrClosed) || errors.Is(err, context.Canceled) {
 				return
 			} else if err != nil {
 				tb.Error("runSocketServer: could not accept connection", err.Error())
@@ -52,9 +51,8 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 
 			// a goroutine handles conn so that the loop can accept other connections
 			go func() {
-				l.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
+				// l.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
 				h.Serve(conn)
-				assert.NoError(tb, conn.Close())
 			}()
 		}
 	}()

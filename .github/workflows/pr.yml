@@ -1,4 +1,4 @@
-name: PR check
+name: checks
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v7
         with:
           version: latest
 

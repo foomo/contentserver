@@ -222,17 +222,27 @@ func (r *Repo) GetRepo() map[string]*content.RepoNode {
 // reads the JSON history file from the Filesystem and copies it directly in to the supplied buffer
 // the result is wrapped as service response, e.g: {"reply": <contentData>}
 func (r *Repo) WriteRepoBytes(w io.Writer) {
+	filename := r.history.GetCurrentFilename()
+	r.history.currentMutext.RLock()
+	defer r.history.currentMutext.RUnlock()
 	f, err := os.Open(r.history.GetCurrentFilename())
 	if err != nil {
-		r.l.Error("Failed to open Repo JSON", zap.Error(err))
+		r.l.Error("failed to open repo JSON", zap.Error(err), zap.String("history", filename))
+		return
 	}
 
-	_, _ = w.Write([]byte("{\"reply\":"))
-	_, err = io.Copy(w, f)
-	if err != nil {
-		r.l.Error("Failed to serve Repo JSON", zap.Error(err))
+	if _, err := w.Write([]byte("{\"reply\":")); err != nil {
+		r.l.Error("failed to write repo JSON prefix", zap.Error(err))
+		return
 	}
-	_, _ = w.Write([]byte("}"))
+	if _, err := io.Copy(w, f); err != nil {
+		r.l.Error("failed to serve repo JSON", zap.Error(err))
+		return
+	}
+	if _, err := w.Write([]byte("}")); err != nil {
+		r.l.Error("failed to write repo JSON suffix", zap.Error(err))
+		return
+	}
 }
 
 func (r *Repo) Update() (updateResponse *responses.Update) {

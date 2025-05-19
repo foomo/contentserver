@@ -1,6 +1,6 @@
 hooks:
   pre-commit:
-    - golangci-lint run --fast
+    - golangci-lint run --fast-only
     - husky lint-staged
   commit-msg:
     # only execute if not in a merge
@@ -8,7 +8,7 @@ hooks:
 
 lint-staged:
   '*.go':
-    - goimports -l -w
+    - golangci-lint fmt
 
 lint-commit:
   types: '^(feat|fix|build|chore|docs|perf|refactor|revert|style|test|wip)$'

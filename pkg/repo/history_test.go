@@ -3,7 +3,6 @@ package repo
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -69,7 +68,5 @@ func TestGetFilesForCleanup(t *testing.T) {
 func testHistory(t *testing.T) *History {
 	t.Helper()
 	l := zaptest.NewLogger(t)
-	tempDir, err := os.MkdirTemp(os.TempDir(), "contentserver-history-test")
-	require.NoError(t, err)
-	return NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(tempDir))
+	return NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(t.TempDir()))
 }

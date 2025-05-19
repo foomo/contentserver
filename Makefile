@@ -27,12 +27,14 @@ doc:
 .PHONY: test
 ## Run tests
 test:
-	@GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -race -json ./... | gotestfmt
+	@GO_TEST_TAGS=-skip go test -v -tags=safe -coverprofile=coverage.out -race -count=1 ./...
+	#@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: test.update
 ## Run tests and update snapshots
 test.update:
-	@GO_TEST_TAGS=-skip go test -update -coverprofile=coverage.out -race -json ./... | gotestfmt
+	@GO_TEST_TAGS=-skip go test -update -v -tags=safe -coverprofile=coverage.out -race ./...
+	#@GO_TEST_TAGS=-skip go test -update -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: lint
 ## Run linter
@@ -54,14 +56,16 @@ tidy:
 outdated:
 	@go list -u -m -json all | go-mod-outdated -update -direct
 
+.PHONY: install
 ## Install binary
 install:
-	@go build -o ${GOPATH}/bin/contentserver main.go
+	@go build -tags=safe -o ${GOPATH}/bin/contentserver main.go
 
+.PHONY: build
 ## Build binary
 build:
 	@mkdir -p bin
-	@go build -o bin/contentserver main.go
+	@go build -tags=safe -o bin/contentserver main.go
 
 ## === Utils ===
 
