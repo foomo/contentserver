@@ -8,6 +8,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,9 +22,10 @@ const (
 
 type (
 	History struct {
-		l            *zap.Logger
-		historyDir   string
-		historyLimit int
+		l             *zap.Logger
+		historyDir    string
+		historyLimit  int
+		currentMutext sync.RWMutex
 	}
 	HistoryOption func(*History)
 )
@@ -67,20 +69,26 @@ func NewHistory(l *zap.Logger, opts ...HistoryOption) *History {
 // ------------------------------------------------------------------------------------------------
 
 func (h *History) Add(jsonBytes []byte) error {
-	var filename = path.Join(h.historyDir, HistoryRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+HistoryRepoJSONSuffix)
+	backupFilename := path.Join(h.historyDir, HistoryRepoJSONPrefix+time.Now().Format(time.RFC3339Nano)+HistoryRepoJSONSuffix)
+	currentFilename := h.GetCurrentFilename()
 
-	if err := os.MkdirAll(path.Dir(filename), 0700); err != nil {
+	if err := os.MkdirAll(path.Dir(backupFilename), 0700); err != nil {
 		return errors.Wrap(err, "failed to create history dir")
 	}
 
-	if err := os.WriteFile(filename, jsonBytes, 0600); err != nil {
-		return errors.Wrap(err, "failed to write history")
+	if err := os.WriteFile(backupFilename, jsonBytes, 0600); err != nil {
+		return errors.Wrap(err, "failed to write backup history file")
 	}
 
-	h.l.Debug("adding content backup", zap.String("file", filename))
+	h.l.Debug("writing files",
+		zap.String("backup", backupFilename),
+		zap.String("current", currentFilename),
+	)
 
 	// current filename
-	if err := os.WriteFile(h.GetCurrentFilename(), jsonBytes, 0600); err != nil {
+	h.currentMutext.Lock()
+	defer h.currentMutext.Unlock()
+	if err := os.WriteFile(currentFilename, jsonBytes, 0600); err != nil {
 		return errors.Wrap(err, "failed to write current history")
 	}
 
@@ -96,6 +104,8 @@ func (h *History) GetCurrentFilename() string {
 }
 
 func (h *History) GetCurrent(buf *bytes.Buffer) error {
+	h.currentMutext.RLock()
+	defer h.currentMutext.RUnlock()
 	f, err := os.Open(h.GetCurrentFilename())
 	if err != nil {
 		return err

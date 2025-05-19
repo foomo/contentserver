@@ -27,7 +27,7 @@ doc:
 .PHONY: test
 ## Run tests
 test:
-	@GO_TEST_TAGS=-skip go test -v -tags=safe -coverprofile=coverage.out -race ./...
+	@GO_TEST_TAGS=-skip go test -v -tags=safe -coverprofile=coverage.out -race -count=1 ./...
 	#@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: test.update

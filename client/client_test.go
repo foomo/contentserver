@@ -16,6 +16,7 @@ import (
 )
 
 func TestUpdate(t *testing.T) {
+	t.Parallel()
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		response, err := c.Update(t.Context())
@@ -27,6 +28,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestGetURIs(t *testing.T) {
+	t.Parallel()
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		request := mock.MakeValidURIsRequest()
@@ -38,6 +40,7 @@ func TestGetURIs(t *testing.T) {
 }
 
 func TestGetRepo(t *testing.T) {
+	t.Parallel()
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		r, err := c.GetRepo(t.Context())
@@ -49,6 +52,7 @@ func TestGetRepo(t *testing.T) {
 }
 
 func TestGetNodes(t *testing.T) {
+	t.Parallel()
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		nodesRequest := mock.MakeNodesRequest()
@@ -69,6 +73,7 @@ func TestGetNodes(t *testing.T) {
 }
 
 func TestGetContent(t *testing.T) {
+	t.Parallel()
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		request := mock.MakeValidContentRequest()
@@ -118,19 +123,26 @@ func benchmarkClientAndServerGetContent(tb testing.TB, numGroups, numCalls int, 
 
 func testWithClients(t *testing.T, testFunc func(t *testing.T, c *client.Client)) {
 	t.Helper()
-	l := zaptest.NewLogger(t)
-	httpRepoServer := initHTTPRepoServer(t, l)
-	socketRepoServer := initSocketRepoServer(t, l)
-	httpClient := newHTTPClient(t, httpRepoServer)
-	socketClient := newSocketClient(t, socketRepoServer.Addr().String())
-	defer func() {
-		httpClient.Close()
-		socketClient.Close()
-		httpRepoServer.Close()
-		socketRepoServer.Close()
-	}()
-	testFunc(t, httpClient)
-	testFunc(t, socketClient)
+	t.Run("http", func(t *testing.T) {
+		l := zaptest.NewLogger(t)
+		s := initHTTPRepoServer(t, l)
+		c := newHTTPClient(t, s)
+		defer func() {
+			s.Close()
+			c.Close()
+		}()
+		testFunc(t, c)
+	})
+	t.Run("socket", func(t *testing.T) {
+		l := zaptest.NewLogger(t)
+		s := initSocketRepoServer(t, l)
+		c := newSocketClient(t, s.Addr().String())
+		defer func() {
+			s.Close()
+			c.Close()
+		}()
+		testFunc(t, c)
+	})
 }
 
 func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {

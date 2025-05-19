@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
@@ -41,7 +42,7 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 		for {
 			// this blocks until connection or error
 			conn, err := ln.Accept()
-			if errors.Is(err, net.ErrClosed) {
+			if errors.Is(err, net.ErrClosed) || errors.Is(err, context.Canceled) {
 				return
 			} else if err != nil {
 				tb.Error("runSocketServer: could not accept connection", err.Error())
@@ -50,7 +51,7 @@ func initSocketRepoServer(tb testing.TB, l *zap.Logger) net.Listener {
 
 			// a goroutine handles conn so that the loop can accept other connections
 			go func() {
-				l.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
+				// l.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
 				h.Serve(conn)
 			}()
 		}
