@@ -75,7 +75,12 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	route := Route(strings.TrimPrefix(r.URL.Path, h.basePath+"/"))
 	if route == RouteGetRepo {
-		h.repo.WriteRepoBytes(w)
+		resp := h.repo.Update()
+		if resp.Success {
+			h.repo.WriteRepoBytes(w)
+		} else {
+			http.Error(w, "failed to update repo: "+resp.ErrorMessage, http.StatusInternalServerError)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		return
 	}
