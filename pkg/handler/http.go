@@ -76,10 +76,8 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route := Route(strings.TrimPrefix(r.URL.Path, h.basePath+"/"))
 	if route == RouteGetRepo {
 		resp := h.repo.Update()
-		if resp.Success {
-			h.repo.WriteRepoBytes(w)
-		} else {
-			http.Error(w, "failed to update repo: "+resp.ErrorMessage, http.StatusInternalServerError)
+		if !resp.Success {
+			h.l.Warn("repo update failed — serving previously cached data", zap.String("reason", resp.ErrorMessage))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		return
