@@ -74,16 +74,6 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	route := Route(strings.TrimPrefix(r.URL.Path, h.basePath+"/"))
-	if route == RouteGetRepo {
-		resp := h.repo.Update()
-		if !resp.Success {
-			h.l.Warn("repo update failed — serving previously cached data", zap.String("reason", resp.ErrorMessage))
-		}
-		h.repo.WriteRepoBytes(w)
-		w.Header().Set("Content-Type", "application/json")
-		return
-	}
-
 	reply, errReply := h.handleRequest(h.repo, route, bytes, "webserver")
 	if errReply != nil {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
@@ -128,8 +118,11 @@ func (h *HTTP) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sourc
 
 	// handle and process
 	switch route {
-	// case HandlerGetRepo: // This case is handled prior to handleRequest being called.
-	// since the resulting bytes are written directly in to the http.ResponseWriter / net.Connection
+	case RouteGetRepo:
+		getRepoRequest := &requests.Repo{}
+		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getRepoRequest), func() {
+			reply = r.GetRepo()
+		})
 	case RouteGetURIs:
 		getURIRequest := &requests.URIs{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {

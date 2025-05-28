@@ -221,8 +221,11 @@ func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sou
 
 	// handle and process
 	switch route {
-	// case RouteGetRepo: // This case is handled prior to handleRequest being called.
-	// since the resulting bytes are written directly in to the http.ResponseWriter / net.Connection
+	case RouteGetRepo:
+		getRepoRequest := &requests.Repo{}
+		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getRepoRequest), func() {
+			reply = r.GetRepo()
+		})
 	case RouteGetURIs:
 		getURIRequest := &requests.URIs{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {
