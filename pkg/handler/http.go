@@ -79,6 +79,7 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !resp.Success {
 			h.l.Warn("repo update failed — serving previously cached data", zap.String("reason", resp.ErrorMessage))
 		}
+		h.repo.WriteRepoBytes(w)
 		w.Header().Set("Content-Type", "application/json")
 		return
 	}
