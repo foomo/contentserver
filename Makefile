@@ -67,6 +67,12 @@ build:
 	@mkdir -p bin
 	@go build -tags=safe -o bin/contentserver main.go
 
+.PHONY: release.snapshot
+## Create a goreleaser snapshot release
+release.snapshot:
+	@rm -rf ./dist
+	@goreleaser release --snapshot
+
 ## === Utils ===
 
 .PHONY: help
