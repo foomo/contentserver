@@ -4,6 +4,7 @@
 *.out
 *.log
 /bin/
+/dist/
 /tmp/
 
 ## Git

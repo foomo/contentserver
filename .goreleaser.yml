@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
 project_name: contentserver
@@ -29,10 +30,10 @@ builds:
       - -s -w -X github.com/foomo/contentserver/cmd.version={{.Version}}
 
 archives:
-  - format: tar.gz
+  - formats: [ tar.gz ]
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [ zip ]
 
 changelog:
   use: github-native
