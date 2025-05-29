@@ -1,12 +1,14 @@
 package client_test
 
 import (
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/foomo/contentserver/client"
 	"github.com/foomo/contentserver/content"
+	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/foomo/contentserver/pkg/repo"
 	"github.com/foomo/contentserver/pkg/repo/mock"
 	"github.com/stretchr/testify/assert"
@@ -161,6 +163,53 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	go r.Start(tb.Context()) //nolint:errcheck
 	<-up
 	return r
+}
+
+func TestGetRepo_UpdateFails(t *testing.T) {
+	t.Helper()
+	t.Parallel()
+
+	l := zaptest.NewLogger(t)
+
+	// Step 1: create a working repo and let it populate history
+	testRepoServer, varDir := mock.GetMockData(t)
+	historyDir := varDir
+
+	workingRepo := repo.New(l,
+		testRepoServer.URL+"/repo-two-dimensions.json",
+		repo.NewHistory(l, repo.HistoryWithHistoryDir(historyDir)),
+	)
+	go func() {
+		if err := workingRepo.Start(t.Context()); err != nil {
+			t.Errorf("workingRepo.Start failed: %v", err)
+		}
+	}()
+
+	// Give it time to persist JSON
+	time.Sleep(300 * time.Millisecond)
+
+	// Step 2: create a new repo with a broken upstream, but reusing the same history
+	brokenRepo := repo.New(l,
+		"http://localhost:9999/this-will-fail-non-existent.json", // force failure
+		repo.NewHistory(l, repo.HistoryWithHistoryDir(historyDir)),
+	)
+	go func() {
+		if err := brokenRepo.Start(t.Context()); err != nil {
+			t.Errorf("brokenRepo.Start failed: %v", err)
+		}
+	}()
+
+	// Step 3: serve it
+	server := httptest.NewServer(handler.NewHTTP(l, brokenRepo))
+	defer server.Close()
+
+	client, err := client.NewHTTPClient(server.URL + pathContentserver)
+	require.NoError(t, err)
+
+	// Step 4: trigger GetRepo, which will log warning and fall back to existing file
+	result, err := client.GetRepo(t.Context())
+	require.NoError(t, err)
+	assert.NotEmpty(t, result, "expected fallback repo content from WriteRepoBytes")
 }
 
 // func dump(t *testing.T, v interface{}) {
