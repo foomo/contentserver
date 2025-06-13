@@ -285,6 +285,8 @@ func (r *Repo) Update() (updateResponse *responses.Update) {
 		if historyErr != nil {
 			r.l.Error("Could not persist current repo in history", zap.Error(historyErr))
 			metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()
+		} else {
+			r.l.Info("Successfully persisted current repo to history")
 		}
 		// add some stats
 		for _, dimension := range r.Directory() {

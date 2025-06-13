@@ -305,6 +305,15 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	if r.poll {
 		r.pollVersion = repoURL
 	}
+
+	// Persist the JSON buffer after successful update
+	if err := r.history.Add(r.JSONBufferBytes()); err != nil {
+		r.l.Error("Failed to persist repo after update", zap.Error(err))
+		metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()
+	} else {
+		r.l.Info("Successfully persisted repo after update")
+	}
+
 	return repoRuntime, nil
 }
 
