@@ -26,6 +26,7 @@ builds:
     flags:
       - -trimpath
       - -tags=safe
+      - -tags=pprof
     ldflags:
       - -s -w -X github.com/foomo/contentserver/cmd.version={{.Version}}
 

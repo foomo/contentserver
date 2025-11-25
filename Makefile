@@ -59,13 +59,13 @@ outdated:
 .PHONY: install
 ## Install binary
 install:
-	@go build -tags=safe -o ${GOPATH}/bin/contentserver main.go
+	@go build -tags=safe -tags=pprof -o ${GOPATH}/bin/contentserver main.go
 
 .PHONY: build
 ## Build binary
 build:
 	@mkdir -p bin
-	@go build -tags=safe -o bin/contentserver main.go
+	@go build -tags=safe -tags=pprof -o bin/contentserver main.go
 
 .PHONY: release.snapshot
 ## Create a goreleaser snapshot release
