@@ -14,7 +14,10 @@ import (
 )
 
 func NewTestRepo(ctx context.Context, l *zap.Logger, url, varDir string) *Repo {
-	h := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(varDir))
+	h, err := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(varDir))
+	if err != nil {
+		panic(err)
+	}
 	r := New(l, url, h)
 	go r.Start(ctx) //nolint:errcheck
 	time.Sleep(100 * time.Millisecond)

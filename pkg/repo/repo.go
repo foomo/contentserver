@@ -218,31 +218,36 @@ func (r *Repo) GetRepo() map[string]*content.RepoNode {
 	return response
 }
 
-// WriteRepoBytes get the whole repo in all dimensions
-// reads the JSON history file from the Filesystem and copies it directly in to the supplied buffer
-// the result is wrapped as service response, e.g: {"reply": <contentData>}
-func (r *Repo) WriteRepoBytes(w io.Writer) {
-	filename := r.history.GetCurrentFilename()
-	r.history.currentMutext.RLock()
-	defer r.history.currentMutext.RUnlock()
-	f, err := os.Open(r.history.GetCurrentFilename())
-	if err != nil {
-		r.l.Error("failed to open repo JSON", zap.Error(err), zap.String("history", filename))
-		return
+// WriteRepoBytes writes the whole repo in all dimensions to the provided writer.
+// It serves from the in-memory buffer, falling back to storage only when empty.
+// The result is wrapped as service response, e.g: {"reply": <contentData>}
+func (r *Repo) WriteRepoBytes(ctx context.Context, w io.Writer) error {
+	r.jsonBufferLock.RLock()
+	var data []byte
+	if r.jsonBuffer != nil {
+		data = r.jsonBuffer.Bytes()
+	}
+	r.jsonBufferLock.RUnlock()
+
+	if len(data) == 0 {
+		// Fallback to storage (cold start or not yet loaded)
+		var buf bytes.Buffer
+		if err := r.history.GetCurrent(ctx, &buf); err != nil {
+			return fmt.Errorf("failed to read repo from storage: %w", err)
+		}
+		data = buf.Bytes()
 	}
 
-	if _, err := w.Write([]byte("{\"reply\":")); err != nil {
-		r.l.Error("failed to write repo JSON prefix", zap.Error(err))
-		return
+	if _, err := w.Write([]byte(`{"reply":`)); err != nil {
+		return fmt.Errorf("failed to write repo JSON prefix: %w", err)
 	}
-	if _, err := io.Copy(w, f); err != nil {
-		r.l.Error("failed to serve repo JSON", zap.Error(err))
-		return
+	if _, err := w.Write(data); err != nil {
+		return fmt.Errorf("failed to write repo JSON data: %w", err)
 	}
-	if _, err := w.Write([]byte("}")); err != nil {
-		r.l.Error("failed to write repo JSON suffix", zap.Error(err))
-		return
+	if _, err := w.Write([]byte(`}`)); err != nil {
+		return fmt.Errorf("failed to write repo JSON suffix: %w", err)
 	}
+	return nil
 }
 
 func (r *Repo) Update() (updateResponse *responses.Update) {
@@ -281,7 +286,7 @@ func (r *Repo) Update() (updateResponse *responses.Update) {
 	} else {
 		updateResponse.Success = true
 		// persist the currently loaded one
-		historyErr := r.history.Add(r.JSONBufferBytes())
+		historyErr := r.history.Add(context.Background(), r.JSONBufferBytes())
 		if historyErr != nil {
 			r.l.Error("Could not persist current repo in history", zap.Error(historyErr))
 			metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/foomo/contentserver/pkg/repo"
@@ -12,6 +13,7 @@ import (
 	"github.com/foomo/keel/net/http/middleware"
 	"github.com/foomo/keel/service"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -37,16 +39,29 @@ func NewHTTPCommand() *cobra.Command {
 				keel.WithPrometheusMeter(servicePrometheusEnabledFlag(v)),
 				keel.WithGracefulPeriod(gracefulPeriodFlag(v)),
 				keel.WithOTLPGRPCTracer(otelEnabledFlag(v)),
+				keel.WithHTTPPProfService(true),
 			)
 
 			l := svr.Logger()
 
+			// Create storage based on configuration
+			storage, err := createStorage(cmd.Context(), v, l)
+			if err != nil {
+				return fmt.Errorf("failed to create storage: %w", err)
+			}
+
+			history, err := repo.NewHistory(l.Named("inst.history"),
+				repo.HistoryWithStorage(storage),
+				repo.HistoryWithHistoryDir(historyDirFlag(v)),
+				repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create history: %w", err)
+			}
+
 			r := repo.New(l.Named("inst.repo"),
 				args[0],
-				repo.NewHistory(l.Named("inst.history"),
-					repo.HistoryWithHistoryDir(historyDirFlag(v)),
-					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
-				),
+				history,
 				repo.WithHTTPClient(
 					keelhttp.NewHTTPClient(
 						keelhttp.HTTPClientWithTelemetry(),
@@ -95,6 +110,42 @@ func NewHTTPCommand() *cobra.Command {
 	addOtelEnabledFlag(flags, v)
 	addServiceHealthzEnabledFlag(flags, v)
 	addServicePrometheusEnabledFlag(flags, v)
+	addStorageTypeFlag(flags, v)
+	addStorageGCSBucketFlag(flags, v)
+	addStorageGCSPrefixFlag(flags, v)
 
 	return cmd
+}
+
+// createStorage creates a storage backend based on the configuration
+func createStorage(ctx context.Context, v *viper.Viper, l *zap.Logger) (repo.Storage, error) {
+	storageType := storageTypeFlag(v)
+	gcsBucket := storageGCSBucketFlag(v)
+	gcsPrefix := storageGCSPrefixFlag(v)
+
+	// Warn about ignored GCS config
+	if storageType != "gcs" && (gcsBucket != "" || gcsPrefix != "") {
+		l.Warn("GCS configuration flags are set but storage-type is not 'gcs'; GCS config will be ignored",
+			zap.String("storage-type", storageType),
+			zap.String("gcs-bucket", gcsBucket),
+			zap.String("gcs-prefix", gcsPrefix),
+		)
+	}
+
+	l.Info("creating storage", zap.String("type", storageType))
+
+	switch storageType {
+	case "gcs":
+		if gcsBucket == "" {
+			return nil, fmt.Errorf("GCS bucket URL is required for gcs storage type")
+		}
+		l.Info("using GCS storage", zap.String("bucket", gcsBucket), zap.String("prefix", gcsPrefix))
+		return repo.NewBlobStorage(ctx, gcsBucket, gcsPrefix)
+	case "filesystem", "":
+		dir := historyDirFlag(v)
+		l.Info("using filesystem storage", zap.String("dir", dir))
+		return repo.NewFilesystemStorage(dir)
+	default:
+		return nil, fmt.Errorf("unknown storage type: %s", storageType)
+	}
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -156,10 +157,12 @@ func (h *Socket) execute(route Route, jsonBytes []byte) (reply []byte) {
 	h.l.Debug("incoming json buffer", zap.Int("length", len(jsonBytes)))
 
 	if route == RouteGetRepo {
-		var (
-			b bytes.Buffer
-		)
-		h.repo.WriteRepoBytes(&b)
+		var b bytes.Buffer
+		if err := h.repo.WriteRepoBytes(context.Background(), &b); err != nil {
+			h.l.Error("failed to write repo bytes", zap.Error(err))
+			errorReply, _ := h.encodeReply(responses.NewError(5, "failed to get repo: "+err.Error()))
+			return errorReply
+		}
 		return b.Bytes()
 	}
 

@@ -212,7 +212,7 @@ func (r *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err erro
 
 func (r *Repo) tryToRestoreCurrent() error {
 	buffer := &bytes.Buffer{}
-	err := r.history.GetCurrent(buffer)
+	err := r.history.GetCurrent(context.Background(), buffer)
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	}
 
 	// Persist the JSON buffer after successful update
-	if err := r.history.Add(r.JSONBufferBytes()); err != nil {
+	if err := r.history.Add(ctx, r.JSONBufferBytes()); err != nil {
 		r.l.Error("Failed to persist repo after update", zap.Error(err))
 		metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()
 	} else {
@@ -347,7 +347,7 @@ func (r *Repo) loadJSONBytes() error {
 
 	err = r.loadNodes(nodes)
 	if err == nil {
-		errHistory := r.history.Add(r.JSONBufferBytes())
+		errHistory := r.history.Add(context.Background(), r.JSONBufferBytes())
 		if errHistory != nil {
 			r.l.Error("Could not add valid JSON to history", zap.Error(errHistory))
 			metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()

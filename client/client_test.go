@@ -148,11 +148,15 @@ func testWithClients(t *testing.T, testFunc func(t *testing.T, c *client.Client)
 func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	tb.Helper()
 	testRepoServer, varDir := mock.GetMockData(tb)
+	h, err := repo.NewHistory(l,
+		repo.HistoryWithHistoryDir(varDir),
+	)
+	if err != nil {
+		tb.Fatal(err)
+	}
 	r := repo.New(l,
 		testRepoServer.URL+"/repo-two-dimensions.json",
-		repo.NewHistory(l,
-			repo.HistoryWithHistoryDir(varDir),
-		),
+		h,
 	)
 	up := make(chan bool, 1)
 	r.OnLoaded(func() {

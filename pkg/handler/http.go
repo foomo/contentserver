@@ -75,8 +75,11 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	route := Route(strings.TrimPrefix(r.URL.Path, h.basePath+"/"))
 	if route == RouteGetRepo {
-		h.repo.WriteRepoBytes(w)
 		w.Header().Set("Content-Type", "application/json")
+		if err := h.repo.WriteRepoBytes(r.Context(), w); err != nil {
+			h.l.Error("failed to write repo bytes", zap.Error(err))
+			http.Error(w, "failed to get repo", http.StatusInternalServerError)
+		}
 		return
 	}
 

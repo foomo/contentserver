@@ -124,3 +124,33 @@ func addOtelEnabledFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	_ = v.BindPFlag("otel.enabled", flags.Lookup("otel-enabled"))
 	_ = v.BindEnv("otel.enabled", "OTEL_ENABLED")
 }
+
+func storageTypeFlag(v *viper.Viper) string {
+	return v.GetString("storage.type")
+}
+
+func addStorageTypeFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("storage-type", "filesystem", "Storage backend type: filesystem or gcs")
+	_ = v.BindPFlag("storage.type", flags.Lookup("storage-type"))
+	_ = v.BindEnv("storage.type", "CONTENT_SERVER_STORAGE_TYPE")
+}
+
+func storageGCSBucketFlag(v *viper.Viper) string {
+	return v.GetString("storage.gcs.bucket")
+}
+
+func addStorageGCSBucketFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("storage-gcs-bucket", "", "GCS bucket URL (e.g., gs://my-bucket)")
+	_ = v.BindPFlag("storage.gcs.bucket", flags.Lookup("storage-gcs-bucket"))
+	_ = v.BindEnv("storage.gcs.bucket", "CONTENT_SERVER_STORAGE_GCS_BUCKET")
+}
+
+func storageGCSPrefixFlag(v *viper.Viper) string {
+	return v.GetString("storage.gcs.prefix")
+}
+
+func addStorageGCSPrefixFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("storage-gcs-prefix", "", "GCS object prefix (e.g., contentserver/)")
+	_ = v.BindPFlag("storage.gcs.prefix", flags.Lookup("storage-gcs-prefix"))
+	_ = v.BindEnv("storage.gcs.prefix", "CONTENT_SERVER_STORAGE_GCS_PREFIX")
+}

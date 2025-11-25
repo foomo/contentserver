@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/foomo/contentserver/pkg/handler"
@@ -31,12 +32,24 @@ func NewSocketCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			l := log.Logger()
 
+			// Create storage based on configuration
+			storage, err := createStorage(cmd.Context(), v, l)
+			if err != nil {
+				return fmt.Errorf("failed to create storage: %w", err)
+			}
+
+			history, err := repo.NewHistory(l,
+				repo.HistoryWithStorage(storage),
+				repo.HistoryWithHistoryDir(historyDirFlag(v)),
+				repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create history: %w", err)
+			}
+
 			r := repo.New(l,
 				args[0],
-				repo.NewHistory(l,
-					repo.HistoryWithHistoryDir(historyDirFlag(v)),
-					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
-				),
+				history,
 				repo.WithHTTPClient(
 					keelhttp.NewHTTPClient(
 						keelhttp.HTTPClientWithTelemetry(),
@@ -91,6 +104,9 @@ func NewSocketCommand() *cobra.Command {
 	addPollIntervalFlag(flags, v)
 	addHistoryDirFlag(flags, v)
 	addHistoryLimitFlag(flags, v)
+	addStorageTypeFlag(flags, v)
+	addStorageGCSBucketFlag(flags, v)
+	addStorageGCSPrefixFlag(flags, v)
 
 	return cmd
 }
