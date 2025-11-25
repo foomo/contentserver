@@ -110,6 +110,7 @@ func (h *History) Add(ctx context.Context, jsonBytes []byte) error {
 }
 
 // GetCurrentFilename returns the path to the current snapshot file.
+//
 // Deprecated: This method is kept for backward compatibility. Use GetCurrent instead.
 func (h *History) GetCurrentFilename() string {
 	return h.historyDir + "/" + CurrentKey

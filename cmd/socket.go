@@ -63,7 +63,8 @@ func NewSocketCommand() *cobra.Command {
 			handle := handler.NewSocket(l, r)
 
 			// listen on socket
-			ln, err := net.Listen("tcp", addressFlag(v))
+			var lc net.ListenConfig
+			ln, err := lc.Listen(cmd.Context(), "tcp", addressFlag(v))
 			if err != nil {
 				return err
 			}

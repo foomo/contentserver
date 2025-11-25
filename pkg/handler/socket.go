@@ -244,7 +244,7 @@ func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sou
 	case RouteUpdate:
 		updateRequest := &requests.Update{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
-			reply = r.Update()
+			reply = r.Update(context.Background())
 		})
 
 	default:

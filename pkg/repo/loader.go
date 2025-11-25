@@ -210,14 +210,14 @@ func (r *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err erro
 	return nodes, nil
 }
 
-func (r *Repo) tryToRestoreCurrent() error {
+func (r *Repo) tryToRestoreCurrent(ctx context.Context) error {
 	buffer := &bytes.Buffer{}
-	err := r.history.GetCurrent(context.Background(), buffer)
+	err := r.history.GetCurrent(ctx, buffer)
 	if err != nil {
 		return err
 	}
 	r.SetJSONBuffer(buffer)
-	return r.loadJSONBytes()
+	return r.loadJSONBytes(ctx)
 }
 
 func (r *Repo) get(ctx context.Context, url string) error {
@@ -331,7 +331,7 @@ func (r *Repo) tryUpdate() (repoRuntime int64, err error) {
 	}
 }
 
-func (r *Repo) loadJSONBytes() error {
+func (r *Repo) loadJSONBytes(ctx context.Context) error {
 	nodes, err := r.loadNodesFromJSON()
 	if err != nil {
 		data := r.JSONBufferBytes()
@@ -347,7 +347,7 @@ func (r *Repo) loadJSONBytes() error {
 
 	err = r.loadNodes(nodes)
 	if err == nil {
-		errHistory := r.history.Add(context.Background(), r.JSONBufferBytes())
+		errHistory := r.history.Add(ctx, r.JSONBufferBytes())
 		if errHistory != nil {
 			r.l.Error("Could not add valid JSON to history", zap.Error(errHistory))
 			metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()

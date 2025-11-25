@@ -250,7 +250,7 @@ func (r *Repo) WriteRepoBytes(ctx context.Context, w io.Writer) error {
 	return nil
 }
 
-func (r *Repo) Update() (updateResponse *responses.Update) {
+func (r *Repo) Update(ctx context.Context) (updateResponse *responses.Update) {
 	floatSeconds := func(nanoSeconds int64) float64 {
 		return float64(nanoSeconds) / float64(1000000000)
 	}
@@ -276,7 +276,7 @@ func (r *Repo) Update() (updateResponse *responses.Update) {
 			updateResponse.ErrorMessage = err.Error()
 			r.l.Error("Failed to update repository", zap.Error(err))
 
-			restoreErr := r.tryToRestoreCurrent()
+			restoreErr := r.tryToRestoreCurrent(ctx)
 			if restoreErr != nil {
 				r.l.Error("Failed to restore preceding repository version", zap.Error(restoreErr))
 			} else {
@@ -286,7 +286,7 @@ func (r *Repo) Update() (updateResponse *responses.Update) {
 	} else {
 		updateResponse.Success = true
 		// persist the currently loaded one
-		historyErr := r.history.Add(context.Background(), r.JSONBufferBytes())
+		historyErr := r.history.Add(ctx, r.JSONBufferBytes())
 		if historyErr != nil {
 			r.l.Error("Could not persist current repo in history", zap.Error(historyErr))
 			metrics.HistoryPersistFailedCounter.WithLabelValues().Inc()
@@ -326,7 +326,7 @@ func (r *Repo) Start(ctx context.Context) error {
 	<-up
 
 	l.Debug("trying to restore previous repo")
-	if err := r.tryToRestoreCurrent(); errors.Is(err, os.ErrNotExist) {
+	if err := r.tryToRestoreCurrent(ctx); errors.Is(err, os.ErrNotExist) {
 		l.Info("previous repo content file does not exist")
 	} else if err != nil {
 		l.Warn("could not restore previous repo content", zap.Error(err))
@@ -343,7 +343,7 @@ func (r *Repo) Start(ctx context.Context) error {
 
 	if !r.Loaded() {
 		l.Debug("trying to update initial state")
-		if resp := r.Update(); !resp.Success {
+		if resp := r.Update(ctx); !resp.Success {
 			l.Error("failed to update initial state",
 				zap.String("error", resp.ErrorMessage),
 				zap.Int("num_modes", resp.Stats.NumberOfNodes),

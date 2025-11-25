@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -83,7 +84,7 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reply, errReply := h.handleRequest(h.repo, route, bytes, "webserver")
+	reply, errReply := h.handleRequest(r.Context(), h.repo, route, bytes, "webserver")
 	if errReply != nil {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return
@@ -95,10 +96,10 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // ~ Private methods
 // ------------------------------------------------------------------------------------------------
 
-func (h *HTTP) handleRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) ([]byte, error) {
+func (h *HTTP) handleRequest(ctx context.Context, r *repo.Repo, route Route, jsonBytes []byte, source string) ([]byte, error) {
 	start := time.Now()
 
-	reply, err := h.executeRequest(r, route, jsonBytes, source)
+	reply, err := h.executeRequest(ctx, r, route, jsonBytes, source)
 	result := "success"
 	if err != nil {
 		result = "error"
@@ -110,7 +111,7 @@ func (h *HTTP) handleRequest(r *repo.Repo, route Route, jsonBytes []byte, source
 	return reply, err
 }
 
-func (h *HTTP) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
+func (h *HTTP) executeRequest(ctx context.Context, r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 	var (
 		reply             interface{}
 		apiErr            error
@@ -147,7 +148,7 @@ func (h *HTTP) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sourc
 	case RouteUpdate:
 		updateRequest := &requests.Update{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
-			reply = r.Update()
+			reply = r.Update(ctx)
 		})
 	default:
 		reply = responses.NewError(1, "unknown route: "+string(route))

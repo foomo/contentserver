@@ -31,7 +31,7 @@ func NewBlobStorage(ctx context.Context, bucketURL, prefix string) (*BlobStorage
 	}
 	// Normalize prefix: ensure trailing slash if non-empty
 	if prefix != "" && !strings.HasSuffix(prefix, "/") {
-		prefix = prefix + "/"
+		prefix += "/"
 	}
 	return &BlobStorage{
 		bucket: bucket,
@@ -44,7 +44,7 @@ func NewBlobStorage(ctx context.Context, bucketURL, prefix string) (*BlobStorage
 func NewBlobStorageFromBucket(bucket *blob.Bucket, prefix string) *BlobStorage {
 	// Normalize prefix: ensure trailing slash if non-empty
 	if prefix != "" && !strings.HasSuffix(prefix, "/") {
-		prefix = prefix + "/"
+		prefix += "/"
 	}
 	return &BlobStorage{
 		bucket: bucket,
