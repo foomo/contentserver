@@ -81,6 +81,10 @@ func NewHTTPCommand() *cobra.Command {
 			svr.AddStartupHealthzers(isLoadedHealtherFn)
 			svr.AddReadinessHealthzers(isLoadedHealtherFn)
 
+			svr.AddClosers(func(ctx context.Context) error {
+				return history.Close()
+			})
+
 			svr.AddServices(
 				service.NewGoRoutine(l.Named("go.repo"), "repo", func(ctx context.Context, l *zap.Logger) error {
 					return r.Start(ctx)

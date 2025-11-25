@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -15,7 +16,8 @@ import (
 )
 
 // BlobStorage implements Storage using gocloud.dev/blob.
-// This supports GCS, S3, Azure, and other cloud storage providers.
+// Currently supports GCS. Support for S3, Azure, and other cloud storage
+// providers can be easily added by importing the corresponding driver.
 type BlobStorage struct {
 	bucket *blob.Bucket
 	prefix string
@@ -27,7 +29,7 @@ type BlobStorage struct {
 func NewBlobStorage(ctx context.Context, bucketURL, prefix string) (*BlobStorage, error) {
 	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open bucket %q: %w", bucketURL, err)
 	}
 	// Normalize prefix: ensure trailing slash if non-empty
 	if prefix != "" && !strings.HasSuffix(prefix, "/") {
@@ -60,7 +62,10 @@ func (b *BlobStorage) fullKey(key string) string {
 }
 
 func (b *BlobStorage) Write(ctx context.Context, key string, data []byte) error {
-	return b.bucket.WriteAll(ctx, b.fullKey(key), data, nil)
+	if err := b.bucket.WriteAll(ctx, b.fullKey(key), data, nil); err != nil {
+		return fmt.Errorf("failed to write blob %q: %w", key, err)
+	}
+	return nil
 }
 
 func (b *BlobStorage) Read(ctx context.Context, key string) ([]byte, error) {
@@ -69,7 +74,7 @@ func (b *BlobStorage) Read(ctx context.Context, key string) ([]byte, error) {
 		if gcerrors.Code(err) == gcerrors.NotFound {
 			return nil, os.ErrNotExist
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to read blob %q: %w", key, err)
 	}
 	return data, nil
 }
@@ -86,7 +91,7 @@ func (b *BlobStorage) List(ctx context.Context, prefix string) ([]string, error)
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to list blobs with prefix %q: %w", prefix, err)
 		}
 		key := obj.Key
 		if b.prefix != "" {
@@ -108,11 +113,14 @@ func (b *BlobStorage) Delete(ctx context.Context, key string) error {
 		if gcerrors.Code(err) == gcerrors.NotFound {
 			return nil
 		}
-		return err
+		return fmt.Errorf("failed to delete blob %q: %w", key, err)
 	}
 	return nil
 }
 
 func (b *BlobStorage) Close() error {
-	return b.bucket.Close()
+	if err := b.bucket.Close(); err != nil {
+		return fmt.Errorf("failed to close bucket: %w", err)
+	}
+	return nil
 }

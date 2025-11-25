@@ -1,7 +1,9 @@
 package repo
 
 import (
+	"bytes"
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -249,4 +251,49 @@ func TestInvalidRequest(t *testing.T) {
 			t.Fatal(comment, "should have failed")
 		}
 	}
+}
+
+func TestWriteRepoBytesRace(t *testing.T) {
+	var (
+		l                  = zaptest.NewLogger(t)
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-ok.json"
+		r                  = NewTestRepo(t.Context(), l, server, varDir)
+	)
+
+	response := r.Update(t.Context())
+	require.True(t, response.Success, "should load repo successfully")
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					var buf bytes.Buffer
+					_ = r.WriteRepoBytes(ctx, &buf)
+				}
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					newBuf := bytes.NewBufferString(`{"test":"data"}`)
+					r.SetJSONBuffer(newBuf)
+				}
+			}
+		}()
+	}
+	wg.Wait()
 }

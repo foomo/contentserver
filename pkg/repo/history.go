@@ -22,7 +22,7 @@ type (
 	History struct {
 		l            *zap.Logger
 		storage      Storage
-		historyDir   string // kept for backward compatibility with GetCurrentFilename()
+		historyDir   string // directory used for default filesystem storage
 		historyLimit int
 		mu           sync.RWMutex
 	}
@@ -107,13 +107,6 @@ func (h *History) Add(ctx context.Context, jsonBytes []byte) error {
 	}
 
 	return nil
-}
-
-// GetCurrentFilename returns the path to the current snapshot file.
-//
-// Deprecated: This method is kept for backward compatibility. Use GetCurrent instead.
-func (h *History) GetCurrentFilename() string {
-	return h.historyDir + "/" + CurrentKey
 }
 
 // GetCurrent reads the current snapshot into the provided buffer.

@@ -84,6 +84,36 @@ Flags:
 Use "contentserver [command] --help" for more information about a command.
 ```
 
+## Storage Backends
+
+The content server supports pluggable storage backends for persisting repository snapshots:
+
+### Filesystem (Default)
+
+By default, the server stores snapshots on the local filesystem:
+
+```bash
+contentserver http --history-dir /var/lib/contentserver http://example.com/repo.json
+```
+
+### Google Cloud Storage (GCS)
+
+For cloud deployments, GCS storage is supported:
+
+```bash
+contentserver http \
+  --storage-type gcs \
+  --storage-gcs-bucket gs://my-bucket \
+  --storage-gcs-prefix contentserver/snapshots/ \
+  http://example.com/repo.json
+```
+
+The server uses Application Default Credentials (ADC) for authentication. Ensure your environment is configured with appropriate GCS permissions.
+
+### Adding Other Cloud Providers
+
+The storage implementation uses [gocloud.dev/blob](https://gocloud.dev/howto/blob/) which supports multiple cloud providers. Support for AWS S3, Azure Blob Storage, and others can be added by importing the corresponding driver package.
+
 ## How to Contribute
 
 Please refer to the [CONTRIBUTING](.github/CONTRIBUTING.md) details and follow the [CODE_OF_CONDUCT](.github/CODE_OF_CONDUCT.md) and [SECURITY](.github/SECURITY.md) guidelines.

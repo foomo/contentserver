@@ -224,8 +224,9 @@ func (r *Repo) GetRepo() map[string]*content.RepoNode {
 func (r *Repo) WriteRepoBytes(ctx context.Context, w io.Writer) error {
 	r.jsonBufferLock.RLock()
 	var data []byte
-	if r.jsonBuffer != nil {
-		data = r.jsonBuffer.Bytes()
+	if r.jsonBuffer != nil && r.jsonBuffer.Len() > 0 {
+		data = make([]byte, r.jsonBuffer.Len())
+		copy(data, r.jsonBuffer.Bytes())
 	}
 	r.jsonBufferLock.RUnlock()
 

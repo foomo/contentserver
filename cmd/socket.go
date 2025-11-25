@@ -46,6 +46,11 @@ func NewSocketCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to create history: %w", err)
 			}
+			defer func() {
+				if closeErr := history.Close(); closeErr != nil {
+					l.Error("failed to close history storage", zap.Error(closeErr))
+				}
+			}()
 
 			r := repo.New(l,
 				args[0],
