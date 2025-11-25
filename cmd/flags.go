@@ -163,3 +163,13 @@ func addStorageGCSPrefixFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	_ = v.BindPFlag("storage.gcs.prefix", flags.Lookup("storage-gcs-prefix"))
 	_ = v.BindEnv("storage.gcs.prefix", "CONTENT_SERVER_STORAGE_GCS_PREFIX")
 }
+
+func repositoryTimeoutFlag(v *viper.Viper) time.Duration {
+	return v.GetDuration("repository.timeout")
+}
+
+func addRepositoryTimeoutFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.Duration("repository-timeout", 5*time.Minute, "HTTP client timeout for repository updates")
+	_ = v.BindPFlag("repository.timeout", flags.Lookup("repository-timeout"))
+	_ = v.BindEnv("repository.timeout", "CONTENT_SERVER_REPOSITORY_TIMEOUT")
+}

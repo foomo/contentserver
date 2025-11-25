@@ -57,6 +57,7 @@ func NewSocketCommand() *cobra.Command {
 				history,
 				repo.WithHTTPClient(
 					keelhttp.NewHTTPClient(
+						keelhttp.HTTPClientWithTimeout(repositoryTimeoutFlag(v)),
 						keelhttp.HTTPClientWithTelemetry(),
 					),
 				),
@@ -113,6 +114,7 @@ func NewSocketCommand() *cobra.Command {
 	addStorageTypeFlag(flags, v)
 	addStorageGCSBucketFlag(flags, v)
 	addStorageGCSPrefixFlag(flags, v)
+	addRepositoryTimeoutFlag(flags, v)
 
 	return cmd
 }
