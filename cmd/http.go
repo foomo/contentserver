@@ -20,6 +20,9 @@ import (
 
 func NewHTTPCommand() *cobra.Command {
 	v := newViper()
+	// TODO: When keel is updated, set it in the correct place
+	service.DefaultHTTPPProfAddr = ":6060"
+
 	cmd := &cobra.Command{
 		Use:   "http <url>",
 		Short: "Start http server",
