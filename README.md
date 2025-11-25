@@ -86,7 +86,7 @@ Use "contentserver [command] --help" for more information about a command.
 
 ## Storage Backends
 
-The content server supports pluggable storage backends for persisting repository snapshots:
+The content server supports pluggable storage backends for persisting repository snapshots.
 
 ### Filesystem (Default)
 
@@ -96,23 +96,55 @@ By default, the server stores snapshots on the local filesystem:
 contentserver http --history-dir /var/lib/contentserver http://example.com/repo.json
 ```
 
-### Google Cloud Storage (GCS)
+### Blob Storage (Cloud)
 
-For cloud deployments, GCS storage is supported:
+For cloud deployments, blob storage supports multiple providers via URL schemes:
+
+#### Google Cloud Storage
 
 ```bash
 contentserver http \
-  --storage-type gcs \
-  --storage-gcs-bucket gs://my-bucket \
-  --storage-gcs-prefix contentserver/snapshots/ \
+  --storage-type blob \
+  --storage-blob-bucket gs://my-bucket \
+  --storage-blob-prefix contentserver/snapshots/ \
   http://example.com/repo.json
 ```
 
-The server uses Application Default Credentials (ADC) for authentication. Ensure your environment is configured with appropriate GCS permissions.
+Uses Application Default Credentials (ADC) for authentication.
 
-### Adding Other Cloud Providers
+#### AWS S3
 
-The storage implementation uses [gocloud.dev/blob](https://gocloud.dev/howto/blob/) which supports multiple cloud providers. Support for AWS S3, Azure Blob Storage, and others can be added by importing the corresponding driver package.
+```bash
+contentserver http \
+  --storage-type blob \
+  --storage-blob-bucket "s3://my-bucket?region=us-east-1" \
+  --storage-blob-prefix contentserver/snapshots/ \
+  http://example.com/repo.json
+```
+
+Uses AWS SDK v2 default credential chain (environment variables, shared credentials file, IAM role).
+
+#### Azure Blob Storage
+
+```bash
+contentserver http \
+  --storage-type blob \
+  --storage-blob-bucket azblob://my-container \
+  --storage-blob-prefix contentserver/snapshots/ \
+  http://example.com/repo.json
+```
+
+Uses Azure SDK default credential chain (environment variables, managed identity).
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `CONTENT_SERVER_STORAGE_TYPE` | Storage type: `filesystem` (default) or `blob` |
+| `CONTENT_SERVER_STORAGE_BLOB_BUCKET` | Blob storage URL with scheme (gs://, s3://, azblob://) |
+| `CONTENT_SERVER_STORAGE_BLOB_PREFIX` | Object key prefix |
+
+See [gocloud.dev/blob](https://gocloud.dev/howto/blob/) for detailed authentication configuration.
 
 ## How to Contribute
 

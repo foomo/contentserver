@@ -11,20 +11,24 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/gcerrors"
 
-	// Import GCS driver for production use
-	_ "gocloud.dev/blob/gcsblob"
+	// Cloud provider drivers - import enables URL scheme support
+	_ "gocloud.dev/blob/azureblob" // azblob:// scheme
+	_ "gocloud.dev/blob/gcsblob"   // gs:// scheme
+	_ "gocloud.dev/blob/s3blob"    // s3:// scheme
 )
 
 // BlobStorage implements Storage using gocloud.dev/blob.
-// Currently supports GCS. Support for S3, Azure, and other cloud storage
-// providers can be easily added by importing the corresponding driver.
+// Supports multiple cloud providers via URL schemes:
+//   - gs://bucket-name          - Google Cloud Storage
+//   - s3://bucket-name?region=X - AWS S3 (region parameter required)
+//   - azblob://container-name   - Azure Blob Storage
 type BlobStorage struct {
 	bucket *blob.Bucket
 	prefix string
 }
 
 // NewBlobStorage creates a new blob-backed storage.
-// bucketURL should be in the format "gs://bucket-name" for GCS.
+// bucketURL should include the provider scheme (gs://, s3://, azblob://).
 // prefix is an optional path prefix for all keys.
 func NewBlobStorage(ctx context.Context, bucketURL, prefix string) (*BlobStorage, error) {
 	bucket, err := blob.OpenBucket(ctx, bucketURL)

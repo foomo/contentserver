@@ -112,8 +112,8 @@ func NewSocketCommand() *cobra.Command {
 	addHistoryDirFlag(flags, v)
 	addHistoryLimitFlag(flags, v)
 	addStorageTypeFlag(flags, v)
-	addStorageGCSBucketFlag(flags, v)
-	addStorageGCSPrefixFlag(flags, v)
+	addStorageBlobBucketFlag(flags, v)
+	addStorageBlobPrefixFlag(flags, v)
 	addRepositoryTimeoutFlag(flags, v)
 
 	return cmd

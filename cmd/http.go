@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/foomo/contentserver/pkg/repo"
@@ -117,42 +118,76 @@ func NewHTTPCommand() *cobra.Command {
 	addServicePrometheusEnabledFlag(flags, v)
 	addServicePProfEnabledFlag(flags, v)
 	addStorageTypeFlag(flags, v)
-	addStorageGCSBucketFlag(flags, v)
-	addStorageGCSPrefixFlag(flags, v)
+	addStorageBlobBucketFlag(flags, v)
+	addStorageBlobPrefixFlag(flags, v)
 	addRepositoryTimeoutFlag(flags, v)
 
 	return cmd
 }
 
+// supportedBlobSchemes lists the URL schemes supported by blob storage
+var supportedBlobSchemes = []string{"gs://", "s3://", "azblob://"}
+
 // createStorage creates a storage backend based on the configuration
 func createStorage(ctx context.Context, v *viper.Viper, l *zap.Logger) (repo.Storage, error) {
 	storageType := storageTypeFlag(v)
-	gcsBucket := storageGCSBucketFlag(v)
-	gcsPrefix := storageGCSPrefixFlag(v)
+	blobBucket := storageBlobBucketFlag(v)
+	blobPrefix := storageBlobPrefixFlag(v)
 
-	// Warn about ignored GCS config
-	if storageType != "gcs" && (gcsBucket != "" || gcsPrefix != "") {
-		l.Warn("GCS configuration flags are set but storage-type is not 'gcs'; GCS config will be ignored",
+	// Warn about ignored blob config
+	if storageType != "blob" && (blobBucket != "" || blobPrefix != "") {
+		l.Warn("blob storage flags are set but storage-type is not 'blob'; blob config will be ignored",
 			zap.String("storage-type", storageType),
-			zap.String("gcs-bucket", gcsBucket),
-			zap.String("gcs-prefix", gcsPrefix),
+			zap.String("blob-bucket", blobBucket),
+			zap.String("blob-prefix", blobPrefix),
 		)
 	}
 
 	l.Info("creating storage", zap.String("type", storageType))
 
 	switch storageType {
-	case "gcs":
-		if gcsBucket == "" {
-			return nil, fmt.Errorf("GCS bucket URL is required for gcs storage type")
+	case "blob":
+		if blobBucket == "" {
+			return nil, fmt.Errorf("blob bucket URL is required when storage-type is 'blob' (supported schemes: gs://, s3://, azblob://)")
 		}
-		l.Info("using GCS storage", zap.String("bucket", gcsBucket), zap.String("prefix", gcsPrefix))
-		return repo.NewBlobStorage(ctx, gcsBucket, gcsPrefix)
+		if !isValidBlobScheme(blobBucket) {
+			return nil, fmt.Errorf("unsupported blob storage URL scheme in %q; supported schemes: gs://, s3://, azblob://", blobBucket)
+		}
+		l.Info("using blob storage",
+			zap.String("bucket", blobBucket),
+			zap.String("prefix", blobPrefix),
+			zap.String("provider", detectBlobProvider(blobBucket)),
+		)
+		return repo.NewBlobStorage(ctx, blobBucket, blobPrefix)
 	case "filesystem", "":
 		dir := historyDirFlag(v)
 		l.Info("using filesystem storage", zap.String("dir", dir))
 		return repo.NewFilesystemStorage(dir)
 	default:
-		return nil, fmt.Errorf("unknown storage type: %s", storageType)
+		return nil, fmt.Errorf("unknown storage type: %s (supported: filesystem, blob)", storageType)
+	}
+}
+
+// isValidBlobScheme checks if the bucket URL has a supported scheme
+func isValidBlobScheme(bucketURL string) bool {
+	for _, scheme := range supportedBlobSchemes {
+		if strings.HasPrefix(bucketURL, scheme) {
+			return true
+		}
+	}
+	return false
+}
+
+// detectBlobProvider returns a human-readable provider name from the URL scheme
+func detectBlobProvider(bucketURL string) string {
+	switch {
+	case strings.HasPrefix(bucketURL, "gs://"):
+		return "Google Cloud Storage"
+	case strings.HasPrefix(bucketURL, "s3://"):
+		return "AWS S3"
+	case strings.HasPrefix(bucketURL, "azblob://"):
+		return "Azure Blob Storage"
+	default:
+		return "unknown"
 	}
 }
