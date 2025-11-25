@@ -118,3 +118,4 @@ docker_manifests:
       - 'foomo/contentserver:{{ .Major }}.{{ .Minor }}-amd64'
       - 'foomo/contentserver:{{ .Major }}.{{ .Minor }}-arm64'
     skip_push: auto
+
