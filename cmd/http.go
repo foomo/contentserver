@@ -39,7 +39,7 @@ func NewHTTPCommand() *cobra.Command {
 				keel.WithPrometheusMeter(servicePrometheusEnabledFlag(v)),
 				keel.WithGracefulPeriod(gracefulPeriodFlag(v)),
 				keel.WithOTLPGRPCTracer(otelEnabledFlag(v)),
-				keel.WithHTTPPProfService(true),
+				keel.WithHTTPPProfService(servicePProfEnabledFlag(v)),
 			)
 
 			l := svr.Logger()
@@ -114,6 +114,7 @@ func NewHTTPCommand() *cobra.Command {
 	addOtelEnabledFlag(flags, v)
 	addServiceHealthzEnabledFlag(flags, v)
 	addServicePrometheusEnabledFlag(flags, v)
+	addServicePProfEnabledFlag(flags, v)
 	addStorageTypeFlag(flags, v)
 	addStorageGCSBucketFlag(flags, v)
 	addStorageGCSPrefixFlag(flags, v)

@@ -115,6 +115,15 @@ func addServicePrometheusEnabledFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	_ = v.BindPFlag("service.prometheus.enabled", flags.Lookup("service-prometheus-enabled"))
 }
 
+func servicePProfEnabledFlag(v *viper.Viper) bool {
+	return v.GetBool("service.pprof.enabled")
+}
+
+func addServicePProfEnabledFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.Bool("service-pprof-enabled", false, "Enable pprof service")
+	_ = v.BindPFlag("service.pprof.enabled", flags.Lookup("service-pprof-enabled"))
+}
+
 func otelEnabledFlag(v *viper.Viper) bool {
 	return v.GetBool("otel.enabled")
 }
