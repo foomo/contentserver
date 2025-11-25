@@ -1,7 +1,9 @@
 package repo
 
 import (
+	"bytes"
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,7 +16,10 @@ import (
 )
 
 func NewTestRepo(ctx context.Context, l *zap.Logger, url, varDir string) *Repo {
-	h := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(varDir))
+	h, err := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(varDir))
+	if err != nil {
+		panic(err)
+	}
 	r := New(l, url, h)
 	go r.Start(ctx) //nolint:errcheck
 	time.Sleep(100 * time.Millisecond)
@@ -42,7 +47,7 @@ func TestLoad404(t *testing.T) {
 		r                  = NewTestRepo(t.Context(), l, url, varDir)
 	)
 
-	response := r.Update()
+	response := r.Update(t.Context())
 	if response.Success {
 		t.Fatal("can not get a repo, if the server responds with a 404")
 	}
@@ -56,7 +61,7 @@ func TestLoadBrokenRepo(t *testing.T) {
 		r                  = NewTestRepo(t.Context(), l, server, varDir)
 	)
 
-	response := r.Update()
+	response := r.Update(t.Context())
 	if response.Success {
 		t.Fatal("how could we load a broken json")
 	}
@@ -71,7 +76,7 @@ func TestLoadRepo(t *testing.T) {
 	)
 	assertRepoIsEmpty(t, r, false)
 
-	response := r.Update()
+	response := r.Update(t.Context())
 	assertRepoIsEmpty(t, r, false)
 
 	if !response.Success {
@@ -101,7 +106,7 @@ func BenchmarkLoadRepo(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		response := r.Update()
+		response := r.Update(b.Context())
 		if len(r.Directory()) == 0 {
 			b.Fatal("directory is empty, but should have been not")
 		}
@@ -120,7 +125,7 @@ func TestLoadRepoDuplicateUris(t *testing.T) {
 		r                  = NewTestRepo(t.Context(), l, server, varDir)
 	)
 
-	response := r.Update()
+	response := r.Update(t.Context())
 	require.False(t, response.Success, "there are duplicates, this repo update should have failed")
 
 	assert.Contains(t, response.ErrorMessage, "update dimension")
@@ -133,11 +138,11 @@ func TestDimensionHygiene(t *testing.T) {
 	server := mockServer.URL + "/repo-two-dimensions.json"
 	r := NewTestRepo(t.Context(), l, server, varDir)
 
-	response := r.Update()
+	response := r.Update(t.Context())
 	require.True(t, response.Success, "well those two dimension should be fine")
 
 	r.url = mockServer.URL + "/repo-ok.json"
-	response = r.Update()
+	response = r.Update(t.Context())
 	require.True(t, response.Success, "it is called repo ok")
 
 	assert.Lenf(t, r.Directory(), 1, "directory hygiene failed")
@@ -150,7 +155,7 @@ func getTestRepo(t *testing.T, path string) *Repo {
 	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + path
 	r := NewTestRepo(t.Context(), l, server, varDir)
-	response := r.Update()
+	response := r.Update(t.Context())
 
 	require.True(t, response.Success, "well those two dimension should be fine")
 
@@ -201,7 +206,7 @@ func TestLinkIds(t *testing.T) {
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-link-ok.json"
 		r                  = NewTestRepo(t.Context(), l, server, varDir)
-		response           = r.Update()
+		response           = r.Update(t.Context())
 	)
 
 	if !response.Success {
@@ -209,7 +214,7 @@ func TestLinkIds(t *testing.T) {
 	}
 
 	r.url = mockServer.URL + "/repo-link-broken.json"
-	response = r.Update()
+	response = r.Update(t.Context())
 
 	if response.Success {
 		t.Fatal("I do not think so")
@@ -246,4 +251,49 @@ func TestInvalidRequest(t *testing.T) {
 			t.Fatal(comment, "should have failed")
 		}
 	}
+}
+
+func TestWriteRepoBytesRace(t *testing.T) {
+	var (
+		l                  = zaptest.NewLogger(t)
+		mockServer, varDir = mock.GetMockData(t)
+		server             = mockServer.URL + "/repo-ok.json"
+		r                  = NewTestRepo(t.Context(), l, server, varDir)
+	)
+
+	response := r.Update(t.Context())
+	require.True(t, response.Success, "should load repo successfully")
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					var buf bytes.Buffer
+					_ = r.WriteRepoBytes(ctx, &buf)
+				}
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					newBuf := bytes.NewBufferString(`{"test":"data"}`)
+					r.SetJSONBuffer(newBuf)
+				}
+			}
+		}()
+	}
+	wg.Wait()
 }

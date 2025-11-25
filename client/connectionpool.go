@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"net"
 	"time"
 )
@@ -92,7 +93,8 @@ RunLoop:
 		// refill connection pool
 		for _, poolEntry := range connectionPool {
 			if poolEntry.conn == nil {
-				newConn, errDial := net.Dial("tcp", c.url)
+				var d net.Dialer
+				newConn, errDial := d.DialContext(context.Background(), "tcp", c.url)
 				poolEntry.err = errDial
 				poolEntry.conn = newConn
 			}

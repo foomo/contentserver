@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/foomo/contentserver/pkg/handler"
@@ -31,14 +32,32 @@ func NewSocketCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			l := log.Logger()
 
+			// Create storage based on configuration
+			storage, err := createStorage(cmd.Context(), v, l)
+			if err != nil {
+				return fmt.Errorf("failed to create storage: %w", err)
+			}
+
+			history, err := repo.NewHistory(l,
+				repo.HistoryWithStorage(storage),
+				repo.HistoryWithHistoryDir(historyDirFlag(v)),
+				repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create history: %w", err)
+			}
+			defer func() {
+				if closeErr := history.Close(); closeErr != nil {
+					l.Error("failed to close history storage", zap.Error(closeErr))
+				}
+			}()
+
 			r := repo.New(l,
 				args[0],
-				repo.NewHistory(l,
-					repo.HistoryWithHistoryDir(historyDirFlag(v)),
-					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
-				),
+				history,
 				repo.WithHTTPClient(
 					keelhttp.NewHTTPClient(
+						keelhttp.HTTPClientWithTimeout(repositoryTimeoutFlag(v)),
 						keelhttp.HTTPClientWithTelemetry(),
 					),
 				),
@@ -50,7 +69,8 @@ func NewSocketCommand() *cobra.Command {
 			handle := handler.NewSocket(l, r)
 
 			// listen on socket
-			ln, err := net.Listen("tcp", addressFlag(v))
+			var lc net.ListenConfig
+			ln, err := lc.Listen(cmd.Context(), "tcp", addressFlag(v))
 			if err != nil {
 				return err
 			}
@@ -91,6 +111,10 @@ func NewSocketCommand() *cobra.Command {
 	addPollIntervalFlag(flags, v)
 	addHistoryDirFlag(flags, v)
 	addHistoryLimitFlag(flags, v)
+	addStorageTypeFlag(flags, v)
+	addStorageBlobBucketFlag(flags, v)
+	addStorageBlobPrefixFlag(flags, v)
+	addRepositoryTimeoutFlag(flags, v)
 
 	return cmd
 }

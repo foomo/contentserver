@@ -115,6 +115,15 @@ func addServicePrometheusEnabledFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	_ = v.BindPFlag("service.prometheus.enabled", flags.Lookup("service-prometheus-enabled"))
 }
 
+func servicePProfEnabledFlag(v *viper.Viper) bool {
+	return v.GetBool("service.pprof.enabled")
+}
+
+func addServicePProfEnabledFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.Bool("service-pprof-enabled", false, "Enable pprof service")
+	_ = v.BindPFlag("service.pprof.enabled", flags.Lookup("service-pprof-enabled"))
+}
+
 func otelEnabledFlag(v *viper.Viper) bool {
 	return v.GetBool("otel.enabled")
 }
@@ -123,4 +132,44 @@ func addOtelEnabledFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	flags.Bool("otel-enabled", false, "Enable otel service")
 	_ = v.BindPFlag("otel.enabled", flags.Lookup("otel-enabled"))
 	_ = v.BindEnv("otel.enabled", "OTEL_ENABLED")
+}
+
+func storageTypeFlag(v *viper.Viper) string {
+	return v.GetString("storage.type")
+}
+
+func addStorageTypeFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("storage-type", "filesystem", "Storage backend type: filesystem or blob")
+	_ = v.BindPFlag("storage.type", flags.Lookup("storage-type"))
+	_ = v.BindEnv("storage.type", "CONTENT_SERVER_STORAGE_TYPE")
+}
+
+func storageBlobBucketFlag(v *viper.Viper) string {
+	return v.GetString("storage.blob.bucket")
+}
+
+func addStorageBlobBucketFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("storage-blob-bucket", "", "Blob storage bucket URL (e.g., gs://bucket, s3://bucket?region=us-east-1, azblob://container)")
+	_ = v.BindPFlag("storage.blob.bucket", flags.Lookup("storage-blob-bucket"))
+	_ = v.BindEnv("storage.blob.bucket", "CONTENT_SERVER_STORAGE_BLOB_BUCKET")
+}
+
+func storageBlobPrefixFlag(v *viper.Viper) string {
+	return v.GetString("storage.blob.prefix")
+}
+
+func addStorageBlobPrefixFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("storage-blob-prefix", "", "Blob storage object prefix (e.g., contentserver/snapshots/)")
+	_ = v.BindPFlag("storage.blob.prefix", flags.Lookup("storage-blob-prefix"))
+	_ = v.BindEnv("storage.blob.prefix", "CONTENT_SERVER_STORAGE_BLOB_PREFIX")
+}
+
+func repositoryTimeoutFlag(v *viper.Viper) time.Duration {
+	return v.GetDuration("repository.timeout")
+}
+
+func addRepositoryTimeoutFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.Duration("repository-timeout", 5*time.Minute, "HTTP client timeout for repository updates")
+	_ = v.BindPFlag("repository.timeout", flags.Lookup("repository-timeout"))
+	_ = v.BindEnv("repository.timeout", "CONTENT_SERVER_REPOSITORY_TIMEOUT")
 }
