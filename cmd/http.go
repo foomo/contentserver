@@ -98,7 +98,7 @@ func NewHTTPCommand() *cobra.Command {
 					handler.NewHTTP(l.Named("inst.handler"), r, handler.WithBasePath(basePathFlag(v))),
 					middleware.Telemetry(),
 					middleware.Logger(),
-					middleware.GZip(),
+					middleware.GZip(middleware.GZipWithLevel(gzipLevelFlag(v))),
 					middleware.Recover(),
 				),
 			)
@@ -124,6 +124,7 @@ func NewHTTPCommand() *cobra.Command {
 	addStorageBlobBucketFlag(flags, v)
 	addStorageBlobPrefixFlag(flags, v)
 	addRepositoryTimeoutFlag(flags, v)
+	addGzipLevelFlag(flags, v)
 
 	return cmd
 }

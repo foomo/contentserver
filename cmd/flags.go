@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"compress/gzip"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -172,4 +173,14 @@ func addRepositoryTimeoutFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	flags.Duration("repository-timeout", 5*time.Minute, "HTTP client timeout for repository updates")
 	_ = v.BindPFlag("repository.timeout", flags.Lookup("repository-timeout"))
 	_ = v.BindEnv("repository.timeout", "CONTENT_SERVER_REPOSITORY_TIMEOUT")
+}
+
+func gzipLevelFlag(v *viper.Viper) int {
+	return v.GetInt("gzip.level")
+}
+
+func addGzipLevelFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.Int("gzip-level", gzip.DefaultCompression, "GZIP compression level (-1=default, 0=none, 1=best speed, 9=best compression)")
+	_ = v.BindPFlag("gzip.level", flags.Lookup("gzip-level"))
+	_ = v.BindEnv("gzip.level", "CONTENT_SERVER_GZIP_LEVEL")
 }
