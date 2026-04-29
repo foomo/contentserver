@@ -1,6 +1,6 @@
 module github.com/foomo/contentserver
 
-go 1.25.4
+go 1.26.0
 
 require (
 	github.com/foomo/keel v0.22.0

@@ -232,7 +232,7 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return errors.Errorf("bad response code from repository %q want %q", response.Status, http.StatusOK)
+		return errors.Errorf("bad response code from repository %q want %d", response.Status, http.StatusOK)
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
