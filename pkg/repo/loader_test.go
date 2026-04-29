@@ -322,6 +322,60 @@ func TestUpdate_ETagThenAbsent_PreservesLast(t *testing.T) {
 	assert.Equal(t, etagV1, r.lastETag, "lastETag must be preserved when a 200 response omits ETag")
 }
 
+// TestUpdate_LastETagNotCommittedOnLoadFailure pins the contract that a
+// poll response's ETag MUST NOT be committed to lastETag until the catalogue
+// body has been fully fetched and loaded. Without this guarantee, a transient
+// failure downloading the body URL would leave lastETag pointing at content
+// the loader never actually loaded — the next poll's If-None-Match would
+// elicit a 304 and the loader would silently log "up to date" without ever
+// recovering. This is a regression test for that ordering bug.
+func TestUpdate_LastETagNotCommittedOnLoadFailure(t *testing.T) {
+	t.Parallel()
+
+	const etagV1 = `"v1"`
+	var pollCallCount int
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case testPollPath:
+			pollCallCount++
+			// Poll always returns 200 + ETag + a URL pointing at the repo
+			// endpoint, which deliberately fails on every call below.
+			w.Header().Set("ETag", etagV1)
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("http://" + r.Host + testRepoPath)) //nolint:gosec // r.Host is the test server's local address, not user input
+		case testRepoPath:
+			// Simulate a transient catalogue download failure (CDN blip,
+			// transient 5xx) — exactly the scenario where the loader must
+			// not poison lastETag.
+			http.Error(w, "boom", http.StatusInternalServerError)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	r := newMinimalRepo(t, srv.URL+testPollPath)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	// First call — poll returns 200+ETag, but the body fetch fails. lastETag
+	// MUST stay empty so the next poll re-attempts (no silent 304 short-circuit).
+	_, err := r.update(ctx)
+	require.Error(t, err, "catalogue download failure must surface as an error")
+	assert.Empty(t, r.lastETag, "lastETag must NOT be committed when the catalogue load failed")
+	require.Equal(t, 1, pollCallCount)
+
+	// Second call — must again attempt the poll and the body fetch (no 304
+	// short-circuit), proving the bug pattern of perma-staleness is gone.
+	_, err = r.update(ctx)
+	require.Error(t, err)
+	assert.Empty(t, r.lastETag, "lastETag must still be empty after a second failed load")
+	assert.Equal(t, 2, pollCallCount, "poll endpoint must be hit again — no 304 short-circuit when lastETag was never committed")
+}
+
 // TestUpdate_NoIfNoneMatchOnFirstCall verifies that the very first poll
 // request does not include an If-None-Match header (lastETag is empty at
 // startup).
