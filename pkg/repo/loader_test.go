@@ -11,6 +11,12 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+const (
+	testPollPath = "/poll"
+	testRepoPath = "/repo"
+	testRepoBody = `{"dimension_foo":{"id":"id-root","uri":"/","name":"root","nodes":{},"index":[]}}`
+)
+
 // newMinimalRepo creates a Repo wired up for poll mode against the given URL,
 // with a temporary history dir. It does NOT start the background routines so
 // tests can call update() directly and observe the state.
@@ -29,8 +35,8 @@ func newMinimalRepo(t *testing.T, url string) *Repo {
 func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
 	t.Parallel()
 
-	// The poll server returns a URL that points at itself + "/repo".
-	// The "/repo" endpoint serves the actual JSON repo content.
+	// The poll server returns a URL that points at itself + testRepoPath.
+	// The testRepoPath endpoint serves the actual JSON repo content.
 	var (
 		pollCallCount int
 		repoCallCount int
@@ -38,35 +44,35 @@ func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/poll":
+		case testPollPath:
 			pollCallCount++
 			// No ETag header — legacy server behaviour.
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("http://" + r.Host + "/repo"))
-		case "/repo":
+			_, _ = w.Write([]byte("http://" + r.Host + testRepoPath)) //nolint:gosec // r.Host is the test server's local address, not user input
+		case testRepoPath:
 			repoCallCount++
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"dimension_foo":{"id":"id-root","uri":"/","name":"root","nodes":{},"index":[]}}`))
+			_, _ = w.Write([]byte(testRepoBody))
 		default:
 			http.NotFound(w, r)
 		}
 	}))
 	t.Cleanup(srv.Close)
 
-	r := newMinimalRepo(t, srv.URL+"/poll")
+	r := newMinimalRepo(t, srv.URL+testPollPath)
 
 	// Start the background channel-routing goroutines that update() requires.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	go r.UpdateRoutine(ctx)   //nolint:errcheck
+	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
 	// First call — no ETag on wire, repo must be fetched and loaded.
 	_, err := r.update(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, "", r.lastETag, "lastETag must stay empty when server sends no ETag")
+	assert.Empty(t, r.lastETag, "lastETag must stay empty when server sends no ETag")
 	assert.Equal(t, 1, pollCallCount)
 	assert.Equal(t, 1, repoCallCount)
 
@@ -86,13 +92,13 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 
 	const etagV1 = `"v1"`
 	var (
-		pollCallCount         int
-		receivedIfNoneMatch   string
+		pollCallCount       int
+		receivedIfNoneMatch string
 	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/poll":
+		case testPollPath:
 			pollCallCount++
 			inm := r.Header.Get("If-None-Match")
 			if inm != "" {
@@ -110,12 +116,12 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 			w.Header().Set("ETag", etagV1)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("http://" + r.Host + "/repo"))
+			_, _ = w.Write([]byte("http://" + r.Host + testRepoPath)) //nolint:gosec // r.Host is the test server's local address, not user input
 
-		case "/repo":
+		case testRepoPath:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"dimension_foo":{"id":"id-root","uri":"/","name":"root","nodes":{},"index":[]}}`))
+			_, _ = w.Write([]byte(testRepoBody))
 
 		default:
 			http.NotFound(w, r)
@@ -123,7 +129,7 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	r := newMinimalRepo(t, srv.URL+"/poll")
+	r := newMinimalRepo(t, srv.URL+testPollPath)
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -157,7 +163,7 @@ func TestUpdate_ETagChange(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/poll":
+		case testPollPath:
 			callCount++
 			switch callCount {
 			case 1:
@@ -165,26 +171,26 @@ func TestUpdate_ETagChange(t *testing.T) {
 				w.Header().Set("ETag", etagV1)
 				w.Header().Set("Content-Type", "text/plain")
 				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte("http://" + r.Host + "/repo?v=1"))
+				_, _ = w.Write([]byte("http://" + r.Host + testRepoPath + "?v=1")) //nolint:gosec // r.Host is the test server's local address, not user input
 			case 2:
 				// Second call: repo has changed — return 200 with new ETag v2 +
 				// a different body URL to prevent URL-in-body skip.
 				w.Header().Set("ETag", etagV2)
 				w.Header().Set("Content-Type", "text/plain")
 				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte("http://" + r.Host + "/repo?v=2"))
+				_, _ = w.Write([]byte("http://" + r.Host + testRepoPath + "?v=2")) //nolint:gosec // r.Host is the test server's local address, not user input
 			}
-		case "/repo":
+		case testRepoPath:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"dimension_foo":{"id":"id-root","uri":"/","name":"root","nodes":{},"index":[]}}`))
+			_, _ = w.Write([]byte(testRepoBody))
 		default:
 			http.NotFound(w, r)
 		}
 	}))
 	t.Cleanup(srv.Close)
 
-	r := newMinimalRepo(t, srv.URL+"/poll")
+	r := newMinimalRepo(t, srv.URL+testPollPath)
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -212,24 +218,24 @@ func TestUpdate_NoIfNoneMatchOnFirstCall(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/poll":
+		case testPollPath:
 			if r.Header.Get("If-None-Match") != "" {
 				firstRequestHadIfNoneMatch = true
 			}
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("http://" + r.Host + "/repo"))
-		case "/repo":
+			_, _ = w.Write([]byte("http://" + r.Host + testRepoPath)) //nolint:gosec // r.Host is the test server's local address, not user input
+		case testRepoPath:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"dimension_foo":{"id":"id-root","uri":"/","name":"root","nodes":{},"index":[]}}`))
+			_, _ = w.Write([]byte(testRepoBody))
 		default:
 			http.NotFound(w, r)
 		}
 	}))
 	t.Cleanup(srv.Close)
 
-	r := newMinimalRepo(t, srv.URL+"/poll")
+	r := newMinimalRepo(t, srv.URL+testPollPath)
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
