@@ -257,14 +257,38 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		if err != nil {
 			return repoRuntime, err
 		}
+		// Send a conditional request only if we have a prior ETag from a successful
+		// response. If lastETag is empty (first call, or server has never sent ETag),
+		// this is a no-op and the request behaves identically to the pre-ETag
+		// implementation.
+		if r.lastETag != "" {
+			req.Header.Set("If-None-Match", r.lastETag)
+		}
 		resp, err := r.httpClient.Do(req)
 		if err != nil {
 			return repoRuntime, err
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return repoRuntime, errors.New("could not poll latest repo download url - non 200 response")
+
+		// 304 Not Modified: server confirms our ETag is current. Skip body read
+		// entirely — the catalogue has not changed since the last successful poll.
+		if resp.StatusCode == http.StatusNotModified {
+			r.l.Info("repo is up to date (304 Not Modified)", zap.String("etag", r.lastETag))
+			return repoRuntime, nil
 		}
+
+		if resp.StatusCode != http.StatusOK {
+			return repoRuntime, errors.New("could not poll latest repo download url - non 200/304 response")
+		}
+
+		// Capture the new ETag if present. If absent, lastETag remains unchanged
+		// (or empty on the first call). This does not alter behavior for servers
+		// that never send ETag; it merely stores the value for future conditional
+		// requests.
+		if etag := resp.Header.Get("ETag"); etag != "" {
+			r.lastETag = etag
+		}
+
 		responseBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return repoRuntime, errors.New("could not poll latest repo download url, could not read body")
