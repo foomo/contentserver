@@ -89,7 +89,13 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, _ = w.Write(reply)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	// reply is produced by encodeReply -> json.Marshal (jsoniter ConfigCompatibleWithStandardLibrary),
+	// which HTML-escapes <, >, & by default. Combined with the explicit JSON content type and the
+	// nosniff header above, this is safe to write back to the client. gosec G705 cannot follow taint
+	// through the third-party JSON encoder and reports a false positive.
+	_, _ = w.Write(reply) //nolint:gosec // see comment above
 }
 
 // ------------------------------------------------------------------------------------------------

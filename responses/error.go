@@ -12,7 +12,7 @@ type Error struct {
 }
 
 func (e Error) Error() string {
-	return fmt.Sprintf("status:%q, code: %q, message: %q", e.Status, e.Code, e.Message)
+	return fmt.Sprintf("status:%d, code: %d, message: %q", e.Status, e.Code, e.Message)
 }
 
 // NewError - a brand new error

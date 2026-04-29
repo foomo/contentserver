@@ -31,6 +31,7 @@ type (
 		poll                       bool
 		pollInterval               time.Duration
 		pollVersion                string
+		lastETag                   string // ETag from the last successful poll response, used for conditional requests
 		onLoaded                   func()
 		loaded                     *atomic.Bool
 		history                    *History

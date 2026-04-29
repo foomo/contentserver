@@ -232,7 +232,7 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return errors.Errorf("bad response code from repository %q want %q", response.Status, http.StatusOK)
+		return errors.Errorf("bad response code from repository %q want %d", response.Status, http.StatusOK)
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
@@ -252,19 +252,46 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	startTimeRepo := time.Now().UnixNano()
 
 	repoURL := r.url
+	// newETag is captured from the poll response and committed to r.lastETag
+	// only after the catalogue is fully fetched and loaded into memory. If
+	// committed earlier, a transient failure in r.get / parse / loadNodes
+	// would leave us with an ETag for content we never actually loaded — and
+	// the next poll's "If-None-Match" would elicit a 304 that silently
+	// returns success, masking the staleness until upstream changes content.
+	var newETag string
 	if r.poll {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url, nil)
 		if err != nil {
 			return repoRuntime, err
+		}
+		// Send a conditional request only if we have a prior ETag from a successful
+		// response. If lastETag is empty (first call, or server has never sent ETag),
+		// this is a no-op and the request behaves identically to the pre-ETag
+		// implementation.
+		if r.lastETag != "" {
+			req.Header.Set("If-None-Match", r.lastETag)
 		}
 		resp, err := r.httpClient.Do(req)
 		if err != nil {
 			return repoRuntime, err
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return repoRuntime, errors.New("could not poll latest repo download url - non 200 response")
+
+		// 304 Not Modified: server confirms our ETag is current. Skip body read
+		// entirely — the catalogue has not changed since the last successful poll.
+		if resp.StatusCode == http.StatusNotModified {
+			r.l.Info("repo is up to date (304 Not Modified)", zap.String("etag", r.lastETag))
+			return repoRuntime, nil
 		}
+
+		if resp.StatusCode != http.StatusOK {
+			return repoRuntime, errors.New("could not poll latest repo download url - non 200/304 response")
+		}
+
+		// Capture the new ETag (if any). The commit to r.lastETag happens later,
+		// alongside r.pollVersion = repoURL, gated on a successful load.
+		newETag = resp.Header.Get("ETag")
+
 		responseBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return repoRuntime, errors.New("could not poll latest repo download url, could not read body")
@@ -304,6 +331,9 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	}
 	if r.poll {
 		r.pollVersion = repoURL
+		if newETag != "" {
+			r.lastETag = newETag
+		}
 	}
 
 	// Persist the JSON buffer after successful update
