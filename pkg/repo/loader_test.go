@@ -69,10 +69,11 @@ func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
-	// First call — no ETag on wire, repo must be fetched and loaded.
+	// First call — no ETag on wire, repo must be fetched and loaded. With the
+	// unified version field, version falls back to the URL returned in the body.
 	_, err := r.update(ctx)
 	require.NoError(t, err)
-	assert.Empty(t, r.lastETag, "lastETag must stay empty when server sends no ETag")
+	assert.Equal(t, srv.URL+testRepoPath, r.version, "version must equal the body URL when server sends no ETag")
 	assert.Equal(t, 1, pollCallCount)
 	assert.Equal(t, 1, repoCallCount)
 
@@ -139,7 +140,7 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 	// First call: 200 + ETag; loader stores the ETag.
 	_, err := r.update(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, etagV1, r.lastETag, "ETag must be stored after first successful poll")
+	assert.Equal(t, etagV1, r.version, "ETag must be stored after first successful poll")
 	assert.Equal(t, 1, pollCallCount)
 
 	// Second call: loader must send If-None-Match; server replies 304.
@@ -147,11 +148,11 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, etagV1, receivedIfNoneMatch, "If-None-Match must equal the stored ETag")
 	assert.Equal(t, 2, pollCallCount)
-	assert.Equal(t, etagV1, r.lastETag, "lastETag must remain unchanged after 304")
+	assert.Equal(t, etagV1, r.version, "version must remain unchanged after 304")
 }
 
 // TestUpdate_ETagChange verifies that when the server returns a new ETag on a
-// 200 response the loader updates lastETag and fetches the new repo content.
+// 200 response the loader updates version and fetches the new repo content.
 func TestUpdate_ETagChange(t *testing.T) {
 	t.Parallel()
 
@@ -200,12 +201,12 @@ func TestUpdate_ETagChange(t *testing.T) {
 	// First call — stores v1.
 	_, err := r.update(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, etagV1, r.lastETag)
+	assert.Equal(t, etagV1, r.version)
 
-	// Second call — server returns new ETag v2; loader must update lastETag.
+	// Second call — server returns new ETag v2; loader must update version.
 	_, err = r.update(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, etagV2, r.lastETag, "lastETag must be updated to the new value after 200 response")
+	assert.Equal(t, etagV2, r.version, "version must be updated to the new value after 200 response")
 }
 
 // TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag verifies the failure
@@ -230,7 +231,7 @@ func TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				_, _ = w.Write([]byte("http://" + r.Host + testRepoPath)) //nolint:gosec // r.Host is the test server's local address, not user input
 			default:
-				// Subsequent calls: 500 — must NOT overwrite lastETag.
+				// Subsequent calls: 500 — must NOT overwrite version.
 				http.Error(w, "boom", http.StatusInternalServerError)
 			}
 		case testRepoPath:
@@ -250,25 +251,24 @@ func TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag(t *testing.T) {
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
-	// First call — primes lastETag to etagV1.
+	// First call — primes version to etagV1.
 	_, err := r.update(ctx)
 	require.NoError(t, err)
-	require.Equal(t, etagV1, r.lastETag)
+	require.Equal(t, etagV1, r.version)
 
 	// Second call — server replies 500. update() must return an error and
 	// MUST preserve the previously captured ETag so the next retry can still
 	// send a valid If-None-Match.
 	_, err = r.update(ctx)
 	require.Error(t, err, "non-200/304 must surface as an error")
-	assert.Equal(t, etagV1, r.lastETag, "lastETag must be preserved across error responses")
+	assert.Equal(t, etagV1, r.version, "version must be preserved across error responses")
 }
 
-// TestUpdate_ETagThenAbsent_PreservesLast verifies that when the server emits
-// an ETag once and subsequently returns 200 with no ETag header, the loader
-// keeps the previously captured value (so a future ETag-aware response from
-// the same server can short-circuit again). This pins the "do not clear on
-// missing header" design choice in update().
-func TestUpdate_ETagThenAbsent_PreservesLast(t *testing.T) {
+// TestUpdate_ETagThenAbsent_FallsBackToURL verifies that when the server emits
+// an ETag once and subsequently returns 200 with no ETag header, the unified
+// version field transitions to the body URL. This pins the "ETag if present,
+// else URL" rule for the version field.
+func TestUpdate_ETagThenAbsent_FallsBackToURL(t *testing.T) {
 	t.Parallel()
 
 	const etagV1 = `"v1"`
@@ -312,24 +312,22 @@ func TestUpdate_ETagThenAbsent_PreservesLast(t *testing.T) {
 	// First call — stores etagV1.
 	_, err := r.update(ctx)
 	require.NoError(t, err)
-	require.Equal(t, etagV1, r.lastETag)
+	require.Equal(t, etagV1, r.version)
 
-	// Second call — server omits ETag. update() must NOT clear lastETag; we
-	// still want to send If-None-Match: etagV1 on the next request in case
-	// the server re-enables ETag emission.
+	// Second call — server omits ETag. version must fall back to the body URL.
 	_, err = r.update(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, etagV1, r.lastETag, "lastETag must be preserved when a 200 response omits ETag")
+	assert.Equal(t, srv.URL+testRepoPath+"?v=2", r.version, "version must fall back to body URL when ETag is absent")
 }
 
-// TestUpdate_LastETagNotCommittedOnLoadFailure pins the contract that a
-// poll response's ETag MUST NOT be committed to lastETag until the catalogue
+// TestUpdate_VersionNotCommittedOnLoadFailure pins the contract that a
+// poll response's ETag MUST NOT be committed to version until the catalogue
 // body has been fully fetched and loaded. Without this guarantee, a transient
-// failure downloading the body URL would leave lastETag pointing at content
+// failure downloading the body URL would leave version pointing at content
 // the loader never actually loaded — the next poll's If-None-Match would
 // elicit a 304 and the loader would silently log "up to date" without ever
 // recovering. This is a regression test for that ordering bug.
-func TestUpdate_LastETagNotCommittedOnLoadFailure(t *testing.T) {
+func TestUpdate_VersionNotCommittedOnLoadFailure(t *testing.T) {
 	t.Parallel()
 
 	const etagV1 = `"v1"`
@@ -348,7 +346,7 @@ func TestUpdate_LastETagNotCommittedOnLoadFailure(t *testing.T) {
 		case testRepoPath:
 			// Simulate a transient catalogue download failure (CDN blip,
 			// transient 5xx) — exactly the scenario where the loader must
-			// not poison lastETag.
+			// not poison version.
 			http.Error(w, "boom", http.StatusInternalServerError)
 		default:
 			http.NotFound(w, r)
@@ -361,23 +359,23 @@ func TestUpdate_LastETagNotCommittedOnLoadFailure(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	// First call — poll returns 200+ETag, but the body fetch fails. lastETag
+	// First call — poll returns 200+ETag, but the body fetch fails. version
 	// MUST stay empty so the next poll re-attempts (no silent 304 short-circuit).
 	_, err := r.update(ctx)
 	require.Error(t, err, "catalogue download failure must surface as an error")
-	assert.Empty(t, r.lastETag, "lastETag must NOT be committed when the catalogue load failed")
+	assert.Empty(t, r.version, "version must NOT be committed when the catalogue load failed")
 	require.Equal(t, 1, pollCallCount)
 
 	// Second call — must again attempt the poll and the body fetch (no 304
 	// short-circuit), proving the bug pattern of perma-staleness is gone.
 	_, err = r.update(ctx)
 	require.Error(t, err)
-	assert.Empty(t, r.lastETag, "lastETag must still be empty after a second failed load")
-	assert.Equal(t, 2, pollCallCount, "poll endpoint must be hit again — no 304 short-circuit when lastETag was never committed")
+	assert.Empty(t, r.version, "version must still be empty after a second failed load")
+	assert.Equal(t, 2, pollCallCount, "poll endpoint must be hit again — no 304 short-circuit when version was never committed")
 }
 
 // TestUpdate_NoIfNoneMatchOnFirstCall verifies that the very first poll
-// request does not include an If-None-Match header (lastETag is empty at
+// request does not include an If-None-Match header (version is empty at
 // startup).
 func TestUpdate_NoIfNoneMatchOnFirstCall(t *testing.T) {
 	t.Parallel()
