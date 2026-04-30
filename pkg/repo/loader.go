@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/foomo/contentserver/content"
@@ -343,6 +344,15 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	} else {
 		r.l.Info("Successfully persisted repo after update")
 	}
+
+	// Force a GC cycle. loadNodes has just swapped in the new tree, so the
+	// previous tree (often hundreds of MB) is now unreachable. Without this,
+	// Go's lazy GC can leave both trees live across the heap-growth window
+	// that follows the swap, which is the OOM signature observed in prod.
+	// Cost: one STW pause on the background poll goroutine, paid once per
+	// successful update, while client reads continue against the already-
+	// swapped-in tree.
+	runtime.GC()
 
 	return repoRuntime, nil
 }
