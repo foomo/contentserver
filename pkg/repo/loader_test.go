@@ -5,10 +5,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 const (
@@ -26,6 +29,62 @@ func newMinimalRepo(t *testing.T, url string) *Repo {
 	h, err := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(t.TempDir()))
 	require.NoError(t, err)
 	return New(l, url, h, WithPoll(true))
+}
+
+func TestPollRoutineLogsSuccessfulVersion(t *testing.T) {
+	t.Parallel()
+
+	core, logs := observer.New(zap.InfoLevel)
+	r := New(zap.New(core), "http://example.test/repo", nil, WithPoll(true), WithPollInterval(time.Millisecond))
+	r.version = `"v1"`
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	handledUpdate := make(chan struct{}, 1)
+	stopResponder := make(chan struct{})
+	responderDone := make(chan struct{})
+	go func() {
+		defer close(responderDone)
+		for {
+			select {
+			case resChan := <-r.updateInProgressChannel:
+				resChan <- updateResponse{}
+				select {
+				case handledUpdate <- struct{}{}:
+				default:
+				}
+			case <-stopResponder:
+				return
+			}
+		}
+	}()
+
+	pollDone := make(chan error, 1)
+	go func() {
+		pollDone <- r.PollRoutine(ctx)
+	}()
+
+	select {
+	case <-handledUpdate:
+	case <-time.After(time.Second):
+		t.Fatal("poll routine did not request an update")
+	}
+
+	cancel()
+	select {
+	case err := <-pollDone:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("poll routine did not stop after context cancellation")
+	}
+
+	close(stopResponder)
+	<-responderDone
+
+	entries := logs.FilterMessage("update success").All()
+	require.NotEmpty(t, entries)
+	assert.Equal(t, `"v1"`, entries[0].ContextMap()["revision"])
 }
 
 // TestUpdate_NoETag_BackwardCompat verifies that when the poll server never

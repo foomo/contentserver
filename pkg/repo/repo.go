@@ -32,8 +32,8 @@ type (
 		pollInterval time.Duration
 		// version is the catalogue identifier from the last successful update:
 		// the ETag if the poll response carried one, otherwise the URL returned
-		// in the body. It is sent as If-None-Match on every poll and used to
-		// short-circuit when the server reports the same version.
+		// in the body. ETag-shaped versions are sent as If-None-Match; all versions
+		// are used to short-circuit when the server reports the same value.
 		version                    string
 		onLoaded                   func()
 		loaded                     *atomic.Bool

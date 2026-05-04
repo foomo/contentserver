@@ -227,7 +227,7 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create get repo request")
 	}
-	response, err := r.httpClient.Do(req)
+	response, err := r.httpClient.Do(req) // #nosec G704 -- The repository URL is explicitly configured for this loader.
 	if err != nil {
 		return errors.Wrap(err, "failed to get repo")
 	}
@@ -274,7 +274,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		if strings.HasPrefix(r.version, `"`) || strings.HasPrefix(r.version, `W/"`) {
 			req.Header.Set("If-None-Match", r.version)
 		}
-		resp, err := r.httpClient.Do(req)
+		resp, err := r.httpClient.Do(req) // #nosec G704 -- Poll mode intentionally calls the configured poll endpoint.
 		if err != nil {
 			return repoRuntime, err
 		}
