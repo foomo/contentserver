@@ -81,7 +81,7 @@ func (t *HTTPTransport) Call(ctx context.Context, route handler.Route, request i
 	if errNewRequest != nil {
 		return errNewRequest
 	}
-	httpResponse, errDo := t.httpClient.Do(req)
+	httpResponse, errDo := t.httpClient.Do(req) // #nosec G704 -- The client transport must call the caller-configured contentserver endpoint.
 	if errDo != nil {
 		return errDo
 	}

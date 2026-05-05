@@ -11,16 +11,21 @@ import (
 	"github.com/foomo/contentserver/requests"
 )
 
+const (
+	dimensionFoo = "dimension_foo"
+	idRoot       = "id-root"
+)
+
 // GetMockData mock data to run a repo
 func GetMockData(tb testing.TB) (*httptest.Server, string) {
 	tb.Helper()
 	_, filename, _, _ := runtime.Caller(0)
 	mockDir := path.Dir(filename)
+	fileServer := http.FileServer(http.Dir(mockDir))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(time.Millisecond * 50)
-		mockFilename := path.Join(mockDir, req.URL.Path[1:])
-		http.ServeFile(w, req, mockFilename)
+		fileServer.ServeHTTP(w, req)
 	}))
 
 	go func() {
@@ -35,12 +40,12 @@ func GetMockData(tb testing.TB) (*httptest.Server, string) {
 func MakeNodesRequest() *requests.Nodes {
 	return &requests.Nodes{
 		Env: &requests.Env{
-			Dimensions: []string{"dimension_foo"},
+			Dimensions: []string{dimensionFoo},
 		},
 		Nodes: map[string]*requests.Node{
 			"test": {
-				ID:         "id-root",
-				Dimension:  "dimension_foo",
+				ID:         idRoot,
+				Dimension:  dimensionFoo,
 				MimeTypes:  []string{},
 				Expand:     true,
 				DataFields: []string{"foo"},
@@ -52,14 +57,14 @@ func MakeNodesRequest() *requests.Nodes {
 // MakeValidURIsRequest URIs reuqest
 func MakeValidURIsRequest() *requests.URIs {
 	return &requests.URIs{
-		Dimension: "dimension_foo",
+		Dimension: dimensionFoo,
 		IDs:       []string{"id-a", "id-b"},
 	}
 }
 
 // MakeValidContentRequest a mock content request
 func MakeValidContentRequest() *requests.Content {
-	dimensions := []string{"dimension_foo"}
+	dimensions := []string{dimensionFoo}
 	return &requests.Content{
 		URI: "/a",
 		Env: &requests.Env{
@@ -67,8 +72,8 @@ func MakeValidContentRequest() *requests.Content {
 			Groups:     []string{},
 		},
 		Nodes: map[string]*requests.Node{
-			"id-root": {
-				ID:         "id-root",
+			idRoot: {
+				ID:         idRoot,
 				Dimension:  dimensions[0],
 				MimeTypes:  []string{"application/x-node"},
 				Expand:     true,

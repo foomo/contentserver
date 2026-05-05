@@ -26,12 +26,15 @@ const maxGetURIForNodeRecursionLevel = 1000
 // Repo content repository
 type (
 	Repo struct {
-		l                          *zap.Logger
-		url                        string
-		poll                       bool
-		pollInterval               time.Duration
-		pollVersion                string
-		lastETag                   string // ETag from the last successful poll response, used for conditional requests
+		l            *zap.Logger
+		url          string
+		poll         bool
+		pollInterval time.Duration
+		// version is the catalogue identifier from the last successful update:
+		// the ETag if the poll response carried one, otherwise the URL returned
+		// in the body. ETag-shaped versions are sent as If-None-Match; all versions
+		// are used to short-circuit when the server reports the same value.
+		version                    string
 		onLoaded                   func()
 		loaded                     *atomic.Bool
 		history                    *History
