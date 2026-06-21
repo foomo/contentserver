@@ -13,7 +13,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Unshallow
         run: git fetch --prune --unshallow
@@ -22,9 +22,9 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - id: app_token
         uses: tibdex/github-app-token@v2
