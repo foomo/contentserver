@@ -17,5 +17,6 @@ func NewVersionCommand() *cobra.Command {
 			fmt.Println(version)
 		},
 	}
+
 	return cmd
 }

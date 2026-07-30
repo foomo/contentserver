@@ -131,6 +131,7 @@ func TestFilesystemStorage_ConcurrentOperations(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
+
 			key := "concurrent-key"
 			data := []byte("data")
 			_ = storage.Write(ctx, key, data)
@@ -138,6 +139,7 @@ func TestFilesystemStorage_ConcurrentOperations(t *testing.T) {
 			_, _ = storage.List(ctx, "concurrent-")
 		}(i)
 	}
+
 	wg.Wait()
 }
 

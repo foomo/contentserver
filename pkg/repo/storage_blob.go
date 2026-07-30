@@ -40,6 +40,7 @@ func NewBlobStorage(ctx context.Context, bucketURL, prefix string) (*BlobStorage
 	if prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
 	}
+
 	return &BlobStorage{
 		bucket: bucket,
 		prefix: prefix,
@@ -53,6 +54,7 @@ func NewBlobStorageFromBucket(bucket *blob.Bucket, prefix string) *BlobStorage {
 	if prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
 	}
+
 	return &BlobStorage{
 		bucket: bucket,
 		prefix: prefix,
@@ -63,6 +65,7 @@ func (b *BlobStorage) Write(ctx context.Context, key string, data []byte) error 
 	if err := b.bucket.WriteAll(ctx, b.fullKey(key), data, nil); err != nil {
 		return fmt.Errorf("failed to write blob %q: %w", key, err)
 	}
+
 	return nil
 }
 
@@ -72,8 +75,10 @@ func (b *BlobStorage) Read(ctx context.Context, key string) ([]byte, error) {
 		if gcerrors.Code(err) == gcerrors.NotFound {
 			return nil, os.ErrNotExist
 		}
+
 		return nil, fmt.Errorf("failed to read blob %q: %w", key, err)
 	}
+
 	return data, nil
 }
 
@@ -83,25 +88,32 @@ func (b *BlobStorage) List(ctx context.Context, prefix string) ([]string, error)
 	})
 
 	var keys []string
+
 	for {
 		obj, err := iter.Next(ctx)
 		if errors.Is(err, io.EOF) {
 			break
 		}
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to list blobs with prefix %q: %w", prefix, err)
 		}
+
 		key := obj.Key
 		if b.prefix != "" {
 			// Skip keys that don't have our prefix (shouldn't happen, but be safe)
 			if !strings.HasPrefix(key, b.prefix) {
 				continue
 			}
+
 			key = strings.TrimPrefix(key, b.prefix)
 		}
+
 		keys = append(keys, key)
 	}
+
 	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+
 	return keys, nil
 }
 
@@ -111,8 +123,10 @@ func (b *BlobStorage) Delete(ctx context.Context, key string) error {
 		if gcerrors.Code(err) == gcerrors.NotFound {
 			return nil
 		}
+
 		return fmt.Errorf("failed to delete blob %q: %w", key, err)
 	}
+
 	return nil
 }
 
@@ -120,6 +134,7 @@ func (b *BlobStorage) Close() error {
 	if err := b.bucket.Close(); err != nil {
 		return fmt.Errorf("failed to close bucket: %w", err)
 	}
+
 	return nil
 }
 
@@ -127,5 +142,6 @@ func (b *BlobStorage) fullKey(key string) string {
 	if b.prefix == "" {
 		return key
 	}
+
 	return b.prefix + key
 }

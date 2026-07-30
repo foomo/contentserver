@@ -27,6 +27,7 @@ func NewSocketCommand() *cobra.Command {
 			} else {
 				comps = cobra.AppendActiveHelp(comps, "This command does not take any more arguments")
 			}
+
 			return comps, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -70,6 +71,7 @@ func NewSocketCommand() *cobra.Command {
 
 			// listen on socket
 			var lc net.ListenConfig
+
 			ln, err := lc.Listen(cmd.Context(), "tcp", addressFlag(v))
 			if err != nil {
 				return err
@@ -77,10 +79,12 @@ func NewSocketCommand() *cobra.Command {
 
 			// start repo
 			up := make(chan bool, 1)
+
 			r.OnLoaded(func() {
 				up <- true
 			})
 			go r.Start(context.Background()) //nolint:errcheck
+
 			<-up
 
 			l.Info("started listening", zap.String("address", addressFlag(v)))
@@ -97,6 +101,7 @@ func NewSocketCommand() *cobra.Command {
 				go func() {
 					l.Debug("accepted connection", zap.String("source", conn.RemoteAddr().String()))
 					handle.Serve(conn)
+
 					if err := conn.Close(); err != nil {
 						l.Warn("failed to close connection", zap.Error(err))
 					}

@@ -21,10 +21,12 @@ func TestHistoryCurrent(t *testing.T) {
 		test = []byte("test")
 		b    bytes.Buffer
 	)
+
 	err := h.Add(ctx, test)
 	require.NoError(t, err)
 	err = h.GetCurrent(ctx, &b)
 	require.NoError(t, err)
+
 	if !bytes.Equal(b.Bytes(), test) {
 		t.Fatalf("expected %q, got %q", string(test), b.String())
 	}
@@ -32,12 +34,14 @@ func TestHistoryCurrent(t *testing.T) {
 
 func TestHistoryCleanup(t *testing.T) {
 	ctx := context.Background()
+
 	h := testHistory(t)
 	for i := range 50 {
 		err := h.Add(ctx, fmt.Append(nil, i))
 		require.NoError(t, err)
 		time.Sleep(time.Millisecond * 5)
 	}
+
 	err := h.cleanup(ctx)
 	require.NoError(t, err)
 	files, err := h.getHistory(ctx)
@@ -84,6 +88,7 @@ func TestHistoryWithStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
+
 	err = h.GetCurrent(ctx, &buf)
 	require.NoError(t, err)
 	assert.Equal(t, "test-data", buf.String())
@@ -98,6 +103,7 @@ func TestHistoryWithBlobStorage(t *testing.T) {
 	ctx := context.Background()
 	bucket, err := blob.OpenBucket(ctx, "mem://")
 	require.NoError(t, err)
+
 	defer bucket.Close()
 
 	storage := NewBlobStorageFromBucket(bucket, "test-prefix")
@@ -111,6 +117,7 @@ func TestHistoryWithBlobStorage(t *testing.T) {
 
 	// Test GetCurrent
 	var buf bytes.Buffer
+
 	err = h.GetCurrent(ctx, &buf)
 	require.NoError(t, err)
 	assert.Equal(t, "test-data", buf.String())
@@ -118,6 +125,7 @@ func TestHistoryWithBlobStorage(t *testing.T) {
 	// Test cleanup - add more entries
 	for i := range 5 {
 		time.Sleep(time.Millisecond * 5) // Ensure unique timestamps
+
 		err = h.Add(ctx, fmt.Appendf(nil, "data-%d", i))
 		require.NoError(t, err)
 	}
@@ -139,6 +147,7 @@ func testHistory(t *testing.T) *History {
 	l := zaptest.NewLogger(t)
 	h, err := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(t.TempDir()))
 	require.NoError(t, err)
+
 	return h
 }
 
@@ -150,5 +159,6 @@ func testHistoryWithTestdata(t *testing.T) *History {
 	require.NoError(t, err)
 	h, err := NewHistory(l, HistoryWithStorage(storage), HistoryWithHistoryLimit(2))
 	require.NoError(t, err)
+
 	return h
 }

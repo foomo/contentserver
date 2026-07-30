@@ -52,13 +52,16 @@ type GetContentClient interface {
 
 func newHTTPClient(tb testing.TB, server *httptest.Server) *client.Client {
 	tb.Helper()
+
 	c, err := client.NewHTTPClient(server.URL + pathContentserver)
 	require.NoError(tb, err)
+
 	return c
 }
 
 func initHTTPRepoServer(tb testing.TB, l *zap.Logger) *httptest.Server {
 	tb.Helper()
 	r := initRepo(tb, l)
+
 	return httptest.NewServer(handler.NewHTTP(l, r))
 }

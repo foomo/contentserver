@@ -72,6 +72,7 @@ func (t *HTTPTransport) Call(ctx context.Context, route handler.Route, request a
 	if errMarshal != nil {
 		return errMarshal
 	}
+
 	req, errNewRequest := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
@@ -81,6 +82,7 @@ func (t *HTTPTransport) Call(ctx context.Context, route handler.Route, request a
 	if errNewRequest != nil {
 		return errNewRequest
 	}
+
 	httpResponse, errDo := t.httpClient.Do(req) // #nosec G704 -- The client transport must call the caller-configured contentserver endpoint.
 	if errDo != nil {
 		return errDo
@@ -90,13 +92,16 @@ func (t *HTTPTransport) Call(ctx context.Context, route handler.Route, request a
 	if httpResponse.StatusCode != http.StatusOK {
 		return errors.New("non 200 reply")
 	}
+
 	if httpResponse.Body == nil {
 		return errors.New("empty response body")
 	}
+
 	responseBytes, errRead := io.ReadAll(httpResponse.Body)
 	if errRead != nil {
 		return errRead
 	}
+
 	return json.Unmarshal(responseBytes, response)
 }
 

@@ -32,8 +32,10 @@ func TestGetURIs(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		t.Parallel()
+
 		request := mock.MakeValidURIsRequest()
 		uriMap, err := c.GetURIs(t.Context(), request.Dimension, request.IDs)
+
 		time.Sleep(100 * time.Millisecond)
 		require.NoError(t, err)
 		assert.Equal(t, "/a", uriMap[request.IDs[0]])
@@ -46,6 +48,7 @@ func TestGetRepo(t *testing.T) {
 		t.Parallel()
 		r, err := c.GetRepo(t.Context())
 		require.NoError(t, err)
+
 		if assert.NotEmpty(t, r, "received empty JSON from GetRepo") {
 			assert.InDelta(t, 1.0, r["dimension_foo"].Nodes["id-a"].Data["baz"].(float64), 0, "failed to drill deep for data") //nolint:forcetypeassert
 		}
@@ -56,17 +59,21 @@ func TestGetNodes(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		t.Parallel()
+
 		nodesRequest := mock.MakeNodesRequest()
 		nodes, err := c.GetNodes(t.Context(), nodesRequest.Env, nodesRequest.Nodes)
 		require.NoError(t, err)
+
 		testNode, ok := nodes["test"]
 		if !ok {
 			t.Fatal("that should be a node")
 		}
+
 		testData, ok := testNode.Item.Data["foo"]
 		if !ok {
 			t.Fatal("where is foo")
 		}
+
 		if testData != "bar" {
 			t.Fatal("testData should have bennd bar not", testData)
 		}
@@ -77,6 +84,7 @@ func TestGetContent(t *testing.T) {
 	testWithClients(t, func(t *testing.T, c *client.Client) {
 		t.Helper()
 		t.Parallel()
+
 		request := mock.MakeValidContentRequest()
 		response, err := c.GetContent(t.Context(), request)
 		require.NoError(t, err)
@@ -88,9 +96,12 @@ func TestGetContent(t *testing.T) {
 func benchmarkServerAndClientGetContent(b *testing.B, numGroups, numCalls int, client GetContentClient) {
 	b.Helper()
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		start := time.Now()
+
 		benchmarkClientAndServerGetContent(b, numGroups, numCalls, client)
+
 		dur := time.Since(start)
 		totalCalls := numGroups * numCalls
 		b.Log("requests per second", int(float64(totalCalls)/(float64(dur)/float64(1000000000))), dur, totalCalls)
@@ -99,11 +110,14 @@ func benchmarkServerAndClientGetContent(b *testing.B, numGroups, numCalls int, c
 
 func benchmarkClientAndServerGetContent(tb testing.TB, numGroups, numCalls int, client GetContentClient) {
 	tb.Helper()
+
 	var wg sync.WaitGroup
 	wg.Add(numGroups)
+
 	for range numGroups {
 		go func() {
 			defer wg.Done()
+
 			request := mock.MakeValidContentRequest()
 			for range numCalls {
 				response, err := client.GetContent(tb.Context(), request)
@@ -111,6 +125,7 @@ func benchmarkClientAndServerGetContent(tb testing.TB, numGroups, numCalls int, 
 					if request.URI != response.URI {
 						tb.Fatal("uri mismatch")
 					}
+
 					if response.Status != content.StatusOk {
 						tb.Fatal("unexpected status")
 					}
@@ -149,17 +164,20 @@ func testWithClients(t *testing.T, testFunc func(t *testing.T, c *client.Client)
 func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	tb.Helper()
 	testRepoServer, varDir := mock.GetMockData(tb)
+
 	h, err := repo.NewHistory(l,
 		repo.HistoryWithHistoryDir(varDir),
 	)
 	if err != nil {
 		tb.Fatal(err)
 	}
+
 	r := repo.New(l,
 		testRepoServer.URL+"/repo-two-dimensions.json",
 		h,
 	)
 	up := make(chan bool, 1)
+
 	r.OnLoaded(func() {
 		up <- true
 	})
@@ -168,6 +186,7 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	// preventing race conditions with logging after test completion.
 	ctx, cancel := context.WithCancel(context.Background())
 	go r.Start(ctx) //nolint:errcheck
+
 	<-up
 
 	tb.Cleanup(func() {

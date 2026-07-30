@@ -74,6 +74,7 @@ func newSummaryVec(name, help string, labels ...string) *prometheus.SummaryVec {
 			Help:      help,
 		}, labels)
 	prometheus.MustRegister(vec)
+
 	return vec
 }
 
@@ -85,6 +86,7 @@ func newCounterVec(name, help string, labels ...string) *prometheus.CounterVec {
 			Help:      help,
 		}, labels)
 	prometheus.MustRegister(vec)
+
 	return vec
 }
 
@@ -96,5 +98,6 @@ func newGaugeVec(name, help string, labels ...string) *prometheus.GaugeVec {
 			Help:      help,
 		}, labels)
 	prometheus.MustRegister(vec)
+
 	return vec
 }

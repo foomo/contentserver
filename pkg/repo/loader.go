@@ -32,6 +32,7 @@ type updateResponse struct {
 func (r *Repo) PollRoutine(ctx context.Context) error {
 	l := r.l.Named("routine.poll")
 	ticker := time.NewTicker(r.pollInterval)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -40,6 +41,7 @@ func (r *Repo) PollRoutine(ctx context.Context) error {
 		case <-ticker.C:
 			chanReponse := make(chan updateResponse)
 			r.updateInProgressChannel <- chanReponse
+
 			response := <-chanReponse
 			if response.err == nil {
 				l.Info("update success", zap.String("revision", r.version))
@@ -52,6 +54,7 @@ func (r *Repo) PollRoutine(ctx context.Context) error {
 
 func (r *Repo) UpdateRoutine(ctx context.Context) error {
 	l := r.l.Named("routine.update")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -71,12 +74,14 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 				if !r.Loaded() {
 					r.loaded.Store(true)
 					l.Info("initial update success")
+
 					if r.onLoaded != nil {
 						r.onLoaded()
 					}
 				} else {
 					l.Info("update success")
 				}
+
 				metrics.UpdatesCompletedCounter.WithLabelValues().Inc()
 			}
 
@@ -92,6 +97,7 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 
 func (r *Repo) DimensionUpdateRoutine(ctx context.Context) error {
 	l := r.l.Named("routine.dimensionUpdate")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -101,10 +107,13 @@ func (r *Repo) DimensionUpdateRoutine(ctx context.Context) error {
 			l.Debug("received a new dimension", zap.String("dimension", newDimension.Dimension))
 
 			err := r._updateDimension(newDimension.Dimension, newDimension.Node)
+
 			l.Info("received result")
+
 			if err != nil {
 				l.Debug("update failed", zap.Error(err))
 			}
+
 			r.dimensionUpdateDoneChannel <- err
 		}
 	}
@@ -112,11 +121,14 @@ func (r *Repo) DimensionUpdateRoutine(ctx context.Context) error {
 
 func (r *Repo) updateDimension(dimension string, node *content.RepoNode) error {
 	r.l.Debug("trying to push dimension into update channel", zap.String("dimension", dimension), zap.String("nodeName", node.Name))
+
 	r.dimensionUpdateChannel <- &RepoDimension{
 		Dimension: dimension,
 		Node:      node,
 	}
+
 	r.l.Debug("waiting for done signal")
+
 	return <-r.dimensionUpdateDoneChannel
 }
 
@@ -132,6 +144,7 @@ func (r *Repo) _updateDimension(dimension string, newNode *content.RepoNode) err
 	if err != nil {
 		return errors.New("update dimension \"" + dimension + "\" failed when building its directory:: " + err.Error())
 	}
+
 	err = wireAliases(newDirectory)
 	if err != nil {
 		return err
@@ -142,6 +155,7 @@ func (r *Repo) _updateDimension(dimension string, newNode *content.RepoNode) err
 	// copy old datastructure to prevent concurrent map access
 	// collect other dimension in the Directory
 	newRepoDirectory := map[string]*Dimension{}
+
 	for d, D := range r.Directory() {
 		if d != dimension {
 			newRepoDirectory[d] = D
@@ -175,11 +189,13 @@ func buildDirectory(dirNode *content.RepoNode, directory map[string]*content.Rep
 	if ok {
 		return errors.New("duplicate node with id:" + existingNode.ID)
 	}
+
 	directory[dirNode.ID] = dirNode
 	// todo handle duplicate uris
 	if _, thereIsAnExistingURINode := uRIDirectory[dirNode.URI]; thereIsAnExistingURINode {
 		return errors.New("duplicate uri: " + dirNode.URI + " (bad node id: " + dirNode.ID + ")")
 	}
+
 	uRIDirectory[dirNode.URI] = dirNode
 	for _, childNode := range dirNode.Nodes {
 		err := buildDirectory(childNode, directory, uRIDirectory)
@@ -187,6 +203,7 @@ func buildDirectory(dirNode *content.RepoNode, directory map[string]*content.Rep
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -200,26 +217,32 @@ func wireAliases(directory map[string]*content.RepoNode) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func (r *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err error) {
 	nodes = make(map[string]*content.RepoNode)
+
 	err = json.Unmarshal(r.JSONBufferBytes(), &nodes)
 	if err != nil {
 		r.l.Error("Failed to deserialize nodes", zap.Error(err))
 		return nil, errors.New("failed to deserialize nodes")
 	}
+
 	return nodes, nil
 }
 
 func (r *Repo) tryToRestoreCurrent(ctx context.Context) error {
 	buffer := &bytes.Buffer{}
+
 	err := r.history.GetCurrent(ctx, buffer)
 	if err != nil {
 		return err
 	}
+
 	r.SetJSONBuffer(buffer)
+
 	return r.loadJSONBytes(ctx)
 }
 
@@ -228,6 +251,7 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create get repo request")
 	}
+
 	response, err := r.httpClient.Do(req) // #nosec G704 -- The repository URL is explicitly configured for this loader.
 	if err != nil {
 		return errors.Wrap(err, "failed to get repo")
@@ -246,6 +270,7 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to copy IO stream")
 	}
+
 	r.SetJSONBuffer(buffer)
 
 	return nil
@@ -262,6 +287,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	// next poll's If-None-Match would elicit a 304 that silently returns
 	// success, masking the staleness until upstream changes content.
 	var newVersion string
+
 	if r.poll {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url, nil)
 		if err != nil {
@@ -275,6 +301,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		if strings.HasPrefix(r.version, `"`) || strings.HasPrefix(r.version, `W/"`) {
 			req.Header.Set("If-None-Match", r.version)
 		}
+
 		resp, err := r.httpClient.Do(req) // #nosec G704 -- Poll mode intentionally calls the configured poll endpoint.
 		if err != nil {
 			return repoRuntime, err
@@ -297,6 +324,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		if err != nil {
 			return repoRuntime, errors.New("could not poll latest repo download url, could not read body")
 		}
+
 		repoURL = string(responseBytes)
 
 		// version = ETag if the server sent one, else the URL body. Commit to
@@ -305,31 +333,38 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		if newVersion == "" {
 			newVersion = repoURL
 		}
+
 		if newVersion == r.version {
 			r.l.Info("repo is up to date", zap.String("version", r.version))
 			return repoRuntime, nil
 		}
+
 		r.l.Info("new repo version", zap.String("version", newVersion))
 	}
 
 	err = r.get(ctx, repoURL)
 	repoRuntime = time.Now().UnixNano() - startTimeRepo
+
 	if err != nil {
 		// we have no json to load - the repo server did not reply
 		r.l.Debug("failed to load json", zap.Error(err))
 		return repoRuntime, err
 	}
+
 	r.l.Debug("loading json", zap.String("server", repoURL), zap.Int("length", len(r.JSONBufferBytes())))
+
 	nodes, err := r.loadNodesFromJSON()
 	if err != nil {
 		// could not load nodes from json
 		return repoRuntime, err
 	}
+
 	err = r.loadNodes(nodes)
 	if err != nil {
 		// repo failed to load nodes
 		return repoRuntime, err
 	}
+
 	if r.poll {
 		r.version = newVersion
 	}
@@ -360,7 +395,9 @@ func (r *Repo) tryUpdate() (repoRuntime int64, err error) {
 	select {
 	case r.updateInProgressChannel <- c:
 		r.l.Debug("update request added to queue")
+
 		ur := <-c
+
 		return ur.repoRuntime, ur.err
 	default:
 		r.l.Info("update request accepted, will be processed after the previous update")
@@ -379,6 +416,7 @@ func (r *Repo) loadJSONBytes(ctx context.Context) error {
 				zap.String("jsonStart", string(data[len(data)-10:])),
 			)
 		}
+
 		return err
 	}
 
@@ -392,35 +430,44 @@ func (r *Repo) loadJSONBytes(ctx context.Context) error {
 			r.l.Info("added valid JSON to history")
 		}
 	}
+
 	return err
 }
 
 func (r *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 	var err error
+
 	newDimensions := make([]string, 0, len(newNodes))
 	for dimension, newNode := range newNodes {
 		newDimensions = append(newDimensions, dimension)
 		r.l.Debug("loading nodes for dimension", zap.String("dimension", dimension))
+
 		errLoad := r.updateDimension(dimension, newNode)
 		if errLoad != nil {
 			err = multierr.Append(err, errLoad)
 		}
 	}
+
 	if err != nil {
 		return errors.Wrap(err, "failed to update dimension")
 	}
+
 	dimensionIsValid := func(dimension string) bool {
 		return slices.Contains(newDimensions, dimension)
 	}
 	// we need to throw away orphaned dimensions
 	directory := map[string]*Dimension{}
+
 	for dimension, value := range r.Directory() {
 		if !dimensionIsValid(dimension) {
 			r.l.Info("removing orphaned dimension", zap.String("dimension", dimension))
 			continue
 		}
+
 		directory[dimension] = value
 	}
+
 	r.SetDirectory(directory)
+
 	return nil
 }

@@ -34,6 +34,7 @@ func NewHTTPCommand() *cobra.Command {
 			} else {
 				comps = cobra.AppendActiveHelp(comps, "This command does not take any more arguments")
 			}
+
 			return comps, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -80,6 +81,7 @@ func NewHTTPCommand() *cobra.Command {
 				if !r.Loaded() {
 					return errors.New("repo not loaded yet")
 				}
+
 				return nil
 			})
 			// start initial update and handle error
@@ -104,6 +106,7 @@ func NewHTTPCommand() *cobra.Command {
 			)
 
 			svr.Run()
+
 			return nil
 		},
 	}
@@ -154,18 +157,22 @@ func createStorage(ctx context.Context, v *viper.Viper, l *zap.Logger) (repo.Sto
 		if blobBucket == "" {
 			return nil, fmt.Errorf("blob bucket URL is required when storage-type is 'blob' (supported schemes: gs://, s3://, azblob://)")
 		}
+
 		if !isValidBlobScheme(blobBucket) {
 			return nil, fmt.Errorf("unsupported blob storage URL scheme in %q; supported schemes: gs://, s3://, azblob://", blobBucket)
 		}
+
 		l.Info("using blob storage",
 			zap.String("bucket", blobBucket),
 			zap.String("prefix", blobPrefix),
 			zap.String("provider", detectBlobProvider(blobBucket)),
 		)
+
 		return repo.NewBlobStorage(ctx, blobBucket, blobPrefix)
 	case "filesystem", "":
 		dir := historyDirFlag(v)
 		l.Info("using filesystem storage", zap.String("dir", dir))
+
 		return repo.NewFilesystemStorage(dir)
 	default:
 		return nil, fmt.Errorf("unknown storage type: %s (supported: filesystem, blob)", storageType)
@@ -179,6 +186,7 @@ func isValidBlobScheme(bucketURL string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

@@ -40,16 +40,20 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 	if t.connPool.chanDrainPool == nil {
 		return errors.New("connection pool has been drained, client is dead")
 	}
+
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("could not marshal request : %w", err)
 	}
+
 	netChan := make(chan net.Conn)
 	t.connPool.chanConnGet <- netChan
+
 	conn := <-netChan
 	if conn == nil {
 		return errors.New("could not get a connection")
 	}
+
 	returnConn := func(err error) {
 		t.connPool.chanConnReturn <- connReturn{
 			conn: conn,
@@ -70,6 +74,7 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 			returnConn(err)
 			return fmt.Errorf("failed to send request: %w", err)
 		}
+
 		written += n
 	}
 
@@ -85,9 +90,11 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 			returnConn(err)
 			return fmt.Errorf("an error occurred while reading the response: %w", err)
 		}
+
 		if n == 0 {
 			break
 		}
+
 		responseBytes = append(responseBytes, buf[0:n]...)
 		if responseLength == 0 {
 			for index, byte := range responseBytes {
@@ -98,11 +105,14 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 						returnConn(err)
 						return errors.New("could not read response length: " + err.Error())
 					}
+
 					responseBytes = responseBytes[index:]
+
 					break
 				}
 			}
 		}
+
 		if responseLength > 0 && len(responseBytes) == responseLength {
 			break
 		}
@@ -120,9 +130,12 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 			returnConn(remoteErrJSONErr)
 			return remoteErr
 		}
+
 		return fmt.Errorf("could not unmarshal response : %w %q", remoteErrJSONErr, string(responseBytes))
 	}
+
 	returnConn(nil)
+
 	return nil
 }
 
