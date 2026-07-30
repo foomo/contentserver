@@ -19,24 +19,24 @@ const pathContentserver = "/contentserver"
 
 func TestInvalidHTTPClientInit(t *testing.T) {
 	c, err := client.NewHTTPClient("")
-	assert.Nil(t, c)
 	require.Error(t, err)
+	assert.Nil(t, c)
 
 	c, err = client.NewHTTPClient("bogus")
-	assert.Nil(t, c)
 	require.Error(t, err)
+	assert.Nil(t, c)
 
 	c, err = client.NewHTTPClient("htt:/notaurl")
-	assert.Nil(t, c)
 	require.Error(t, err)
+	assert.Nil(t, c)
 
 	c, err = client.NewHTTPClient("htts://notaurl")
-	assert.Nil(t, c)
 	require.Error(t, err)
+	assert.Nil(t, c)
 
 	c, err = client.NewHTTPClient("/path/segment/only")
-	assert.Nil(t, c)
 	require.Error(t, err)
+	assert.Nil(t, c)
 }
 
 func BenchmarkWebClientAndServerGetContent(b *testing.B) {

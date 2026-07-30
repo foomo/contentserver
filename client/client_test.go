@@ -128,20 +128,20 @@ func testWithClients(t *testing.T, testFunc func(t *testing.T, c *client.Client)
 		l := zaptest.NewLogger(t)
 		s := initHTTPRepoServer(t, l)
 		c := newHTTPClient(t, s)
-		defer func() {
+		t.Cleanup(func() {
 			s.Close()
 			c.Close()
-		}()
+		})
 		testFunc(t, c)
 	})
 	t.Run("socket", func(t *testing.T) {
 		l := zaptest.NewLogger(t)
 		s := initSocketRepoServer(t, l)
 		c := newSocketClient(t, s.Addr().String())
-		defer func() {
-			s.Close()
+		t.Cleanup(func() {
+			_ = s.Close()
 			c.Close()
-		}()
+		})
 		testFunc(t, c)
 	})
 }

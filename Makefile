@@ -42,19 +42,19 @@ lint.fix:
 ## Run tests
 test:
 	@echo "〉go test"
-	@GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -tags=safe ./...
+	@GO_TEST_TAGS=-skip go test -v -coverprofile=coverage.out -tags=safe -shuffle=on ./...
 
 .PHONY: test.race
 ## Run tests with -race
 test.race:
 	@echo "〉go test -race"
-	@GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -tags=safe -race ./...
+	@GO_TEST_TAGS=-skip go test -v -coverprofile=coverage.out -tags=safe -shuffle=on -race ./...
 
 .PHONY: test.update
 ## Run tests and update snapshots
 test.update:
 	@echo "〉go test -update"
-	@GO_TEST_TAGS=-skip go test -tags=safe -update -coverprofile=coverage.out -update ./...
+	@GO_TEST_TAGS=-skip go test -v -coverprofile=coverage.out -tags=safe -shuffle=on -update ./...
 
 ### Dependencies
 
