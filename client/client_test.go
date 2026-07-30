@@ -168,7 +168,11 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	// preventing race conditions with logging after test completion.
 	ctx, cancel := context.WithCancel(context.Background())
 	go r.Start(ctx) //nolint:errcheck
-	<-up
+	select {
+	case <-up:
+	case <-time.After(5 * time.Second):
+		tb.Fatal("repo did not load within timeout")
+	}
 
 	tb.Cleanup(func() {
 		cancel()
