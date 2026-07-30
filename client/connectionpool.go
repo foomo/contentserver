@@ -40,7 +40,7 @@ func (c *connectionPool) run(connectionPoolSize int, waitTimeout time.Duration) 
 		connectionPool = make(map[int]*poolEntry, connectionPoolSize)
 		waitPool       = map[int]*waitPoolEntry{}
 	)
-	for i := 0; i < connectionPoolSize; i++ {
+	for i := range connectionPoolSize {
 		connectionPool[i] = &poolEntry{
 			conn: nil,
 			busy: false,

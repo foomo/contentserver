@@ -7,6 +7,6 @@ import (
 )
 
 type Transport interface {
-	Call(ctx context.Context, route handler.Route, request interface{}, response interface{}) error
+	Call(ctx context.Context, route handler.Route, request any, response any) error
 	Close()
 }

@@ -33,8 +33,8 @@ func TestHistoryCurrent(t *testing.T) {
 func TestHistoryCleanup(t *testing.T) {
 	ctx := context.Background()
 	h := testHistory(t)
-	for i := 0; i < 50; i++ {
-		err := h.Add(ctx, []byte(fmt.Sprint(i)))
+	for i := range 50 {
+		err := h.Add(ctx, fmt.Append(nil, i))
 		require.NoError(t, err)
 		time.Sleep(time.Millisecond * 5)
 	}
@@ -116,9 +116,9 @@ func TestHistoryWithBlobStorage(t *testing.T) {
 	assert.Equal(t, "test-data", buf.String())
 
 	// Test cleanup - add more entries
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		time.Sleep(time.Millisecond * 5) // Ensure unique timestamps
-		err = h.Add(ctx, []byte(fmt.Sprintf("data-%d", i)))
+		err = h.Add(ctx, fmt.Appendf(nil, "data-%d", i))
 		require.NoError(t, err)
 	}
 

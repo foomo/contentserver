@@ -119,7 +119,7 @@ func (h *HTTP) handleRequest(ctx context.Context, r *repo.Repo, route Route, jso
 
 func (h *HTTP) executeRequest(ctx context.Context, r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 	var (
-		reply             interface{}
+		reply             any
 		apiErr            error
 		jsonErr           error
 		processIfJSONIsOk = func(err error, processingFunc func()) {
@@ -174,8 +174,8 @@ func (h *HTTP) executeRequest(ctx context.Context, r *repo.Repo, route Route, js
 
 // encodeReply takes an interface and encodes it as JSON
 // it returns the resulting JSON and a marshalling error
-func (h *HTTP) encodeReply(reply interface{}) (bytes []byte, err error) {
-	bytes, err = json.Marshal(map[string]interface{}{
+func (h *HTTP) encodeReply(reply any) (bytes []byte, err error) {
+	bytes, err = json.Marshal(map[string]any{
 		"reply": reply,
 	})
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -409,12 +410,7 @@ func (r *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 		return errors.Wrap(err, "failed to update dimension")
 	}
 	dimensionIsValid := func(dimension string) bool {
-		for _, newDimension := range newDimensions {
-			if dimension == newDimension {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(newDimensions, dimension)
 	}
 	// we need to throw away orphaned dimensions
 	directory := map[string]*Dimension{}
