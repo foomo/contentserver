@@ -12,7 +12,6 @@ import (
 	"github.com/foomo/keel/net/http/middleware"
 	"github.com/foomo/keel/service"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 func NewHTTPCommand() *cobra.Command {
@@ -36,7 +35,7 @@ func NewHTTPCommand() *cobra.Command {
 				keel.WithHTTPHealthzService(serviceHealthzEnabledFlag(v)),
 				keel.WithPrometheusMeter(servicePrometheusEnabledFlag(v)),
 				keel.WithGracefulPeriod(gracefulPeriodFlag(v)),
-				keel.WithOTLPGRPCTracer(otelEnabledFlag(v)),
+				keel.WithOTLPHTTPTracer(otelEnabledFlag(v)),
 			)
 
 			l := svr.Logger()
@@ -48,7 +47,7 @@ func NewHTTPCommand() *cobra.Command {
 					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
 				),
 				repo.WithHTTPClient(
-					keelhttp.NewHTTPClient(
+					keelhttp.NewInternalHTTPClient(
 						keelhttp.HTTPClientWithTelemetry(),
 					),
 				),
@@ -62,14 +61,14 @@ func NewHTTPCommand() *cobra.Command {
 				}
 				return nil
 			})
+
 			// start initial update and handle error
 			svr.AddStartupHealthzers(isLoadedHealtherFn)
 			svr.AddReadinessHealthzers(isLoadedHealtherFn)
 
-			svr.AddServices(
-				service.NewGoRoutine(l.Named("go.repo"), "repo", func(ctx context.Context, l *zap.Logger) error {
-					return r.Start(ctx)
-				}),
+			svr.AddService(r)
+
+			svr.AddService(
 				service.NewHTTP(l.Named("svc.http"), "http", addressFlag(v),
 					handler.NewHTTP(l.Named("inst.handler"), r, handler.WithBasePath(basePathFlag(v))),
 					middleware.Telemetry(),

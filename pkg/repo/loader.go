@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/foomo/contentserver/content"
@@ -232,7 +233,7 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return errors.Errorf("bad response code from repository %q want %q", response.Status, http.StatusOK)
+		return errors.Errorf("bad response code from repository: %q", response.Status)
 	}
 
 	// Log.Info(ansi.Red + "RESETTING BUFFER" + ansi.Reset)
@@ -364,12 +365,7 @@ func (r *Repo) loadNodes(newNodes map[string]*content.RepoNode) error {
 		return errors.Wrap(err, "failed to update dimension")
 	}
 	dimensionIsValid := func(dimension string) bool {
-		for _, newDimension := range newDimensions {
-			if dimension == newDimension {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(newDimensions, dimension)
 	}
 	// we need to throw away orphaned dimensions
 	directory := map[string]*Dimension{}

@@ -28,8 +28,8 @@ func TestHistoryCurrent(t *testing.T) {
 
 func TestHistoryCleanup(t *testing.T) {
 	h := testHistory(t)
-	for i := 0; i < 50; i++ {
-		err := h.Add([]byte(fmt.Sprint(i)))
+	for i := range 50 {
+		err := h.Add(fmt.Append(nil, i))
 		require.NoError(t, err)
 		time.Sleep(time.Millisecond * 5)
 	}

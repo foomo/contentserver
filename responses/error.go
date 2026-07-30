@@ -11,10 +11,6 @@ type Error struct {
 	Message string `json:"message"`
 }
 
-func (e Error) Error() string {
-	return fmt.Sprintf("status:%q, code: %q, message: %q", e.Status, e.Code, e.Message)
-}
-
 // NewError - a brand new error
 func NewError(code int, message string) *Error {
 	return &Error{
@@ -22,4 +18,8 @@ func NewError(code int, message string) *Error {
 		Code:    code,
 		Message: message,
 	}
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("status:%d, code: %d, message: %s", e.Status, e.Code, e.Message)
 }

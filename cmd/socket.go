@@ -38,7 +38,7 @@ func NewSocketCommand() *cobra.Command {
 					repo.HistoryWithHistoryLimit(historyLimitFlag(v)),
 				),
 				repo.WithHTTPClient(
-					keelhttp.NewHTTPClient(
+					keelhttp.NewExternalHTTPClient(
 						keelhttp.HTTPClientWithTelemetry(),
 					),
 				),
@@ -50,7 +50,8 @@ func NewSocketCommand() *cobra.Command {
 			handle := handler.NewSocket(l, r)
 
 			// listen on socket
-			ln, err := net.Listen("tcp", addressFlag(v))
+			lc := net.ListenConfig{}
+			ln, err := lc.Listen(cmd.Context(), "tcp", addressFlag(v))
 			if err != nil {
 				return err
 			}

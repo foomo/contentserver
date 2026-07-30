@@ -7,7 +7,7 @@ type SiteContent struct {
 	Dimension string            `json:"dimension"`
 	MimeType  string            `json:"mimeType"`
 	Item      *Item             `json:"item"`
-	Data      interface{}       `json:"data"`
+	Data      any               `json:"data"`
 	Path      []*Item           `json:"path"`
 	URIs      map[string]string `json:"URIs"`
 	Nodes     map[string]*Node  `json:"nodes"`

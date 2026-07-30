@@ -206,7 +206,7 @@ func (h *Socket) handleRequest(r *repo.Repo, route Route, jsonBytes []byte, sour
 
 func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 	var (
-		reply             interface{}
+		reply             any
 		apiErr            error
 		jsonErr           error
 		processIfJSONIsOk = func(err error, processingFunc func()) {
@@ -262,8 +262,8 @@ func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sou
 
 // encodeReply takes an interface and encodes it as JSON
 // it returns the resulting JSON and a marshalling error
-func (h *Socket) encodeReply(reply interface{}) (replyBytes []byte, err error) {
-	replyBytes, err = json.Marshal(map[string]interface{}{
+func (h *Socket) encodeReply(reply any) (replyBytes []byte, err error) {
+	replyBytes, err = json.Marshal(map[string]any{
 		"reply": reply,
 	})
 	if err != nil {

@@ -36,13 +36,13 @@ func NewSocketTransport(url string, connectionPoolSize int, waitTimeout time.Dur
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request interface{}, response interface{}) error {
+func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request any, response any) error {
 	if t.connPool.chanDrainPool == nil {
 		return errors.New("connection pool has been drained, client is dead")
 	}
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
-		return fmt.Errorf("could not marshal request : %q", err)
+		return fmt.Errorf("could not marshal request : %w", err)
 	}
 	netChan := make(chan net.Conn)
 	t.connPool.chanConnGet <- netChan
@@ -57,7 +57,7 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 		}
 	}
 	// write header result will be like handler:2{}
-	jsonBytes = append([]byte(fmt.Sprintf("%s:%d", route, len(jsonBytes))), jsonBytes...)
+	jsonBytes = append(fmt.Appendf(nil, "%s:%d", route, len(jsonBytes)), jsonBytes...)
 
 	// send request
 	var (
@@ -68,7 +68,7 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 		n, err := conn.Write(jsonBytes[written:])
 		if err != nil {
 			returnConn(err)
-			return fmt.Errorf("failed to send request: %q", err)
+			return fmt.Errorf("failed to send request: %w", err)
 		}
 		written += n
 	}
@@ -81,9 +81,9 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 	)
 	for {
 		n, err := conn.Read(buf)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			returnConn(err)
-			return fmt.Errorf("an error occurred while reading the response: %q", err)
+			return fmt.Errorf("an error occurred while reading the response: %w", err)
 		}
 		if n == 0 {
 			break
@@ -120,7 +120,7 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 			returnConn(remoteErrJSONErr)
 			return remoteErr
 		}
-		return fmt.Errorf("could not unmarshal response : %q %q", remoteErrJSONErr, string(responseBytes))
+		return fmt.Errorf("could not unmarshal response : %w %q", remoteErrJSONErr, string(responseBytes))
 	}
 	returnConn(nil)
 	return nil

@@ -20,7 +20,7 @@ func GetMockData(tb testing.TB) (*httptest.Server, string) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(time.Millisecond * 50)
 		mockFilename := path.Join(mockDir, req.URL.Path[1:])
-		http.ServeFile(w, req, mockFilename)
+		http.ServeFile(w, req, mockFilename) //nolint:gosec // mock data
 	}))
 
 	go func() {

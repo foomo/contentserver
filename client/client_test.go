@@ -100,11 +100,11 @@ func benchmarkClientAndServerGetContent(tb testing.TB, numGroups, numCalls int, 
 	tb.Helper()
 	var wg sync.WaitGroup
 	wg.Add(numGroups)
-	for group := 0; group < numGroups; group++ {
+	for range numGroups {
 		go func() {
 			defer wg.Done()
 			request := mock.MakeValidContentRequest()
-			for i := 0; i < numCalls; i++ {
+			for range numCalls {
 				response, err := client.GetContent(tb.Context(), request)
 				if err == nil {
 					if request.URI != response.URI {

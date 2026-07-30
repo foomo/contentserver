@@ -39,7 +39,7 @@ func (c *connectionPool) run(connectionPoolSize int, waitTimeout time.Duration) 
 		connectionPool = make(map[int]*poolEntry, connectionPoolSize)
 		waitPool       = map[int]*waitPoolEntry{}
 	)
-	for i := 0; i < connectionPoolSize; i++ {
+	for i := range connectionPoolSize {
 		connectionPool[i] = &poolEntry{
 			conn: nil,
 			busy: false,
@@ -92,7 +92,7 @@ RunLoop:
 		// refill connection pool
 		for _, poolEntry := range connectionPool {
 			if poolEntry.conn == nil {
-				newConn, errDial := net.Dial("tcp", c.url)
+				newConn, errDial := net.Dial("tcp", c.url) //nolint:noctx // TODO needs refactoring
 				poolEntry.err = errDial
 				poolEntry.conn = newConn
 			}

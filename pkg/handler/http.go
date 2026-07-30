@@ -75,8 +75,8 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	route := Route(strings.TrimPrefix(r.URL.Path, h.basePath+"/"))
 	if route == RouteGetRepo {
-		h.repo.WriteRepoBytes(w)
 		w.Header().Set("Content-Type", "application/json")
+		h.repo.WriteRepoBytes(w)
 		return
 	}
 
@@ -85,6 +85,8 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	//nolint:gosec // G705 false positive: reply is JSON via jsoniter EscapeHTML; content-type is application/json
 	_, _ = w.Write(reply)
 }
 
@@ -109,7 +111,7 @@ func (h *HTTP) handleRequest(r *repo.Repo, route Route, jsonBytes []byte, source
 
 func (h *HTTP) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
 	var (
-		reply             interface{}
+		reply             any
 		apiErr            error
 		jsonErr           error
 		processIfJSONIsOk = func(err error, processingFunc func()) {
@@ -164,8 +166,8 @@ func (h *HTTP) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sourc
 
 // encodeReply takes an interface and encodes it as JSON
 // it returns the resulting JSON and a marshalling error
-func (h *HTTP) encodeReply(reply interface{}) (bytes []byte, err error) {
-	bytes, err = json.Marshal(map[string]interface{}{
+func (h *HTTP) encodeReply(reply any) (bytes []byte, err error) {
+	bytes, err = json.Marshal(map[string]any{
 		"reply": reply,
 	})
 	if err != nil {
