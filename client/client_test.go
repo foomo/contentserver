@@ -128,20 +128,20 @@ func testWithClients(t *testing.T, testFunc func(t *testing.T, c *client.Client)
 		l := zaptest.NewLogger(t)
 		s := initHTTPRepoServer(t, l)
 		c := newHTTPClient(t, s)
-		defer func() {
+		t.Cleanup(func() {
 			s.Close()
 			c.Close()
-		}()
+		})
 		testFunc(t, c)
 	})
 	t.Run("socket", func(t *testing.T) {
 		l := zaptest.NewLogger(t)
 		s := initSocketRepoServer(t, l)
 		c := newSocketClient(t, s.Addr().String())
-		defer func() {
-			s.Close()
+		t.Cleanup(func() {
+			_ = s.Close()
 			c.Close()
-		}()
+		})
 		testFunc(t, c)
 	})
 }
@@ -168,11 +168,7 @@ func initRepo(tb testing.TB, l *zap.Logger) *repo.Repo {
 	// preventing race conditions with logging after test completion.
 	ctx, cancel := context.WithCancel(context.Background())
 	go r.Start(ctx) //nolint:errcheck
-	select {
-	case <-up:
-	case <-time.After(5 * time.Second):
-		tb.Fatal("repo did not load within timeout")
-	}
+	<-up
 
 	tb.Cleanup(func() {
 		cancel()
