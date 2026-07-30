@@ -56,7 +56,7 @@ func NewSocketCommand() *cobra.Command {
 				args[0],
 				history,
 				repo.WithHTTPClient(
-					keelhttp.NewHTTPClient(
+					keelhttp.NewExternalHTTPClient(
 						keelhttp.HTTPClientWithTimeout(repositoryTimeoutFlag(v)),
 						keelhttp.HTTPClientWithTelemetry(),
 					),

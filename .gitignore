@@ -1,15 +1,19 @@
 .*
-*.zip
-*.tar
-*.out
 *.log
-/bin/
-/dist/
-/tmp/
+*.pid
+*.retry
+*.out
+*.tgz
+*.zip
+*.pem
+bin/
+dist/
+tmp/
 
 ## Git
 !.gitkeep
 !.gitignore
+!.gitattributes
 
 ## GitHub
 !.github/
@@ -17,13 +21,20 @@
 ## Editorconfig
 !.editorconfig
 
-## Husky
-!.husky/
-!.husky.yaml
+## Lefthook
+!.lefthook.yaml
 
-## Ownbrew
-!.ownbrew.yaml
+## VSCode
+!.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.default.json
 
 ## Golang
-!.golangci.yml
-!.goreleaser.yml
+go.work
+go.work.sum
+!.golangci.yaml
+!.goreleaser.yaml
+
+## Mise
+!.mise.toml

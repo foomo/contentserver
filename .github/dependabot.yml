@@ -1,52 +1,46 @@
-# Please see the documentation for all configuration options:
-# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# yaml-language-server: $schema=https://json.schemastore.org/dependabot-2.0.json
 version: 2
 
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 updates:
   - package-ecosystem: github-actions
-    open-pull-requests-limit: 1
+    commit-message: { prefix: sec(gha) }
+    open-pull-requests-limit: 0
     directory: '/'
     schedule:
-      day: 'sunday'
-      interval: 'weekly'
+      interval: daily
     groups:
-      github-actions:
-        patterns: ['*']
-
-  - package-ecosystem: 'gomod'
-    open-pull-requests-limit: 1
-    directory: '/'
-    schedule:
-      day: 'sunday'
-      interval: 'weekly'
-    groups:
-      gomod-security:
+      security:
         applies-to: security-updates
-        update-types: ['minor', 'patch']
-        patterns: ['*']
-      gomod-update:
-        applies-to: version-updates
-        update-types: ['minor', 'patch']
-        patterns: ['*']
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+        group-by: dependency-name
+        patterns: [ '*' ]
+    cooldown:
+      default-days: 3
 
   - package-ecosystem: docker
-    open-pull-requests-limit: 1
-    directory: '/build'
+    commit-message: { prefix: sec(docker) }
+    open-pull-requests-limit: 0
+    directories: [ '**/*' ]
     schedule:
-      day: 'sunday'
-      interval: 'weekly'
+      interval: daily
     groups:
-      docker-security:
+      security:
         applies-to: security-updates
-        update-types: ['minor', 'patch']
-        patterns: ['*']
-      docker-update:
-        applies-to: version-updates
-        update-types: ['minor', 'patch']
-        patterns: ['*']
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+        group-by: dependency-name
+        patterns: [ '*' ]
+    cooldown:
+      default-days: 3
+
+  - package-ecosystem: gomod
+    commit-message: { prefix: sec(gomod) }
+    open-pull-requests-limit: 0
+    directories: [ '**/*' ]
+    schedule:
+      interval: daily
+    groups:
+      security:
+        applies-to: security-updates
+        group-by: dependency-name
+        patterns: [ '*' ]
+    cooldown:
+      default-days: 3

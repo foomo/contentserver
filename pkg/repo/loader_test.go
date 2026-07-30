@@ -32,7 +32,7 @@ func newMinimalRepo(t *testing.T, url string) *Repo {
 }
 
 func TestPollRoutineLogsSuccessfulVersion(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	core, logs := observer.New(zap.InfoLevel)
 	r := New(zap.New(core), "http://example.test/repo", nil, WithPoll(true), WithPollInterval(time.Millisecond))
@@ -92,7 +92,7 @@ func TestPollRoutineLogsSuccessfulVersion(t *testing.T) {
 // change: it fetches the body URL, loads the repo, and on a second call with
 // the same poll response it skips via the URL-in-body comparison.
 func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// The poll server returns a URL that points at itself + testRepoPath.
 	// The testRepoPath endpoint serves the actual JSON repo content.
@@ -148,7 +148,7 @@ func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
 // first call stores the ETag; second call sends If-None-Match and the server
 // replies 304, causing the loader to skip the body read.
 func TestUpdate_ETagSetThenNotModified(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const etagV1 = `"v1"`
 	var (
@@ -213,7 +213,7 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 // TestUpdate_ETagChange verifies that when the server returns a new ETag on a
 // 200 response the loader updates version and fetches the new repo content.
 func TestUpdate_ETagChange(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const (
 		etagV1 = `"v1"`
@@ -273,7 +273,7 @@ func TestUpdate_ETagChange(t *testing.T) {
 // 500), update() must return an error and must NOT clobber a previously
 // captured ETag — so the next attempt can still send a valid If-None-Match.
 func TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const etagV1 = `"v1"`
 	callCount := 0
@@ -328,7 +328,7 @@ func TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag(t *testing.T) {
 // version field transitions to the body URL. This pins the "ETag if present,
 // else URL" rule for the version field.
 func TestUpdate_ETagThenAbsent_FallsBackToURL(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const etagV1 = `"v1"`
 	callCount := 0
@@ -387,7 +387,7 @@ func TestUpdate_ETagThenAbsent_FallsBackToURL(t *testing.T) {
 // elicit a 304 and the loader would silently log "up to date" without ever
 // recovering. This is a regression test for that ordering bug.
 func TestUpdate_VersionNotCommittedOnLoadFailure(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const etagV1 = `"v1"`
 	var pollCallCount int
@@ -437,7 +437,7 @@ func TestUpdate_VersionNotCommittedOnLoadFailure(t *testing.T) {
 // request does not include an If-None-Match header (version is empty at
 // startup).
 func TestUpdate_NoIfNoneMatchOnFirstCall(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	var firstRequestHadIfNoneMatch bool
 

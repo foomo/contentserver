@@ -1,0 +1,13 @@
+# https://docs.github.com/en/github/administering-a-repository/customizing-how-changed-files-appear-on-github
+*.csv binary
+*.gif binary
+*.jpeg binary
+*.jpg binary
+*.png binary
+*.svg binary
+*.webp binary
+*.xml binary
+*.sum linguist-generated
+*.lock linguist-generated
+*_gen.go linguist-generated
+*.snapshot linguist-generated
