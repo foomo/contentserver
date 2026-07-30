@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
+# https://lefthook.dev/configuration/
+output: [ meta ]
+
+pre-commit:
+  skip: [ merge, rebase ]
+  parallel: true
+  commands:
+    golangci:
+      glob: "*.go"
+      run: golangci-lint fmt {staged_files}
+      stage_fixed: true
