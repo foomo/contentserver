@@ -28,12 +28,12 @@ func newMinimalRepo(t *testing.T, url string) *Repo {
 	l := zaptest.NewLogger(t)
 	h, err := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(t.TempDir()))
 	require.NoError(t, err)
+
 	return New(l, url, h, WithPoll(true))
 }
 
 func TestPollRoutineLogsSuccessfulVersion(t *testing.T) {
 	// t.Parallel()
-
 	core, logs := observer.New(zap.InfoLevel)
 	r := New(zap.New(core), "http://example.test/repo", nil, WithPoll(true), WithPollInterval(time.Millisecond))
 	r.version = `"v1"`
@@ -43,13 +43,16 @@ func TestPollRoutineLogsSuccessfulVersion(t *testing.T) {
 
 	handledUpdate := make(chan struct{}, 1)
 	stopResponder := make(chan struct{})
+
 	responderDone := make(chan struct{})
 	go func() {
 		defer close(responderDone)
+
 		for {
 			select {
 			case resChan := <-r.updateInProgressChannel:
 				resChan <- updateResponse{}
+
 				select {
 				case handledUpdate <- struct{}{}:
 				default:
@@ -72,6 +75,7 @@ func TestPollRoutineLogsSuccessfulVersion(t *testing.T) {
 	}
 
 	cancel()
+
 	select {
 	case err := <-pollDone:
 		require.NoError(t, err)
@@ -111,6 +115,7 @@ func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
 			_, _ = w.Write([]byte("http://" + r.Host + testRepoPath)) //nolint:gosec // r.Host is the test server's local address, not user input
 		case testRepoPath:
 			repoCallCount++
+
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(testRepoBody))
@@ -125,6 +130,7 @@ func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
 	// Start the background channel-routing goroutines that update() requires.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
+
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
@@ -149,8 +155,8 @@ func TestUpdate_NoETag_BackwardCompat(t *testing.T) {
 // replies 304, causing the loader to skip the body read.
 func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 	// t.Parallel()
-
 	const etagV1 = `"v1"`
+
 	var (
 		pollCallCount       int
 		receivedIfNoneMatch string
@@ -160,6 +166,7 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 		switch r.URL.Path {
 		case testPollPath:
 			pollCallCount++
+
 			inm := r.Header.Get("If-None-Match")
 			if inm != "" {
 				receivedIfNoneMatch = inm
@@ -169,6 +176,7 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 				// Confirm the ETag — content unchanged.
 				w.Header().Set("ETag", etagV1)
 				w.WriteHeader(http.StatusNotModified)
+
 				return
 			}
 
@@ -193,6 +201,7 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
+
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
@@ -214,11 +223,11 @@ func TestUpdate_ETagSetThenNotModified(t *testing.T) {
 // 200 response the loader updates version and fetches the new repo content.
 func TestUpdate_ETagChange(t *testing.T) {
 	// t.Parallel()
-
 	const (
 		etagV1 = `"v1"`
 		etagV2 = `"v2"`
 	)
+
 	callCount := 0
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -254,6 +263,7 @@ func TestUpdate_ETagChange(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
+
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
@@ -274,8 +284,8 @@ func TestUpdate_ETagChange(t *testing.T) {
 // captured ETag — so the next attempt can still send a valid If-None-Match.
 func TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag(t *testing.T) {
 	// t.Parallel()
-
 	const etagV1 = `"v1"`
+
 	callCount := 0
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -307,6 +317,7 @@ func TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
+
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
@@ -329,8 +340,8 @@ func TestUpdate_NonOKNon304_ReturnsErrorAndPreservesETag(t *testing.T) {
 // else URL" rule for the version field.
 func TestUpdate_ETagThenAbsent_FallsBackToURL(t *testing.T) {
 	// t.Parallel()
-
 	const etagV1 = `"v1"`
+
 	callCount := 0
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -365,6 +376,7 @@ func TestUpdate_ETagThenAbsent_FallsBackToURL(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
+
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 
@@ -388,8 +400,8 @@ func TestUpdate_ETagThenAbsent_FallsBackToURL(t *testing.T) {
 // recovering. This is a regression test for that ordering bug.
 func TestUpdate_VersionNotCommittedOnLoadFailure(t *testing.T) {
 	// t.Parallel()
-
 	const etagV1 = `"v1"`
+
 	var pollCallCount int
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -438,7 +450,6 @@ func TestUpdate_VersionNotCommittedOnLoadFailure(t *testing.T) {
 // startup).
 func TestUpdate_NoIfNoneMatchOnFirstCall(t *testing.T) {
 	// t.Parallel()
-
 	var firstRequestHadIfNoneMatch bool
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -447,6 +458,7 @@ func TestUpdate_NoIfNoneMatchOnFirstCall(t *testing.T) {
 			if r.Header.Get("If-None-Match") != "" {
 				firstRequestHadIfNoneMatch = true
 			}
+
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("http://" + r.Host + testRepoPath)) //nolint:gosec // r.Host is the test server's local address, not user input
@@ -464,6 +476,7 @@ func TestUpdate_NoIfNoneMatchOnFirstCall(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
+
 	go r.UpdateRoutine(ctx)          //nolint:errcheck
 	go r.DimensionUpdateRoutine(ctx) //nolint:errcheck
 

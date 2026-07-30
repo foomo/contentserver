@@ -20,6 +20,7 @@ func NewFilesystemStorage(baseDir string) (*FilesystemStorage, error) {
 	if err := os.MkdirAll(baseDir, 0700); err != nil {
 		return nil, err
 	}
+
 	return &FilesystemStorage{baseDir: baseDir}, nil
 }
 
@@ -28,10 +29,12 @@ func (f *FilesystemStorage) Write(_ context.Context, key string, data []byte) er
 	defer f.mu.Unlock()
 
 	path := filepath.Join(f.baseDir, key)
+
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
+
 	return os.WriteFile(path, data, 0600)
 }
 
@@ -40,6 +43,7 @@ func (f *FilesystemStorage) Read(_ context.Context, key string) ([]byte, error) 
 	defer f.mu.RUnlock()
 
 	path := filepath.Join(f.baseDir, key)
+
 	return os.ReadFile(path)
 }
 
@@ -56,12 +60,15 @@ func (f *FilesystemStorage) List(_ context.Context, prefix string) ([]string, er
 	}
 
 	var keys []string
+
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) {
 			keys = append(keys, entry.Name())
 		}
 	}
+
 	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+
 	return keys, nil
 }
 
@@ -70,10 +77,12 @@ func (f *FilesystemStorage) Delete(_ context.Context, key string) error {
 	defer f.mu.Unlock()
 
 	path := filepath.Join(f.baseDir, key)
+
 	err := os.Remove(path)
 	if os.IsNotExist(err) {
 		return nil
 	}
+
 	return err
 }
 

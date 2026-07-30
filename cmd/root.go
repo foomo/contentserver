@@ -53,5 +53,6 @@ func initConfig() {
 func newViper() *viper.Viper {
 	v := viper.New()
 	v.AutomaticEnv()
+
 	return v
 }

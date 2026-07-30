@@ -18,9 +18,11 @@ import (
 func BenchmarkSocketClientAndServerGetContent(b *testing.B) {
 	l := zaptest.NewLogger(b)
 	socketServer := initSocketRepoServer(b, l)
+
 	socketClient := newSocketClient(b, socketServer.Addr().String())
 	defer socketClient.Close()
 	defer socketServer.Close()
+
 	benchmarkServerAndClientGetContent(b, 30, 100, socketClient)
 }
 

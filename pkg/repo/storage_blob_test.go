@@ -14,10 +14,12 @@ import (
 
 func newTestBlobStorage(t *testing.T, prefix string) *BlobStorage {
 	t.Helper()
+
 	ctx := context.Background()
 	bucket, err := blob.OpenBucket(ctx, "mem://")
 	require.NoError(t, err)
 	t.Cleanup(func() { bucket.Close() })
+
 	return NewBlobStorageFromBucket(bucket, prefix)
 }
 
@@ -179,6 +181,7 @@ func TestBlobStorage_ConcurrentOperations(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
+
 			key := "concurrent-key"
 			data := []byte("data")
 			_ = storage.Write(ctx, key, data)
@@ -186,6 +189,7 @@ func TestBlobStorage_ConcurrentOperations(t *testing.T) {
 			_, _ = storage.List(ctx, "concurrent-")
 		}(i)
 	}
+
 	wg.Wait()
 }
 

@@ -48,6 +48,7 @@ func (n *RepoNode) InPath(path []*Item) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -61,6 +62,7 @@ func (n *RepoNode) GetPath(dataFields []string) []*Item {
 		parentNode = parentNode.parent
 		pathLength++
 	}
+
 	parentNode = n.parent
 
 	var (
@@ -77,6 +79,7 @@ func (n *RepoNode) GetPath(dataFields []string) []*Item {
 		parentNode = parentNode.parent
 		i++
 	}
+
 	return path
 }
 
@@ -88,6 +91,7 @@ func (n *RepoNode) ToItem(dataFields []string) *Item {
 	item.MimeType = n.MimeType
 	item.Hidden = n.Hidden
 	item.URI = n.URI
+
 	item.Groups = n.Groups
 	if dataFields == nil {
 		item.Data = n.Data
@@ -98,6 +102,7 @@ func (n *RepoNode) ToItem(dataFields []string) *Item {
 			}
 		}
 	}
+
 	return item
 }
 
@@ -117,6 +122,7 @@ func (n *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 	if len(mimeTypes) == 0 {
 		return true
 	}
+
 	return slices.Contains(mimeTypes, n.MimeType)
 }
 
@@ -133,6 +139,7 @@ func (n *RepoNode) CanBeAccessedByGroups(groups []string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -140,6 +147,7 @@ func (n *RepoNode) CanBeAccessedByGroups(groups []string) bool {
 func (n *RepoNode) PrintNode(id string, level int) {
 	prefix := strings.Repeat(Indent, level)
 	fmt.Printf("%s %s %s:\n", prefix, id, n.Name)
+
 	for key, childNode := range n.Nodes {
 		childNode.PrintNode(key, level+1)
 	}

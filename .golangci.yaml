@@ -4,7 +4,7 @@ version: "2"
 
 run:
   go: "1.26"
-  build-tags: [ safe ]
+  build-tags: [ safe, pprof ]
   modules-download-mode: readonly
 
 linters:
@@ -16,8 +16,6 @@ linters:
     - paralleltest
     - godoclint
     - forbidigo
-    - wsl_v5
-    - whitespace
     # Discouraged linters
     - noinlineerr # Disallows inline error handling (`if err := ...; err != nil {`).
     - embeddedstructfieldcheck #  Embedded types should be at the top of the field list of a struct, and there must be an empty line separating embedded fields from regular fields. [fast]

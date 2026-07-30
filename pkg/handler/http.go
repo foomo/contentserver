@@ -63,6 +63,7 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httputils.ServerError(h.l, w, r, http.StatusMethodNotAllowed, errors.New("method not allowed"))
 		return
 	}
+
 	if r.Body == nil {
 		httputils.BadRequestServerError(h.l, w, r, errors.New("empty request body"))
 		return
@@ -77,10 +78,12 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route := Route(strings.TrimPrefix(r.URL.Path, h.basePath+"/"))
 	if route == RouteGetRepo {
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := h.repo.WriteRepoBytes(r.Context(), w); err != nil {
 			h.l.Error("failed to write repo bytes", zap.Error(err))
 			http.Error(w, "failed to get repo", http.StatusInternalServerError)
 		}
+
 		return
 	}
 
@@ -89,6 +92,7 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errReply.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// reply is produced by encodeReply -> json.Marshal (jsoniter ConfigCompatibleWithStandardLibrary),
@@ -106,6 +110,7 @@ func (h *HTTP) handleRequest(ctx context.Context, r *repo.Repo, route Route, jso
 	start := time.Now()
 
 	reply, err := h.executeRequest(ctx, r, route, jsonBytes, source)
+
 	result := "success"
 	if err != nil {
 		result = "error"
@@ -127,9 +132,11 @@ func (h *HTTP) executeRequest(ctx context.Context, r *repo.Repo, route Route, js
 				jsonErr = err
 				return
 			}
+
 			processingFunc()
 		}
 	)
+
 	metrics.ContentRequestCounter.WithLabelValues(source).Inc()
 
 	// handle and process
@@ -181,5 +188,6 @@ func (h *HTTP) encodeReply(reply any) (bytes []byte, err error) {
 	if err != nil {
 		h.l.Error("could not encode reply", zap.Error(err))
 	}
+
 	return
 }

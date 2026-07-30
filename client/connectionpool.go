@@ -22,6 +22,7 @@ func newConnectionPool(url string, connectionPoolSize int, waitTimeout time.Dura
 		chanDrainPool:  make(chan int),
 	}
 	go connPool.run(connectionPoolSize, waitTimeout)
+
 	return connPool
 }
 
@@ -31,6 +32,7 @@ func (c *connectionPool) run(connectionPoolSize int, waitTimeout time.Duration) 
 		err  error
 		conn net.Conn
 	}
+
 	type waitPoolEntry struct {
 		entryTime time.Time
 		chanConn  chan net.Conn
@@ -46,6 +48,7 @@ func (c *connectionPool) run(connectionPoolSize int, waitTimeout time.Duration) 
 			busy: false,
 		}
 	}
+
 RunLoop:
 	for {
 		// fmt.Println("----------------------- run loop ------------------------")
@@ -55,6 +58,7 @@ RunLoop:
 			for _, waitPoolEntry := range waitPool {
 				waitPoolEntry.chanConn <- nil
 			}
+
 			break RunLoop
 		case <-time.After(waitTimeout):
 		//	fmt.Println("tick", len(connectionPool), len(waitPool))
@@ -72,6 +76,7 @@ RunLoop:
 					nextI = i + 1
 				}
 			}
+
 			waitPool[nextI] = &waitPoolEntry{
 				chanConn:  chanReturnNextConn,
 				entryTime: time.Now(),
@@ -94,6 +99,7 @@ RunLoop:
 		for _, poolEntry := range connectionPool {
 			if poolEntry.conn == nil {
 				var d net.Dialer
+
 				newConn, errDial := d.DialContext(context.Background(), "tcp", c.url)
 				poolEntry.err = errDial
 				poolEntry.conn = newConn
@@ -104,12 +110,16 @@ RunLoop:
 			if len(waitPool) == 0 {
 				break
 			}
+
 			if poolEntry.err == nil && poolEntry.conn != nil && !poolEntry.busy {
 				for i, waitPoolEntry := range waitPool {
 					// fmt.Println("---------------------------> serving wait pool", i, waitPoolEntry)
 					poolEntry.busy = true
+
 					delete(waitPool, i)
+
 					waitPoolEntry.chanConn <- poolEntry.conn
+
 					break
 				}
 			}
@@ -122,13 +132,16 @@ RunLoop:
 		for i, waitPoolEntry := range waitPool {
 			if now.Sub(waitPoolEntry.entryTime) > waitTimeout {
 				waitPoolLoosers = append(waitPoolLoosers, i)
+
 				waitPoolEntry.chanConn <- nil
 			}
 		}
+
 		for _, i := range waitPoolLoosers {
 			delete(waitPool, i)
 		}
 	}
+
 	c.chanDrainPool = nil
 	c.chanConnReturn = nil
 	c.chanConnGet = nil

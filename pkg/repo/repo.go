@@ -109,24 +109,28 @@ func (r *Repo) Loaded() bool {
 func (r *Repo) Directory() map[string]*Dimension {
 	r.directoryLock.RLock()
 	defer r.directoryLock.RUnlock()
+
 	return r.directory
 }
 
 func (r *Repo) SetDirectory(v map[string]*Dimension) {
 	r.directoryLock.Lock()
 	defer r.directoryLock.Unlock()
+
 	r.directory = v
 }
 
 func (r *Repo) JSONBufferBytes() []byte {
 	r.jsonBufferLock.RLock()
 	defer r.jsonBufferLock.RUnlock()
+
 	return r.jsonBuffer.Bytes()
 }
 
 func (r *Repo) SetJSONBuffer(v *bytes.Buffer) {
 	r.jsonBufferLock.Lock()
 	defer r.jsonBufferLock.Unlock()
+
 	r.jsonBuffer = v
 }
 
@@ -144,6 +148,7 @@ func (r *Repo) GetURIs(dimension string, ids []string) map[string]string {
 	for _, id := range ids {
 		uris[id] = r.getURI(dimension, id)
 	}
+
 	return uris
 }
 
@@ -167,18 +172,24 @@ func (r *Repo) GetContent(req *requests.Content) (*content.SiteContent, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "repo.GetContent invalid request")
 	}
+
 	r.l.Debug("repo.GetContent", zap.String("URI", req.URI))
+
 	c := content.NewSiteContent()
+
 	resolved, resolvedURI, resolvedDimension, node := r.resolveContent(req.Env.Dimensions, req.URI)
 	if resolved {
 		if !node.CanBeAccessedByGroups(req.Env.Groups) {
 			r.l.Warn("Resolved content cannot be accessed by specified group", zap.String("uri", req.URI))
+
 			c.Status = content.StatusForbidden
 		} else {
 			r.l.Info("Content resolved", zap.String("uri", req.URI))
+
 			c.Status = content.StatusOk
 			c.Data = node.Data
 		}
+
 		c.MimeType = node.MimeType
 		c.Dimension = resolvedDimension
 		c.URI = resolvedURI
@@ -189,9 +200,11 @@ func (r *Repo) GetContent(req *requests.Content) (*content.SiteContent, error) {
 		for dimensionName := range r.Directory() {
 			uris[dimensionName] = r.getURI(dimensionName, node.ID)
 		}
+
 		c.URIs = uris
 	} else {
 		r.l.Info("Content not found", zap.String("URI", req.URI))
+
 		c.Status = content.StatusNotFound
 		c.Dimension = req.Env.Dimensions[0]
 
@@ -209,7 +222,9 @@ func (r *Repo) GetContent(req *requests.Content) (*content.SiteContent, error) {
 			node.Dimension = resolvedDimension
 		}
 	}
+
 	c.Nodes = r.getNodes(req.Nodes, req.Env)
+
 	return c, nil
 }
 
@@ -219,6 +234,7 @@ func (r *Repo) GetRepo() map[string]*content.RepoNode {
 	for dimensionName, dimension := range r.Directory() {
 		response[dimensionName] = dimension.Node
 	}
+
 	return response
 }
 
@@ -227,11 +243,13 @@ func (r *Repo) GetRepo() map[string]*content.RepoNode {
 // The result is wrapped as service response, e.g: {"reply": <contentData>}
 func (r *Repo) WriteRepoBytes(ctx context.Context, w io.Writer) error {
 	r.jsonBufferLock.RLock()
+
 	var data []byte
 	if r.jsonBuffer != nil && r.jsonBuffer.Len() > 0 {
 		data = make([]byte, r.jsonBuffer.Len())
 		copy(data, r.jsonBuffer.Bytes())
 	}
+
 	r.jsonBufferLock.RUnlock()
 
 	if len(data) == 0 {
@@ -240,18 +258,22 @@ func (r *Repo) WriteRepoBytes(ctx context.Context, w io.Writer) error {
 		if err := r.history.GetCurrent(ctx, &buf); err != nil {
 			return fmt.Errorf("failed to read repo from storage: %w", err)
 		}
+
 		data = buf.Bytes()
 	}
 
 	if _, err := w.Write([]byte(`{"reply":`)); err != nil {
 		return fmt.Errorf("failed to write repo JSON prefix: %w", err)
 	}
+
 	if _, err := w.Write(data); err != nil {
 		return fmt.Errorf("failed to write repo JSON data: %w", err)
 	}
+
 	if _, err := w.Write([]byte(`}`)); err != nil {
 		return fmt.Errorf("failed to write repo JSON suffix: %w", err)
 	}
+
 	return nil
 }
 
@@ -304,7 +326,9 @@ func (r *Repo) Update(ctx context.Context) (updateResponse *responses.Update) {
 			updateResponse.Stats.NumberOfURIs += len(dimension.URIDirectory)
 		}
 	}
+
 	updateResponse.Stats.OwnRuntime = floatSeconds(time.Since(start).Nanoseconds()) - updateResponse.Stats.RepoRuntime
+
 	return updateResponse
 }
 
@@ -314,9 +338,12 @@ func (r *Repo) Start(ctx context.Context) error {
 	l := r.l.Named("start")
 
 	up := make(chan bool, 1)
+
 	g.Go(func() error {
 		l.Debug("starting update routine")
+
 		up <- true
+
 		return r.UpdateRoutine(gCtx)
 	})
 	l.Debug("waiting for UpdateRoutine")
@@ -324,13 +351,16 @@ func (r *Repo) Start(ctx context.Context) error {
 
 	g.Go(func() error {
 		l.Debug("starting dimension update routine")
+
 		up <- true
+
 		return r.DimensionUpdateRoutine(gCtx)
 	})
 	l.Debug("waiting for DimensionUpdateRoutine")
 	<-up
 
 	l.Debug("trying to restore previous repo")
+
 	if err := r.tryToRestoreCurrent(ctx); errors.Is(err, os.ErrNotExist) {
 		l.Info("previous repo content file does not exist")
 	} else if err != nil {
@@ -348,6 +378,7 @@ func (r *Repo) Start(ctx context.Context) error {
 
 	if !r.Loaded() {
 		l.Debug("trying to update initial state")
+
 		if resp := r.Update(ctx); !resp.Success {
 			l.Error("failed to update initial state",
 				zap.String("error", resp.ErrorMessage),
@@ -371,11 +402,13 @@ func (r *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.En
 		path  []*content.Item
 		nodes = map[string]*content.Node{}
 	)
+
 	for nodeName, nodeRequest := range nodeRequests {
 		if nodeName == "" || nodeRequest.ID == "" {
 			r.l.Warn("invalid node request", zap.Error(errors.New("nodeName or nodeRequest.ID empty")))
 			continue
 		}
+
 		r.l.Debug("adding node", zap.String("name", nodeName), zap.String("requestID", nodeRequest.ID))
 
 		groups := env.Groups
@@ -388,12 +421,14 @@ func (r *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.En
 
 		if !ok && nodeRequest.Dimension == "" {
 			r.l.Debug("Could not get dimension root node", zap.String("dimension", nodeRequest.Dimension))
+
 			for _, dimension := range env.Dimensions {
 				dimensionNode, ok = r.Directory()[dimension]
 				if ok {
 					r.l.Debug("Found root node in env.Dimensions", zap.String("dimension", dimension))
 					break
 				}
+
 				r.l.Debug("Could NOT find root node in env.Dimensions", zap.String("dimension", dimension))
 			}
 		}
@@ -410,10 +445,13 @@ func (r *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.En
 				zap.String("nodeID", nodeRequest.ID),
 			)
 			metrics.InvalidNodeTreeRequests.WithLabelValues().Inc()
+
 			continue
 		}
+
 		nodes[nodeName] = r.getNode(treeNode, nodeRequest.Expand, nodeRequest.MimeTypes, path, 0, groups, nodeRequest.DataFields, nodeRequest.ExposeHiddenNodes)
 	}
+
 	return nodes
 }
 
@@ -421,31 +459,38 @@ func (r *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.En
 func (r *Repo) resolveContent(dimensions []string, uri string) (resolved bool, resolvedURI string, resolvedDimension string, repoNode *content.RepoNode) {
 	parts := strings.Split(uri, content.PathSeparator)
 	r.l.Debug("repo.ResolveContent", zap.String("URI", uri))
+
 	for i := len(parts); i > 0; i-- {
 		testURI := strings.Join(parts[0:i], content.PathSeparator)
 		if testURI == "" {
 			testURI = content.PathSeparator
 		}
+
 		for _, dimension := range dimensions {
 			if d, ok := r.Directory()[dimension]; ok {
 				r.l.Debug("Checking node",
 					zap.String("dimension", dimension),
 					zap.String("URI", testURI),
 				)
+
 				if repoNode, ok := d.URIDirectory[testURI]; ok {
 					resolved = true
+
 					r.l.Debug("Node found", zap.String("URI", testURI), zap.String("destination", repoNode.DestinationID))
+
 					if len(repoNode.DestinationID) > 0 {
 						if destionationNode, destinationNodeOk := d.Directory[repoNode.DestinationID]; destinationNodeOk {
 							repoNode = destionationNode
 						}
 					}
+
 					return resolved, testURI, dimension, repoNode
 				}
 			}
 		}
 	}
-	return
+
+	return resolved, resolvedURI, resolvedDimension, repoNode
 }
 
 func (r *Repo) getURIForNode(dimension string, repoNode *content.RepoNode, recursionLevel int64) (uri string) {
@@ -453,14 +498,17 @@ func (r *Repo) getURIForNode(dimension string, repoNode *content.RepoNode, recur
 		uri = repoNode.URI
 		return
 	}
+
 	linkedNode, ok := r.Directory()[dimension].Directory[repoNode.LinkID]
 	if ok {
 		if recursionLevel > maxGetURIForNodeRecursionLevel {
 			r.l.Error("maxGetURIForNodeRecursionLevel reached", zap.String("repoNode.ID", repoNode.ID), zap.String("linkID", repoNode.LinkID), zap.String("dimension", dimension))
 			return ""
 		}
+
 		return r.getURIForNode(dimension, linkedNode, recursionLevel+1)
 	}
+
 	return
 }
 
@@ -469,10 +517,12 @@ func (r *Repo) getURI(dimension string, id string) string {
 	if !ok {
 		return ""
 	}
+
 	repoNode, ok := directory.Directory[id]
 	if !ok {
 		return ""
 	}
+
 	return r.getURIForNode(dimension, repoNode, 0)
 }
 
@@ -489,6 +539,7 @@ func (r *Repo) getNode(
 	node := content.NewNode()
 	node.Item = repoNode.ToItem(dataFields)
 	r.l.Debug("getNode", zap.String("ID", repoNode.ID))
+
 	for _, childID := range repoNode.Index {
 		childNode := repoNode.Nodes[childID]
 		if (level == 0 || expanded || !expanded && childNode.InPath(path)) && (!childNode.Hidden || exposeHiddenNodes) && childNode.CanBeAccessedByGroups(groups) && childNode.IsOneOfTheseMimeTypes(mimeTypes) {
@@ -496,6 +547,7 @@ func (r *Repo) getNode(
 			node.Index = append(node.Index, childID)
 		}
 	}
+
 	return node
 }
 
@@ -503,21 +555,26 @@ func (r *Repo) validateContentRequest(req *requests.Content) (err error) {
 	if req == nil {
 		return errors.New("request must not be nil")
 	}
+
 	if len(req.URI) == 0 {
 		return errors.New("request URI must not be empty")
 	}
+
 	if req.Env == nil {
 		return errors.New("request.Env must not be nil")
 	}
+
 	if len(req.Env.Dimensions) == 0 {
 		return errors.New("request.Env.Dimensions must not be empty")
 	}
+
 	for _, envDimension := range req.Env.Dimensions {
 		if !r.hasDimension(envDimension) {
 			availableDimensions := make([]string, 0, len(r.Directory()))
 			for availableDimension := range r.Directory() {
 				availableDimensions = append(availableDimensions, availableDimension)
 			}
+
 			return errors.New(fmt.Sprint(
 				"unknown dimension ", envDimension,
 				" in r.Env must be one of ", availableDimensions,
@@ -525,6 +582,7 @@ func (r *Repo) validateContentRequest(req *requests.Content) (err error) {
 			))
 		}
 	}
+
 	return nil
 }
 

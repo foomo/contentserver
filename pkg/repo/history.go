@@ -72,6 +72,7 @@ func NewHistory(l *zap.Logger, opts ...HistoryOption) (*History, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default filesystem storage: %w", err)
 		}
+
 		inst.storage = storage
 	}
 
@@ -113,11 +114,14 @@ func (h *History) Add(ctx context.Context, jsonBytes []byte) error {
 func (h *History) GetCurrent(ctx context.Context, buf *bytes.Buffer) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+
 	data, err := h.storage.Read(ctx, CurrentKey)
 	if err != nil {
 		return err
 	}
+
 	_, err = buf.Write(data)
+
 	return err
 }
 
@@ -125,9 +129,11 @@ func (h *History) GetCurrent(ctx context.Context, buf *bytes.Buffer) error {
 func (h *History) Close() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	if h.storage != nil {
 		return h.storage.Close()
 	}
+
 	return nil
 }
 
@@ -148,6 +154,7 @@ func (h *History) getHistory(ctx context.Context) (files []string, err error) {
 			files = append(files, key)
 		}
 	}
+
 	return files, nil
 }
 
@@ -159,6 +166,7 @@ func (h *History) cleanup(ctx context.Context) error {
 
 	for _, f := range files {
 		h.l.Debug("removing outdated backup", zap.String("file", f))
+
 		if err := h.storage.Delete(ctx, f); err != nil {
 			return fmt.Errorf("could not remove file %s: %w", f, err)
 		}
@@ -178,5 +186,6 @@ func (h *History) getFilesForCleanup(ctx context.Context, historyVersions int) (
 			files = append(files, contentFiles[i])
 		}
 	}
+
 	return files, nil
 }

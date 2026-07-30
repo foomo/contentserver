@@ -39,10 +39,12 @@ func (c *Client) Update(ctx context.Context) (*responses.Update, error) {
 	type serverResponse struct {
 		Reply *responses.Update
 	}
+
 	resp := serverResponse{}
 	if err := c.t.Call(ctx, handler.RouteUpdate, &requests.Update{}, &resp); err != nil {
 		return nil, err
 	}
+
 	return resp.Reply, nil
 }
 
@@ -51,6 +53,7 @@ func (c *Client) GetContent(ctx context.Context, request *requests.Content) (*co
 	type serverResponse struct {
 		Reply *content.SiteContent
 	}
+
 	resp := serverResponse{}
 	if err := c.t.Call(ctx, handler.RouteGetContent, request, &resp); err != nil {
 		return nil, err
@@ -69,6 +72,7 @@ func (c *Client) GetURIs(ctx context.Context, dimension string, ids []string) (m
 	if err := c.t.Call(ctx, handler.RouteGetURIs, &requests.URIs{Dimension: dimension, IDs: ids}, &resp); err != nil {
 		return nil, err
 	}
+
 	return resp.Reply, nil
 }
 
@@ -78,13 +82,16 @@ func (c *Client) GetNodes(ctx context.Context, env *requests.Env, nodes map[stri
 		Env:   env,
 		Nodes: nodes,
 	}
+
 	type serverResponse struct {
 		Reply map[string]*content.Node
 	}
+
 	resp := serverResponse{}
 	if err := c.t.Call(ctx, handler.RouteGetNodes, r, &resp); err != nil {
 		return nil, err
 	}
+
 	return resp.Reply, nil
 }
 
@@ -93,10 +100,12 @@ func (c *Client) GetRepo(ctx context.Context) (map[string]*content.RepoNode, err
 	type serverResponse struct {
 		Reply map[string]*content.RepoNode
 	}
+
 	resp := serverResponse{}
 	if err := c.t.Call(ctx, handler.RouteGetRepo, &requests.Repo{}, &resp); err != nil {
 		return nil, err
 	}
+
 	return resp.Reply, nil
 }
 

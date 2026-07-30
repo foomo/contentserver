@@ -20,14 +20,18 @@ func NewTestRepo(ctx context.Context, l *zap.Logger, url, varDir string) *Repo {
 	if err != nil {
 		panic(err)
 	}
+
 	r := New(l, url, h)
 	go r.Start(ctx) //nolint:errcheck
+
 	time.Sleep(100 * time.Millisecond)
+
 	return r
 }
 
 func assertRepoIsEmpty(t *testing.T, r *Repo, empty bool) {
 	t.Helper()
+
 	if empty {
 		if len(r.Directory()) > 0 {
 			t.Fatal("directory should have been empty, but is not")
@@ -82,9 +86,11 @@ func TestLoadRepo(t *testing.T) {
 	if !response.Success {
 		t.Fatal("could not load valid repo")
 	}
+
 	if response.Stats.OwnRuntime > response.Stats.RepoRuntime {
 		t.Fatal("how could all take less time, than me alone")
 	}
+
 	if response.Stats.RepoRuntime < 0.05 {
 		t.Fatal("the server was too fast")
 	}
@@ -105,6 +111,7 @@ func BenchmarkLoadRepo(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
+
 	for n := 0; n < b.N; n++ {
 		response := r.Update(b.Context())
 		if len(r.Directory()) == 0 {
@@ -272,18 +279,21 @@ func TestWriteRepoBytesRace(t *testing.T) {
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
+
 			for {
 				select {
 				case <-ctx.Done():
 					return
 				default:
 					var buf bytes.Buffer
+
 					_ = r.WriteRepoBytes(ctx, &buf)
 				}
 			}
 		}()
 		go func() {
 			defer wg.Done()
+
 			for {
 				select {
 				case <-ctx.Done():
@@ -295,5 +305,6 @@ func TestWriteRepoBytesRace(t *testing.T) {
 			}
 		}()
 	}
+
 	wg.Wait()
 }

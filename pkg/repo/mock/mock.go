@@ -19,6 +19,7 @@ const (
 // GetMockData mock data to run a repo
 func GetMockData(tb testing.TB) (*httptest.Server, string) {
 	tb.Helper()
+
 	_, filename, _, _ := runtime.Caller(0)
 	mockDir := path.Dir(filename)
 	fileServer := http.FileServer(http.Dir(mockDir))
@@ -65,6 +66,7 @@ func MakeValidURIsRequest() *requests.URIs {
 // MakeValidContentRequest a mock content request
 func MakeValidContentRequest() *requests.Content {
 	dimensions := []string{dimensionFoo}
+
 	return &requests.Content{
 		URI: "/a",
 		Env: &requests.Env{
