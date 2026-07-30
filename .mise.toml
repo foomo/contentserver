@@ -1,9 +1,14 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+
+[settings]
+minimum_release_age = "3d"
+
 [tools]
-# https://mise-tools.jdx.dev/tools/lefthook
-lefthook = "2.1.10"
-# https://mise-tools.jdx.dev/tools/goreleaser
-goreleaser = "2.17.1"
-# https://mise-tools.jdx.dev/tools/golangci-lint
-golangci-lint = "2.12.2"
 # https://github.com/oligot/go-mod-upgrade/releases
 "github:oligot/go-mod-upgrade" = "0.12.0"
+# https://mise-tools.jdx.dev/tools/golangci-lint
+golangci-lint = "2.12.2"
+# https://mise-tools.jdx.dev/tools/goreleaser
+goreleaser = "2.17.1"
+# https://mise-tools.jdx.dev/tools/lefthook
+lefthook = "2.1.10"
