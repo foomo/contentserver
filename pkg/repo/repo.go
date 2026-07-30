@@ -348,14 +348,19 @@ func (r *Repo) Start(ctx context.Context) error {
 
 	if !r.Loaded() {
 		l.Debug("trying to update initial state")
-		if resp := r.Update(ctx); !resp.Success {
-			l.Error("failed to update initial state",
-				zap.String("error", resp.ErrorMessage),
-				zap.Int("num_modes", resp.Stats.NumberOfNodes),
-				zap.Int("num_uris", resp.Stats.NumberOfURIs),
-				zap.Float64("own_runtime", resp.Stats.OwnRuntime),
-				zap.Float64("repo_runtime", resp.Stats.RepoRuntime),
-			)
+		// Submit the initial load with a blocking send instead of r.Update's
+		// non-blocking tryUpdate. A blocking send cannot be rejected: it waits
+		// until UpdateRoutine is actually at its receive, closing a startup race
+		// where the routine wasn't ready yet, tryUpdate hit its default branch,
+		// and OnLoaded never fired (leaving callers gated on it hung forever).
+		c := make(chan updateResponse)
+		select {
+		case r.updateInProgressChannel <- c:
+			if resp := <-c; resp.err != nil {
+				l.Error("failed to update initial state", zap.Error(resp.err))
+			}
+		case <-gCtx.Done():
+			return gCtx.Err()
 		}
 	}
 
