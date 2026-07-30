@@ -67,7 +67,7 @@ func HTTPTransportWithHTTPClient(v *http.Client) HTTPTransportOption {
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (t *HTTPTransport) Call(ctx context.Context, route handler.Route, request interface{}, response interface{}) error {
+func (t *HTTPTransport) Call(ctx context.Context, route handler.Route, request any, response any) error {
 	requestBytes, errMarshal := json.Marshal(request)
 	if errMarshal != nil {
 		return errMarshal

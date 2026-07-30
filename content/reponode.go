@@ -2,23 +2,24 @@ package content
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
 // RepoNode node in a content tree
 type RepoNode struct {
-	ID            string                 `json:"id"`       // unique identifier - it is your responsibility, that they are unique
-	MimeType      string                 `json:"mimeType"` // well a mime type http://www.ietf.org/rfc/rfc2046.txt
-	LinkID        string                 `json:"linkId"`   // (symbolic) link/alias to another node
-	Groups        []string               `json:"groups"`   // which groups have access to the node, if empty everybody has access to it
-	URI           string                 `json:"URI"`
-	Name          string                 `json:"name"`
-	Hidden        bool                   `json:"hidden"`        // hidden in content.nodes, but can still be resolved when being directly addressed
-	DestinationID string                 `json:"destinationId"` // if a node does not have any content like a folder the destinationIds can point to nodes that do aka. the first displayable child node
-	Data          map[string]interface{} `json:"data"`          // what ever you want to stuff into it - the payload you want to attach to a node
-	Nodes         map[string]*RepoNode   `json:"nodes"`         // child nodes
-	Index         []string               `json:"index"`         // defines the order of the child nodes
-	parent        *RepoNode              // parent node - helps to resolve a path / bread crumb
+	ID            string               `json:"id"`       // unique identifier - it is your responsibility, that they are unique
+	MimeType      string               `json:"mimeType"` // well a mime type http://www.ietf.org/rfc/rfc2046.txt
+	LinkID        string               `json:"linkId"`   // (symbolic) link/alias to another node
+	Groups        []string             `json:"groups"`   // which groups have access to the node, if empty everybody has access to it
+	URI           string               `json:"URI"`
+	Name          string               `json:"name"`
+	Hidden        bool                 `json:"hidden"`        // hidden in content.nodes, but can still be resolved when being directly addressed
+	DestinationID string               `json:"destinationId"` // if a node does not have any content like a folder the destinationIds can point to nodes that do aka. the first displayable child node
+	Data          map[string]any       `json:"data"`          // what ever you want to stuff into it - the payload you want to attach to a node
+	Nodes         map[string]*RepoNode `json:"nodes"`         // child nodes
+	Index         []string             `json:"index"`         // defines the order of the child nodes
+	parent        *RepoNode            // parent node - helps to resolve a path / bread crumb
 	// published from - to is going to be an array of fromTos
 }
 
@@ -116,12 +117,7 @@ func (n *RepoNode) IsOneOfTheseMimeTypes(mimeTypes []string) bool {
 	if len(mimeTypes) == 0 {
 		return true
 	}
-	for _, mimeType := range mimeTypes {
-		if mimeType == n.MimeType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(mimeTypes, n.MimeType)
 }
 
 // CanBeAccessedByGroups can this node be accessed by at least one the given
@@ -133,10 +129,8 @@ func (n *RepoNode) CanBeAccessedByGroups(groups []string) bool {
 	}
 
 	for _, group := range groups {
-		for _, myGroup := range n.Groups {
-			if group == myGroup {
-				return true
-			}
+		if slices.Contains(n.Groups, group) {
+			return true
 		}
 	}
 	return false

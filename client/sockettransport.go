@@ -36,7 +36,7 @@ func NewSocketTransport(url string, connectionPoolSize int, waitTimeout time.Dur
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request interface{}, response interface{}) error {
+func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request any, response any) error {
 	if t.connPool.chanDrainPool == nil {
 		return errors.New("connection pool has been drained, client is dead")
 	}
@@ -57,7 +57,7 @@ func (t *SocketTransport) Call(ctx context.Context, route handler.Route, request
 		}
 	}
 	// write header result will be like handler:2{}
-	jsonBytes = append([]byte(fmt.Sprintf("%s:%d", route, len(jsonBytes))), jsonBytes...)
+	jsonBytes = append(fmt.Appendf(nil, "%s:%d", route, len(jsonBytes)), jsonBytes...)
 
 	// send request
 	var (

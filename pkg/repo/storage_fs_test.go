@@ -127,7 +127,7 @@ func TestFilesystemStorage_ConcurrentOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()

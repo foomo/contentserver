@@ -16,7 +16,6 @@ linters:
     - paralleltest
     - godoclint
     - forbidigo
-    - modernize
     - wsl_v5
     - whitespace
     # Discouraged linters
