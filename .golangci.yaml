@@ -1,0 +1,105 @@
+# https://golangci-lint.run/usage/configuration/
+# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
+version: "2"
+
+run:
+  go: "1.26"
+  build-tags: [ safe ]
+  modules-download-mode: readonly
+
+linters:
+  default: all
+  disable:
+    # Project specific linters
+    - testpackage
+    - nonamedreturns
+    - paralleltest
+    - godoclint
+    - forbidigo
+    - modernize
+    - wsl_v5
+    - whitespace
+    # Discouraged linters
+    - noinlineerr # Disallows inline error handling (`if err := ...; err != nil {`).
+    - embeddedstructfieldcheck #  Embedded types should be at the top of the field list of a struct, and there must be an empty line separating embedded fields from regular fields. [fast]
+    - cyclop # checks function and package cyclomatic complexity [fast: false, auto-fix: false]
+    - depguard # Go linter that checks if package imports are in a list of acceptable packages [fast: true, auto-fix: false]
+    - dogsled # Checks assignments with too many blank identifiers (e.g. x, _, _, _, := f()) [fast: true, auto-fix: false]
+    - dupl # Tool for code clone detection [fast: true, auto-fix: false]
+    - dupword # checks for duplicate words in the source code [fast: true, auto-fix: false]
+    - dogsled # Checks assignments with too many blank identifiers (e.g. x, _, _, _, := f()) [fast: true, auto-fix: false]
+    - err113 # Go linter to check the errors handling expressions [fast: false, auto-fix: false]
+    - exhaustruct # Checks if all structure fields are initialized [fast: false, auto-fix: false]
+    - funlen # Tool for detection of long functions [fast: true, auto-fix: false]
+    - ginkgolinter # enforces standards of using ginkgo and gomega [fast: false, auto-fix: false]
+    - gochecknoglobals # Check that no global variables exist. [fast: false, auto-fix: false]
+    - gochecknoinits # Checks that no init functions are present in Go code [fast: true, auto-fix: false]
+    - gocognit # Computes and checks the cognitive complexity of functions [fast: true, auto-fix: false]
+    - gocyclo # Computes and checks the cyclomatic complexity of functions [fast: true, auto-fix: false]
+    - godot # Check if comments end in a period [fast: true, auto-fix: true]
+    - godox # Tool for detection of comment keywords [fast: true, auto-fix: false]
+    - interfacebloat # A linter that checks the number of methods inside an interface. [fast: true, auto-fix: false]
+    - intrange # (go >= 1.22) intrange is a linter to find places where for loops could make use of an integer range. [fast: true, auto-fix: false]
+    - ireturn # Accept Interfaces, Return Concrete Types [fast: false, auto-fix: false]
+    - lll # Reports long lines [fast: true, auto-fix: false]
+    - maintidx # maintidx measures the maintainability index of each function. [fast: true, auto-fix: false]
+    - nestif # Reports deeply nested if statements [fast: true, auto-fix: false]
+    - nlreturn # nlreturn checks for a new line before return and branch statements to increase code clarity [fast: true, auto-fix: false]
+    - mnd # An analyzer to detect magic numbers. [fast: true, auto-fix: false]
+    - perfsprint # Checks that fmt.Sprintf can be replaced with a faster alternative. [fast: false, auto-fix: false]
+    - prealloc # Finds slice declarations that could potentially be pre-allocated [fast: true, auto-fix: false]
+    - protogetter # Reports direct reads from proto message fields when getters should be used [fast: false, auto-fix: true]
+    - sloglint # ensure consistent code style when using log/slog [fast: false, auto-fix: false]
+    - tagalign # check that struct tags are well aligned [fast: true, auto-fix: true]
+    - tagliatelle # Checks the struct tags. [fast: true, auto-fix: false]
+    - unparam # Reports unused function parameters [fast: false, auto-fix: false]
+    - varnamelen # checks that the length of a variable's name matches its scope [fast: false, auto-fix: false]
+    - wrapcheck # Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
+    - zerologlint # Detects the wrong usage of `zerolog` that a user forgets to dispatch with `Send` or `Msg` [fast: false, auto-fix: false]
+    # Deprected linters
+    - gomodguard
+    - wsl
+
+  # https://golangci-lint.run/docs/linters/
+  settings:
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - commentFormatting
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+    goconst:
+      ignore-tests: true
+      min-occurrences: 5
+    exhaustive:
+      default-signifies-exhaustive: true
+    gosec:
+      confidence: medium
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - bin
+      - tmp
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - bin
+      - tmp
+      - third_party$
+      - builtin$
+      - examples$

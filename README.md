@@ -1,10 +1,11 @@
-[![Build Status](https://github.com/foomo/contentserver/actions/workflows/pr.yml/badge.svg?branch=main&event=push)](https://github.com/foomo/contentserver/actions/workflows/pr.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/foomo/contentserver)](https://goreportcard.com/report/github.com/foomo/contentserver)
-[![Coverage Status](https://coveralls.io/repos/github/foomo/contentserver/badge.svg?branch=main&)](https://coveralls.io/github/foomo/contentserver?branch=main)
-[![GoDoc](https://godoc.org/github.com/foomo/contentserver?status.svg)](https://godoc.org/github.com/foomo/contentserver)
+[![GoDoc](https://img.shields.io/badge/GoDoc-✓-informational.svg?style=flat-square&logo=go)](https://godoc.org/github.com/foomo/contentserver)
+[![Coverage](https://img.shields.io/codecov/c/github/foomo/contentserver?style=flat-square&logo=github)](https://app.codecov.io/gh/foomo/contentserver)
+[![GitHub Downloads](https://img.shields.io/github/downloads/foomo/contentserver/total.svg?style=flat-square&logo=github)](https://github.com/foomo/contentserver/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/foomo/contentserver.svg?style=flat-square&logo=docker)](https://hub.docker.com/r/foomo/contentserver)
+[![GitHub Stars](https://img.shields.io/github/stars/foomo/contentserver.svg?style=flat-square&logo=github)](https://github.com/foomo/contentserver)
 
 <p align="center">
-  <img alt="sesamy" src=".github/assets/contentserver.png"/>
+  <img alt="contentserver" src="docs/public/logo.png" height="400" width="400"/>
 </p>
 
 # Content Server
@@ -22,7 +23,7 @@ cache hazzle-free content server to mix different content sources.
 
 ### Overview
 
-<img src="docs/assets/Overview.svg" width="100%" height="500">
+<img src="docs/public/Overview.svg" width="100%" height="500">
 
 ## Export Data
 
@@ -58,7 +59,7 @@ every other framework and language, too.
 
 ## Update Flowchart
 
-<img src="docs/assets/Update-Flow.svg" width="100%" height="700">
+<img src="docs/public/Update-Flow.svg" width="100%" height="700">
 
 ### Usage
 
@@ -148,10 +149,12 @@ See [gocloud.dev/blob](https://gocloud.dev/howto/blob/) for detailed authenticat
 
 ## How to Contribute
 
-Please refer to the [CONTRIBUTING](.github/CONTRIBUTING.md) details and follow the [CODE_OF_CONDUCT](.github/CODE_OF_CONDUCT.md) and [SECURITY](.github/SECURITY.md) guidelines.
+Contributions are welcome! Please read the [contributing guide](docs/CONTRIBUTING.md).
+
+![Contributors](https://contributors-table.vercel.app/image?repo=foomo/contentserver&width=50&columns=15)
 
 ## License
 
-Distributed under LGPL 3.0 License, please see license file within the code for more details.
+Distributed under MIT License, please see the [license](LICENSE) file within the code for more details.
 
 _Made with ♥ [foomo](https://www.foomo.org) by [bestbytes](https://www.bestbytes.com)_
