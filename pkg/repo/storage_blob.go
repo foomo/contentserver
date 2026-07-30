@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -58,13 +59,6 @@ func NewBlobStorageFromBucket(bucket *blob.Bucket, prefix string) *BlobStorage {
 	}
 }
 
-func (b *BlobStorage) fullKey(key string) string {
-	if b.prefix == "" {
-		return key
-	}
-	return b.prefix + key
-}
-
 func (b *BlobStorage) Write(ctx context.Context, key string, data []byte) error {
 	if err := b.bucket.WriteAll(ctx, b.fullKey(key), data, nil); err != nil {
 		return fmt.Errorf("failed to write blob %q: %w", key, err)
@@ -91,7 +85,7 @@ func (b *BlobStorage) List(ctx context.Context, prefix string) ([]string, error)
 	var keys []string
 	for {
 		obj, err := iter.Next(ctx)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -127,4 +121,11 @@ func (b *BlobStorage) Close() error {
 		return fmt.Errorf("failed to close bucket: %w", err)
 	}
 	return nil
+}
+
+func (b *BlobStorage) fullKey(key string) string {
+	if b.prefix == "" {
+		return key
+	}
+	return b.prefix + key
 }
