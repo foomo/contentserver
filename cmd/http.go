@@ -38,6 +38,16 @@ func NewHTTPCommand() *cobra.Command {
 			return comps, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logLevelMissingNode, err := logLevelMissingNodeFlag(v)
+			if err != nil {
+				return err
+			}
+
+			logLevelResolved, err := logLevelResolvedFlag(v)
+			if err != nil {
+				return err
+			}
+
 			svr := keel.NewServer(
 				keel.WithHTTPPrometheusService(servicePrometheusEnabledFlag(v)),
 				keel.WithHTTPHealthzService(serviceHealthzEnabledFlag(v)),
@@ -75,6 +85,8 @@ func NewHTTPCommand() *cobra.Command {
 				),
 				repo.WithPollInterval(pollIntevalFlag(v)),
 				repo.WithPoll(pollFlag(v)),
+				repo.WithLogLevelMissingNode(logLevelMissingNode),
+				repo.WithLogLevelResolved(logLevelResolved),
 			)
 
 			isLoadedHealtherFn := healthz.NewHealthzerFn(func(ctx context.Context) error {
@@ -112,6 +124,8 @@ func NewHTTPCommand() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
+	addLogLevelMissingNodeFlag(flags, v)
+	addLogLevelResolvedFlag(flags, v)
 	addAddressFlag(flags, v)
 	addBasePathFlag(flags, v)
 	addPollFlag(flags, v)

@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"compress/gzip"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
 )
 
 func logLevelFlag(v *viper.Viper) string {
@@ -16,6 +19,41 @@ func addLogLevelFlag(flags *pflag.FlagSet, v *viper.Viper) {
 	flags.String("log-level", "info", "log level")
 	_ = v.BindPFlag("log.level", flags.Lookup("log-level"))
 	_ = v.BindEnv("log.level", "LOG_LEVEL")
+}
+
+func logLevelMissingNodeFlag(v *viper.Viper) (zapcore.Level, error) {
+	return parseRepositoryLogLevel(v.GetString("log.level_missing_node"), "log-level-missing-node")
+}
+
+func addLogLevelMissingNodeFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("log-level-missing-node", "ERROR", "Missing node log level: DEBUG, INFO, WARN or ERROR")
+	_ = v.BindPFlag("log.level_missing_node", flags.Lookup("log-level-missing-node"))
+	_ = v.BindEnv("log.level_missing_node", "LOG_LEVEL_MISSING_NODE")
+}
+
+func logLevelResolvedFlag(v *viper.Viper) (zapcore.Level, error) {
+	return parseRepositoryLogLevel(v.GetString("log.level_resolved"), "log-level-resolved")
+}
+
+func addLogLevelResolvedFlag(flags *pflag.FlagSet, v *viper.Viper) {
+	flags.String("log-level-resolved", "INFO", "Successful resolution log level: DEBUG, INFO, WARN or ERROR")
+	_ = v.BindPFlag("log.level_resolved", flags.Lookup("log-level-resolved"))
+	_ = v.BindEnv("log.level_resolved", "LOG_LEVEL_RESOLVED")
+}
+
+func parseRepositoryLogLevel(value, flag string) (zapcore.Level, error) {
+	switch strings.ToUpper(value) {
+	case "DEBUG":
+		return zapcore.DebugLevel, nil
+	case "INFO":
+		return zapcore.InfoLevel, nil
+	case "WARN":
+		return zapcore.WarnLevel, nil
+	case "ERROR":
+		return zapcore.ErrorLevel, nil
+	default:
+		return 0, fmt.Errorf("invalid --%s value %q: expected DEBUG, INFO, WARN or ERROR", flag, value)
+	}
 }
 
 func logFormatFlag(v *viper.Viper) string {
