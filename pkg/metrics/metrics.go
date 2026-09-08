@@ -42,6 +42,14 @@ var (
 		"updates_failed_count",
 		"Number of updates that failed due to an error",
 	)
+	LastSuccessfulUpdateTimestamp = newGaugeVec(
+		"last_successful_update_timestamp_seconds",
+		"Unix timestamp in seconds of the last successful update or unchanged-content check; zero until the first success",
+	).WithLabelValues()
+	LastFailedUpdateTimestamp = newGaugeVec(
+		"last_failed_update_timestamp_seconds",
+		"Unix timestamp in seconds of the last failed update attempt; zero until the first failure",
+	).WithLabelValues()
 	// UpdateDuration observe the duration of each repo.update() call
 	UpdateDuration = newSummaryVec(
 		"update_duration_seconds",
