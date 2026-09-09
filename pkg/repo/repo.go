@@ -55,6 +55,10 @@ type (
 
 type invalidRequestError struct{ error }
 
+func (e invalidRequestError) Unwrap() error {
+	return e.error
+}
+
 func IsInvalidRequest(err error) bool {
 	var target invalidRequestError
 	return errors.As(err, &target)

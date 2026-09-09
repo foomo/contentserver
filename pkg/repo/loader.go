@@ -223,7 +223,7 @@ func (r *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err erro
 
 	err = json.Unmarshal(r.JSONBufferBytes(), &nodes)
 	if err != nil {
-		return nil, errors.New("failed to deserialize nodes")
+		return nil, errors.Wrap(err, "failed to deserialize nodes")
 	}
 
 	return nodes, nil
