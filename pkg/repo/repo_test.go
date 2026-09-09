@@ -15,14 +15,30 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func NewTestRepo(ctx context.Context, l *zap.Logger, url, varDir string) *Repo {
+func NewTestRepo(tb testing.TB, l *zap.Logger, url, varDir string) *Repo {
+	tb.Helper()
+
 	h, err := NewHistory(l, HistoryWithHistoryLimit(2), HistoryWithHistoryDir(varDir))
 	if err != nil {
 		panic(err)
 	}
 
 	r := New(l, url, h)
-	go r.Start(ctx) //nolint:errcheck
+	ctx, cancel := context.WithCancel(tb.Context())
+
+	done := make(chan error, 1)
+	go func() { done <- r.Start(ctx) }()
+
+	tb.Cleanup(func() {
+		cancel()
+
+		select {
+		case err := <-done:
+			assert.NoError(tb, err)
+		case <-time.After(5 * time.Second):
+			tb.Error("repository routines did not stop")
+		}
+	})
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -48,7 +64,7 @@ func TestLoad404(t *testing.T) {
 		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
 		url                = mockServer.URL + "/repo-no-have"
-		r                  = NewTestRepo(t.Context(), l, url, varDir)
+		r                  = NewTestRepo(t, l, url, varDir)
 	)
 
 	response := r.Update(t.Context())
@@ -62,7 +78,7 @@ func TestLoadBrokenRepo(t *testing.T) {
 		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-broken-json.json"
-		r                  = NewTestRepo(t.Context(), l, server, varDir)
+		r                  = NewTestRepo(t, l, server, varDir)
 	)
 
 	response := r.Update(t.Context())
@@ -76,7 +92,7 @@ func TestLoadRepo(t *testing.T) {
 		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-ok.json"
-		r                  = NewTestRepo(t.Context(), l, server, varDir)
+		r                  = NewTestRepo(t, l, server, varDir)
 	)
 	assertRepoIsEmpty(t, r, false)
 
@@ -106,7 +122,7 @@ func BenchmarkLoadRepo(b *testing.B) {
 		t                  = &testing.T{}
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-ok.json"
-		r                  = NewTestRepo(b.Context(), l, server, varDir)
+		r                  = NewTestRepo(b, l, server, varDir)
 	)
 
 	b.ReportAllocs()
@@ -129,7 +145,7 @@ func TestLoadRepoDuplicateUris(t *testing.T) {
 		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-duplicate-uris.json"
-		r                  = NewTestRepo(t.Context(), l, server, varDir)
+		r                  = NewTestRepo(t, l, server, varDir)
 	)
 
 	response := r.Update(t.Context())
@@ -143,7 +159,7 @@ func TestDimensionHygiene(t *testing.T) {
 
 	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + "/repo-two-dimensions.json"
-	r := NewTestRepo(t.Context(), l, server, varDir)
+	r := NewTestRepo(t, l, server, varDir)
 
 	response := r.Update(t.Context())
 	require.True(t, response.Success, "well those two dimension should be fine")
@@ -161,7 +177,7 @@ func getTestRepo(t *testing.T, path string) *Repo {
 
 	mockServer, varDir := mock.GetMockData(t)
 	server := mockServer.URL + path
-	r := NewTestRepo(t.Context(), l, server, varDir)
+	r := NewTestRepo(t, l, server, varDir)
 	response := r.Update(t.Context())
 
 	require.True(t, response.Success, "well those two dimension should be fine")
@@ -212,7 +228,7 @@ func TestLinkIds(t *testing.T) {
 	var (
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-link-ok.json"
-		r                  = NewTestRepo(t.Context(), l, server, varDir)
+		r                  = NewTestRepo(t, l, server, varDir)
 		response           = r.Update(t.Context())
 	)
 
@@ -265,7 +281,7 @@ func TestWriteRepoBytesRace(t *testing.T) {
 		l                  = zaptest.NewLogger(t)
 		mockServer, varDir = mock.GetMockData(t)
 		server             = mockServer.URL + "/repo-ok.json"
-		r                  = NewTestRepo(t.Context(), l, server, varDir)
+		r                  = NewTestRepo(t, l, server, varDir)
 	)
 
 	response := r.Update(t.Context())

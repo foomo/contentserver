@@ -1,0 +1,146 @@
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: startup zeros and equal timestamps stay inactive
+    interval: 1m
+    input_series:
+      - series: 'contentserver_last_failed_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0x5 360x5'
+      - series: 'contentserver_last_successful_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0x5 360x5'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 11m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+
+  - name: initial and repeated failures fire after five minutes only on the failing replica and clear on recovery
+    interval: 1m
+    input_series:
+      - series: 'contentserver_last_failed_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0 60 60 180 180 300 300 300'
+      - series: 'contentserver_last_successful_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0x6 420'
+      - series: 'contentserver_last_failed_update_timestamp_seconds{job="contentserver", instance="replica-b", cluster="test"}'
+        values: '0x7'
+      - series: 'contentserver_last_successful_update_timestamp_seconds{job="contentserver", instance="replica-b", cluster="test"}'
+        values: '0+60x7'
+    alert_rule_test:
+      - eval_time: 0m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: ContentserverUpdateFailed
+        exp_alerts:
+          - exp_labels:
+              job: contentserver
+              instance: replica-a
+              cluster: test
+              severity: warning
+            exp_annotations:
+              summary: Contentserver update failure remains unrecovered
+              description: contentserver / replica-a has not completed a successful update/check since its failure.
+      - eval_time: 7m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+
+  - name: recovery during pending prevents firing
+    interval: 1m
+    input_series:
+      - series: 'contentserver_last_failed_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0 60x9'
+      - series: 'contentserver_last_successful_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0x2 180x6'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+
+  - name: evaluated restart zeros reset pending time
+    interval: 1m
+    input_series:
+      - series: 'contentserver_last_failed_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '60x2 0 240x5'
+      - series: 'contentserver_last_successful_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0x9'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: ContentserverUpdateFailed
+        exp_alerts:
+          - exp_labels:
+              job: contentserver
+              instance: replica-a
+              cluster: test
+              severity: warning
+            exp_annotations:
+              summary: Contentserver update failure remains unrecovered
+              description: contentserver / replica-a has not completed a successful update/check since its failure.
+
+  - name: restart without an evaluated reset preserves pending time
+    interval: 1m
+    input_series:
+      - series: 'contentserver_last_failed_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '60x2 180+60x3'
+      - series: 'contentserver_last_successful_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0x6'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: ContentserverUpdateFailed
+        exp_alerts:
+          - exp_labels:
+              job: contentserver
+              instance: replica-a
+              cluster: test
+              severity: warning
+            exp_annotations:
+              summary: Contentserver update failure remains unrecovered
+              description: contentserver / replica-a has not completed a successful update/check since its failure.
+
+  - name: evaluated absent series reset pending time
+    interval: 1m
+    input_series:
+      - series: 'contentserver_last_failed_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '60x2 stale 240x5'
+      - series: 'contentserver_last_successful_update_timestamp_seconds{job="contentserver", instance="replica-a", cluster="test"}'
+        values: '0x2 stale 0x5'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: ContentserverUpdateFailed
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: ContentserverUpdateFailed
+        exp_alerts:
+          - exp_labels:
+              job: contentserver
+              instance: replica-a
+              cluster: test
+              severity: warning
+            exp_annotations:
+              summary: Contentserver update failure remains unrecovered
+              description: contentserver / replica-a has not completed a successful update/check since its failure.

@@ -78,13 +78,15 @@ func (h *Socket) Serve(conn net.Conn) {
 		// read next byte
 		current := headerBuffer[0:]
 		if string(current) == "{" {
+			start := time.Now()
 			// json has started
 			handler, jsonLength, headerErr := h.extractHandlerAndJSONLentgh(header)
 			// reset header
 			header = ""
 
 			if headerErr != nil {
-				h.l.Error("invalid request could not read header", zap.Error(headerErr))
+				h.l.Warn("invalid request could not read header", zap.Error(headerErr))
+				observeRequest(handler, sourceSocketServer, start, true)
 
 				encodedErr, encodingErr := h.encodeReply(responses.NewError(4, "invalid header "+headerErr.Error()))
 				if encodingErr == nil {
@@ -116,7 +118,8 @@ func (h *Socket) Serve(conn net.Conn) {
 					if jsonReadErr != nil {
 						// @fixme we need to force a read timeout (SetReadDeadline?), if expected jsonLength is lower than really sent bytes (e.g. if client implements protocol wrong)
 						// @todo should we check for io.EOF here
-						h.l.Error("could not read json - giving up with this client connection", zap.Error(jsonReadErr))
+						h.l.Warn("could not read json - giving up with this client connection", zap.Error(jsonReadErr))
+						observeRequest(handler, sourceSocketServer, start, true)
 						metrics.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Dec()
 
 						return
@@ -137,7 +140,8 @@ func (h *Socket) Serve(conn net.Conn) {
 				continue
 			}
 
-			h.l.Error("can not read empty json")
+			h.l.Warn("can not read empty json")
+			observeRequest(handler, sourceSocketServer, start, true)
 			metrics.NumSocketsGauge.WithLabelValues(conn.RemoteAddr().String()).Dec()
 
 			return
@@ -169,8 +173,14 @@ func (h *Socket) execute(route Route, jsonBytes []byte) (reply []byte) {
 	h.l.Debug("incoming json buffer", zap.Int("length", len(jsonBytes)))
 
 	if route == RouteGetRepo {
+		start := time.Now()
+
 		var b bytes.Buffer
-		if err := h.repo.WriteRepoBytes(context.Background(), &b); err != nil {
+
+		err := h.repo.WriteRepoBytes(context.Background(), &b)
+		observeRequest(route, sourceSocketServer, start, err != nil)
+
+		if err != nil {
 			h.l.Error("failed to write repo bytes", zap.Error(err))
 			errorReply, _ := h.encodeReply(responses.NewError(5, "failed to get repo: "+err.Error()))
 
@@ -214,20 +224,14 @@ func (h *Socket) writeResponse(conn net.Conn, reply []byte) {
 func (h *Socket) handleRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) ([]byte, error) {
 	start := time.Now()
 
-	reply, err := h.executeRequest(r, route, jsonBytes, source)
+	reply, failed, err := h.executeRequest(r, route, jsonBytes, source)
 
-	result := "success"
-	if err != nil {
-		result = "error"
-	}
-
-	metrics.ServiceRequestCounter.WithLabelValues(string(route), result, source).Inc()
-	metrics.ServiceRequestDuration.WithLabelValues(string(route), result, source).Observe(time.Since(start).Seconds())
+	observeRequest(route, source, start, failed || err != nil)
 
 	return reply, err
 }
 
-func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, err error) {
+func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, source string) (replyBytes []byte, failed bool, err error) {
 	var (
 		reply             any
 		apiErr            error
@@ -250,39 +254,63 @@ func (h *Socket) executeRequest(r *repo.Repo, route Route, jsonBytes []byte, sou
 	// since the resulting bytes are written directly in to the http.ResponseWriter / net.Connection
 	case RouteGetURIs:
 		getURIRequest := &requests.URIs{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &getURIRequest), func() {
+		processIfJSONIsOk(decodeRequest(jsonBytes, &getURIRequest), func() {
 			reply = r.GetURIs(getURIRequest.Dimension, getURIRequest.IDs)
 		})
 	case RouteGetContent:
 		contentRequest := &requests.Content{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &contentRequest), func() {
 			reply, apiErr = r.GetContent(contentRequest)
+			if contentRequest != nil {
+				failed = invalidNodes(contentRequest.Nodes)
+			}
 		})
 	case RouteGetNodes:
 		nodesRequest := &requests.Nodes{}
-		processIfJSONIsOk(json.Unmarshal(jsonBytes, &nodesRequest), func() {
+		processIfJSONIsOk(decodeRequest(jsonBytes, &nodesRequest), func() {
+			if jsonErr = validateNodesRequest(nodesRequest); jsonErr != nil {
+				return
+			}
+
+			failed = invalidNodes(nodesRequest.Nodes)
 			reply = r.GetNodes(nodesRequest)
 		})
 	case RouteUpdate:
 		updateRequest := &requests.Update{}
 		processIfJSONIsOk(json.Unmarshal(jsonBytes, &updateRequest), func() {
-			reply = r.Update(context.Background())
+			updateReply := r.Update(context.Background())
+			failed = !updateReply.Success
+			reply = updateReply
 		})
 
 	default:
+		failed = true
+
+		h.l.Warn("unknown handler", zap.String("route", string(route)))
 		reply = responses.NewError(1, "unknown handler: "+string(route))
 	}
 
 	// error handling
 	if jsonErr != nil {
-		h.l.Error("could not read incoming json", zap.Error(jsonErr))
+		failed = true
+
+		h.l.Warn("could not read incoming json", zap.Error(jsonErr))
 		reply = responses.NewError(2, "could not read incoming json "+jsonErr.Error())
 	} else if apiErr != nil {
-		h.l.Error("an API error occurred", zap.Error(apiErr))
+		failed = true
+
+		if repo.IsInvalidRequest(apiErr) {
+			h.l.Warn("an API error occurred", zap.Error(apiErr))
+		} else {
+			h.l.Error("an API error occurred", zap.Error(apiErr))
+		}
+
 		reply = responses.NewError(3, "internal error "+apiErr.Error())
 	}
 
-	return h.encodeReply(reply)
+	replyBytes, err = h.encodeReply(reply)
+
+	return replyBytes, failed, err
 }
 
 // encodeReply takes an interface and encodes it as JSON

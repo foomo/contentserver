@@ -1,0 +1,13 @@
+groups:
+  - name: contentserver
+    rules:
+      - alert: ContentserverUpdateFailed
+        expr: |
+          contentserver_last_failed_update_timestamp_seconds
+            > contentserver_last_successful_update_timestamp_seconds
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Contentserver update failure remains unrecovered"
+          description: "{{ $labels.job }} / {{ $labels.instance }} has not completed a successful update/check since its failure."
