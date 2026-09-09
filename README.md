@@ -147,6 +147,11 @@ Uses Azure SDK default credential chain (environment variables, managed identity
 
 See [gocloud.dev/blob](https://gocloud.dev/howto/blob/) for detailed authentication configuration.
 
+## Monitoring
+
+See [update-failure monitoring](docs/monitoring/README.md) for timestamp metrics,
+an example five-minute alert rule, and rule validation commands.
+
 ## How to Contribute
 
 Contributions are welcome! Please read the [contributing guide](docs/CONTRIBUTING.md).

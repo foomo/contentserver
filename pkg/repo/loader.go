@@ -70,6 +70,7 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 			if err != nil {
 				l.Error("update failed", zap.Error(err))
 				metrics.UpdatesFailedCounter.WithLabelValues().Inc()
+				metrics.LastFailedUpdateTimestamp.SetToCurrentTime()
 			} else {
 				if !r.Loaded() {
 					r.loaded.Store(true)
@@ -83,6 +84,7 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 				}
 
 				metrics.UpdatesCompletedCounter.WithLabelValues().Inc()
+				metrics.LastSuccessfulUpdateTimestamp.SetToCurrentTime()
 			}
 
 			resChan <- updateResponse{
