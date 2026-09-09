@@ -26,6 +26,7 @@ var (
 
 type updateResponse struct {
 	repoRuntime int64
+	changed     bool
 	err         error
 }
 
@@ -42,12 +43,7 @@ func (r *Repo) PollRoutine(ctx context.Context) error {
 			chanReponse := make(chan updateResponse)
 			r.updateInProgressChannel <- chanReponse
 
-			response := <-chanReponse
-			if response.err == nil {
-				l.Info("update success", zap.String("revision", r.version))
-			} else {
-				l.Error("update failed", zap.Error(response.err))
-			}
+			<-chanReponse
 		}
 	}
 }
@@ -64,9 +60,9 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 			start := time.Now()
 			l := l.With(zap.String("run_id", uuid.New().String()))
 
-			l.Info("update started")
+			l.Debug("update started")
 
-			repoRuntime, err := r.update(context.WithoutCancel(ctx))
+			repoRuntime, changed, err := r.update(context.WithoutCancel(ctx))
 			if err != nil {
 				l.Error("update failed", zap.Error(err))
 				metrics.UpdatesFailedCounter.WithLabelValues().Inc()
@@ -74,13 +70,15 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 			} else {
 				if !r.Loaded() {
 					r.loaded.Store(true)
-					l.Info("initial update success")
+					l.Info("initial update success", zap.String("revision", r.version))
 
 					if r.onLoaded != nil {
 						r.onLoaded()
 					}
+				} else if changed {
+					l.Info("update success", zap.String("revision", r.version))
 				} else {
-					l.Info("update success")
+					l.Debug("repo is up to date", zap.String("revision", r.version))
 				}
 
 				metrics.UpdatesCompletedCounter.WithLabelValues().Inc()
@@ -89,6 +87,7 @@ func (r *Repo) UpdateRoutine(ctx context.Context) error {
 
 			resChan <- updateResponse{
 				repoRuntime: repoRuntime,
+				changed:     changed,
 				err:         err,
 			}
 
@@ -110,11 +109,7 @@ func (r *Repo) DimensionUpdateRoutine(ctx context.Context) error {
 
 			err := r._updateDimension(newDimension.Dimension, newDimension.Node)
 
-			l.Info("received result")
-
-			if err != nil {
-				l.Debug("update failed", zap.Error(err))
-			}
+			l.Debug("received result")
 
 			r.dimensionUpdateDoneChannel <- err
 		}
@@ -228,7 +223,6 @@ func (r *Repo) loadNodesFromJSON() (nodes map[string]*content.RepoNode, err erro
 
 	err = json.Unmarshal(r.JSONBufferBytes(), &nodes)
 	if err != nil {
-		r.l.Error("Failed to deserialize nodes", zap.Error(err))
 		return nil, errors.New("failed to deserialize nodes")
 	}
 
@@ -278,7 +272,7 @@ func (r *Repo) get(ctx context.Context, url string) error {
 	return nil
 }
 
-func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
+func (r *Repo) update(ctx context.Context) (repoRuntime int64, changed bool, err error) {
 	startTimeRepo := time.Now().UnixNano()
 
 	repoURL := r.url
@@ -293,7 +287,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	if r.poll {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url, nil)
 		if err != nil {
-			return repoRuntime, err
+			return repoRuntime, false, err
 		}
 		// Only forward `version` as If-None-Match when it actually originated
 		// from an ETag (RFC 7232 entity-tags are quoted). When `version` is a
@@ -306,7 +300,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 
 		resp, err := r.httpClient.Do(req) // #nosec G704 -- Poll mode intentionally calls the configured poll endpoint.
 		if err != nil {
-			return repoRuntime, err
+			return repoRuntime, false, err
 		}
 		defer resp.Body.Close()
 
@@ -314,17 +308,16 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		// read entirely — the catalogue has not changed since the last
 		// successful poll.
 		if resp.StatusCode == http.StatusNotModified {
-			r.l.Info("repo is up to date (304 Not Modified)", zap.String("version", r.version))
-			return repoRuntime, nil
+			return repoRuntime, false, nil
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return repoRuntime, errors.New("could not poll latest repo download url - non 200/304 response")
+			return repoRuntime, false, errors.New("could not poll latest repo download url - non 200/304 response")
 		}
 
 		responseBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return repoRuntime, errors.New("could not poll latest repo download url, could not read body")
+			return repoRuntime, false, errors.New("could not poll latest repo download url, could not read body")
 		}
 
 		repoURL = string(responseBytes)
@@ -337,11 +330,10 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 		}
 
 		if newVersion == r.version {
-			r.l.Info("repo is up to date", zap.String("version", r.version))
-			return repoRuntime, nil
+			return repoRuntime, false, nil
 		}
 
-		r.l.Info("new repo version", zap.String("version", newVersion))
+		r.l.Debug("new repo version", zap.String("version", newVersion))
 	}
 
 	err = r.get(ctx, repoURL)
@@ -349,8 +341,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 
 	if err != nil {
 		// we have no json to load - the repo server did not reply
-		r.l.Debug("failed to load json", zap.Error(err))
-		return repoRuntime, err
+		return repoRuntime, false, err
 	}
 
 	r.l.Debug("loading json", zap.String("server", repoURL), zap.Int("length", len(r.JSONBufferBytes())))
@@ -358,13 +349,13 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	nodes, err := r.loadNodesFromJSON()
 	if err != nil {
 		// could not load nodes from json
-		return repoRuntime, err
+		return repoRuntime, false, err
 	}
 
 	err = r.loadNodes(nodes)
 	if err != nil {
 		// repo failed to load nodes
-		return repoRuntime, err
+		return repoRuntime, false, err
 	}
 
 	if r.poll {
@@ -388,7 +379,7 @@ func (r *Repo) update(ctx context.Context) (repoRuntime int64, err error) {
 	// swapped-in tree.
 	runtime.GC()
 
-	return repoRuntime, nil
+	return repoRuntime, true, nil
 }
 
 // limit ressources and allow only one update request at once
@@ -402,7 +393,7 @@ func (r *Repo) tryUpdate() (repoRuntime int64, err error) {
 
 		return ur.repoRuntime, ur.err
 	default:
-		r.l.Info("update request accepted, will be processed after the previous update")
+		r.l.Warn("update request rejected: update already in progress")
 		return 0, ErrUpdateRejected
 	}
 }

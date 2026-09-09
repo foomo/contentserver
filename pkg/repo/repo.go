@@ -18,6 +18,7 @@ import (
 	"github.com/foomo/contentserver/responses"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -26,10 +27,12 @@ const maxGetURIForNodeRecursionLevel = 1000
 // Repo content repository
 type (
 	Repo struct {
-		l            *zap.Logger
-		url          string
-		poll         bool
-		pollInterval time.Duration
+		l                   *zap.Logger
+		url                 string
+		poll                bool
+		pollInterval        time.Duration
+		logLevelMissingNode zapcore.Level
+		logLevelResolved    zapcore.Level
 		// version is the catalogue identifier from the last successful update:
 		// the ETag if the poll response carried one, otherwise the URL returned
 		// in the body. ETag-shaped versions are sent as If-None-Match; all versions
@@ -50,6 +53,13 @@ type (
 	Option func(*Repo)
 )
 
+type invalidRequestError struct{ error }
+
+func IsInvalidRequest(err error) bool {
+	var target invalidRequestError
+	return errors.As(err, &target)
+}
+
 // ------------------------------------------------------------------------------------------------
 // ~ Constructor
 // ------------------------------------------------------------------------------------------------
@@ -61,6 +71,8 @@ func New(l *zap.Logger, url string, history *History, opts ...Option) *Repo {
 		poll:                       false,
 		loaded:                     &atomic.Bool{},
 		pollInterval:               time.Minute,
+		logLevelMissingNode:        zap.ErrorLevel,
+		logLevelResolved:           zap.InfoLevel,
 		history:                    history,
 		httpClient:                 http.DefaultClient,
 		directory:                  map[string]*Dimension{},
@@ -95,6 +107,18 @@ func WithPoll(v bool) Option {
 func WithPollInterval(v time.Duration) Option {
 	return func(o *Repo) {
 		o.pollInterval = v
+	}
+}
+
+func WithLogLevelMissingNode(v zapcore.Level) Option {
+	return func(o *Repo) {
+		o.logLevelMissingNode = v
+	}
+}
+
+func WithLogLevelResolved(v zapcore.Level) Option {
+	return func(o *Repo) {
+		o.logLevelResolved = v
 	}
 }
 
@@ -170,7 +194,7 @@ func (r *Repo) GetContent(req *requests.Content) (*content.SiteContent, error) {
 	// add more input validation
 	err := r.validateContentRequest(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "repo.GetContent invalid request")
+		return nil, invalidRequestError{errors.Wrap(err, "repo.GetContent invalid request")}
 	}
 
 	r.l.Debug("repo.GetContent", zap.String("URI", req.URI))
@@ -184,7 +208,7 @@ func (r *Repo) GetContent(req *requests.Content) (*content.SiteContent, error) {
 
 			c.Status = content.StatusForbidden
 		} else {
-			r.l.Info("Content resolved", zap.String("uri", req.URI))
+			r.l.Log(r.logLevelResolved, "Content resolved", zap.String("uri", req.URI))
 
 			c.Status = content.StatusOk
 			c.Data = node.Data
@@ -282,7 +306,7 @@ func (r *Repo) Update(ctx context.Context) (updateResponse *responses.Update) {
 		return float64(nanoSeconds) / float64(1000000000)
 	}
 
-	r.l.Info("Update triggered")
+	r.l.Debug("Update triggered")
 	// Log.Info(ansi.Yellow + "BUFFER LENGTH BEFORE tryUpdate(): " + strconv.Itoa(len(repo.jsonBuf.Bytes())) + ansi.Reset)
 
 	start := time.Now()
@@ -301,7 +325,6 @@ func (r *Repo) Update(ctx context.Context) (updateResponse *responses.Update) {
 
 		if !errors.Is(err, ErrUpdateRejected) {
 			updateResponse.ErrorMessage = err.Error()
-			r.l.Error("Failed to update repository", zap.Error(err))
 
 			restoreErr := r.tryToRestoreCurrent(ctx)
 			if restoreErr != nil {
@@ -379,15 +402,7 @@ func (r *Repo) Start(ctx context.Context) error {
 	if !r.Loaded() {
 		l.Debug("trying to update initial state")
 
-		if resp := r.Update(ctx); !resp.Success {
-			l.Error("failed to update initial state",
-				zap.String("error", resp.ErrorMessage),
-				zap.Int("num_modes", resp.Stats.NumberOfNodes),
-				zap.Int("num_uris", resp.Stats.NumberOfURIs),
-				zap.Float64("own_runtime", resp.Stats.OwnRuntime),
-				zap.Float64("repo_runtime", resp.Stats.RepoRuntime),
-			)
-		}
+		r.Update(ctx)
 	}
 
 	return g.Wait()
@@ -440,7 +455,7 @@ func (r *Repo) getNodes(nodeRequests map[string]*requests.Node, env *requests.En
 
 		treeNode, ok := dimensionNode.Directory[nodeRequest.ID]
 		if !ok {
-			r.l.Error("Invalid tree node requested",
+			r.l.Log(r.logLevelMissingNode, "Invalid tree node requested",
 				zap.String("nodeName", nodeName),
 				zap.String("nodeID", nodeRequest.ID),
 			)
@@ -566,6 +581,12 @@ func (r *Repo) validateContentRequest(req *requests.Content) (err error) {
 
 	if len(req.Env.Dimensions) == 0 {
 		return errors.New("request.Env.Dimensions must not be empty")
+	}
+
+	for _, node := range req.Nodes {
+		if node == nil {
+			return errors.New("request.Nodes must not contain nil nodes")
+		}
 	}
 
 	for _, envDimension := range req.Env.Dimensions {

@@ -85,6 +85,36 @@ Flags:
 Use "contentserver [command] --help" for more information about a command.
 ```
 
+## Logging
+
+Both `http` and `socket` support independent levels for missing nodes and successful
+resolutions. Values are case-insensitive: `DEBUG`, `INFO`, `WARN`, or `ERROR`.
+Other values cause startup to fail before storage is opened or services start.
+
+| Flag | Environment variable | Default |
+|------|----------------------|---------|
+| `--log-level-missing-node` | `LOG_LEVEL_MISSING_NODE` | `ERROR` |
+| `--log-level-resolved` | `LOG_LEVEL_RESOLVED` | `INFO` |
+
+Explicit flags take precedence over environment variables. The global `--log-level`
+(`LOG_LEVEL`, default `info`) still filters all log events. To suppress missing-node
+and successful-resolution messages at the default global threshold:
+
+```bash
+contentserver http --log-level=info \
+  --log-level-missing-node=DEBUG \
+  --log-level-resolved=DEBUG \
+  http://example.com/repo.json
+```
+
+Set the global `--log-level=debug` to reveal those messages again. The sampled HTTP
+request summary, including status and duration, remains independent of these settings.
+
+Unchanged polling checks log at DEBUG; applied revisions log at INFO. Failed update
+attempts are reported once, with persistence and restoration failures reported
+separately. Request metrics count logical failures even when an error response is
+encoded successfully; supported missing-content results remain normal outcomes.
+
 ## Storage Backends
 
 The content server supports pluggable storage backends for persisting repository snapshots.

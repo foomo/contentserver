@@ -31,6 +31,16 @@ func NewSocketCommand() *cobra.Command {
 			return comps, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logLevelMissingNode, err := logLevelMissingNodeFlag(v)
+			if err != nil {
+				return err
+			}
+
+			logLevelResolved, err := logLevelResolvedFlag(v)
+			if err != nil {
+				return err
+			}
+
 			l := log.Logger()
 
 			// Create storage based on configuration
@@ -64,6 +74,8 @@ func NewSocketCommand() *cobra.Command {
 				),
 				repo.WithPoll(pollFlag(v)),
 				repo.WithPollInterval(pollIntevalFlag(v)),
+				repo.WithLogLevelMissingNode(logLevelMissingNode),
+				repo.WithLogLevelResolved(logLevelResolved),
 			)
 
 			// create socket server
@@ -111,6 +123,8 @@ func NewSocketCommand() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
+	addLogLevelMissingNodeFlag(flags, v)
+	addLogLevelResolvedFlag(flags, v)
 	addAddressFlag(flags, v)
 	addPollFlag(flags, v)
 	addPollIntervalFlag(flags, v)

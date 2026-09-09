@@ -1,5 +1,11 @@
 package handler
 
+import (
+	"time"
+
+	"github.com/foomo/contentserver/pkg/metrics"
+)
+
 // Route type
 type Route string
 
@@ -15,3 +21,13 @@ const (
 	// RouteGetRepo get the whole repo
 	RouteGetRepo Route = "getRepo"
 )
+
+func observeRequest(route Route, source string, start time.Time, failed bool) {
+	result := "success"
+	if failed {
+		result = "error"
+	}
+
+	metrics.ServiceRequestCounter.WithLabelValues(string(route), result, source).Inc()
+	metrics.ServiceRequestDuration.WithLabelValues(string(route), result, source).Observe(time.Since(start).Seconds())
+}
