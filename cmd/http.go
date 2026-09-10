@@ -10,7 +10,6 @@ import (
 	"github.com/foomo/contentserver/pkg/repo"
 	"github.com/foomo/keel"
 	"github.com/foomo/keel/healthz"
-	keelhttp "github.com/foomo/keel/net/http"
 	"github.com/foomo/keel/net/http/middleware"
 	"github.com/foomo/keel/service"
 	"github.com/spf13/cobra"
@@ -77,12 +76,7 @@ func NewHTTPCommand() *cobra.Command {
 			r := repo.New(l.Named("inst.repo"),
 				args[0],
 				history,
-				repo.WithHTTPClient(
-					keelhttp.NewInternalHTTPClient(
-						keelhttp.HTTPClientWithTimeout(repositoryTimeoutFlag(v)),
-						keelhttp.HTTPClientWithTelemetry(),
-					),
-				),
+				repo.WithHTTPClient(newRepositoryHTTPClient(true, repositoryTimeoutFlag(v))),
 				repo.WithPollInterval(pollIntevalFlag(v)),
 				repo.WithPoll(pollFlag(v)),
 				repo.WithLogLevelMissingNode(logLevelMissingNode),

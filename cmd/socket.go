@@ -8,7 +8,6 @@ import (
 	"github.com/foomo/contentserver/pkg/handler"
 	"github.com/foomo/contentserver/pkg/repo"
 	"github.com/foomo/keel/log"
-	keelhttp "github.com/foomo/keel/net/http"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -66,12 +65,7 @@ func NewSocketCommand() *cobra.Command {
 			r := repo.New(l,
 				args[0],
 				history,
-				repo.WithHTTPClient(
-					keelhttp.NewExternalHTTPClient(
-						keelhttp.HTTPClientWithTimeout(repositoryTimeoutFlag(v)),
-						keelhttp.HTTPClientWithTelemetry(),
-					),
-				),
+				repo.WithHTTPClient(newRepositoryHTTPClient(false, repositoryTimeoutFlag(v))),
 				repo.WithPoll(pollFlag(v)),
 				repo.WithPollInterval(pollIntevalFlag(v)),
 				repo.WithLogLevelMissingNode(logLevelMissingNode),
